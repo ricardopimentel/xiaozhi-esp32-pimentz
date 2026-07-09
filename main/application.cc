@@ -9,6 +9,7 @@
 #include "mcp_server.h"
 #include "assets.h"
 #include "settings.h"
+#include "esp_now_receiver.h"
 
 #include <cstring>
 #include <esp_log.h>
@@ -160,6 +161,9 @@ void Application::Initialize() {
 
     // Update the status bar immediately to show the network state
     display->UpdateStatusBar(true);
+
+    // Initialize ESP-NOW receiver to listen to the body controller
+    InitializeEspNowReceiver();
 }
 
 void Application::Run() {
