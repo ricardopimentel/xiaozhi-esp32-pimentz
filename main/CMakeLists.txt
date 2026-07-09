@@ -1075,7 +1075,6 @@ idf_component_register(SRCS ${SOURCES}
                         bt
                         fatfs
                         esp_wifi
-                        esp_now
                         ${MAIN_PRIV_REQUIRES_EXTRA}
                     )
 
