@@ -5,6 +5,7 @@
 #include <string.h>
 #include "application.h"
 #include "board.h"
+#include "display.h"
 
 static const char* TAG = "ESP_NOW_RX";
 
