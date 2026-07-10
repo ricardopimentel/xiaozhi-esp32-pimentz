@@ -48,15 +48,15 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             if (state.estadoNascimento == 0 || state.estadoNascimento == 1) { // Ovo
                 display->SetEmotion("neutral");
             } else if (state.petDormindo) {
-                display->SetEmotion("sleeping");
+                display->SetEmotion("sleepy");
             } else if (state.choqueDetectado) {
-                display->SetEmotion("dizzy");
+                display->SetEmotion("confused");
             } else if (state.obstaculoDetectado) {
-                display->SetEmotion("surprise");
+                display->SetEmotion("surprised");
             } else if (state.animacaoComendo) {
-                display->SetEmotion("tongue");
+                display->SetEmotion("silly");
             } else if (state.animacaoBrincando) {
-                display->SetEmotion("wink");
+                display->SetEmotion("winking");
             } else {
                 switch (state.humor) {
                     case 0: display->SetEmotion("happy"); break;
