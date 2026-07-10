@@ -257,6 +257,34 @@ void Application::Run() {
             clock_ticks_++;
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
+            
+            // Atualiza o motor do Tamagotchi periodicamente
+            auto& engine = TamagotchiEngine::GetInstance();
+            engine.Update(0.0f, 0.0f, false, nullptr);
+            
+            // Se ainda não nasceu, exibe o status de ovo/incubação na tela
+            if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {
+                if (engine.GetEstadoNascimento() == ESTADO_OVO) {
+                    display->SetStatus("OVO DE TAMAGOTCHI");
+                    display->SetChatMessage("system", "Aproxime o cartão RFID do corpo do robô para começar a chocar!");
+                    display->SetEmotion("neutral");
+                } else if (engine.GetEstadoNascimento() == ESTADO_CHOCANDO) {
+                    char buf[64];
+                    snprintf(buf, sizeof(buf), "Chocando o ovo... (%d/15s)", engine.GetSegundosChocados());
+                    display->SetStatus("CHOCANDO...");
+                    display->SetChatMessage("system", buf);
+                    display->SetEmotion("neutral");
+                }
+            } else {
+                // Ao nascer, limpa as mensagens de sistema se ainda estiver mostrando o ovo
+                static bool nasceu_limpo = false;
+                if (!nasceu_limpo) {
+                    nasceu_limpo = true;
+                    display->SetStatus(Lang::Strings::STANDBY);
+                    display->SetChatMessage("system", "Olá, eu nasci!");
+                    display->SetEmotion("happy");
+                }
+            }
         
             // Print debug info every 10 seconds
             if (clock_ticks_ % 10 == 0) {
@@ -680,6 +708,11 @@ void Application::StopListening() {
 }
 
 void Application::HandleToggleChatEvent() {
+    if (TamagotchiEngine::GetInstance().GetEstadoNascimento() != ESTADO_NASCIDO) {
+        audio_service_.PlaySound(Lang::Sounds::OGG_EXCLAMATION);
+        return;
+    }
+
     auto state = GetDeviceState();
     
     if (state == kDeviceStateActivating) {
@@ -787,6 +820,11 @@ void Application::HandleStopListeningEvent() {
 
 void Application::HandleWakeWordDetectedEvent() {
     if (!protocol_) {
+        return;
+    }
+
+    if (TamagotchiEngine::GetInstance().GetEstadoNascimento() != ESTADO_NASCIDO) {
+        audio_service_.PlaySound(Lang::Sounds::OGG_EXCLAMATION);
         return;
     }
 
