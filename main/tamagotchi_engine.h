@@ -22,6 +22,7 @@ public:
 
     void Initialize();
     void Update(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID);
+    void SyncState(uint8_t estadoNasc, uint8_t fome, uint8_t diversao, uint8_t saude);
     void SaveState();
     
     // Ações de cuidado

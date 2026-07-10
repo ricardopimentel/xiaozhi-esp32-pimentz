@@ -64,6 +64,7 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             
             // Atualiza o motor do Tamagotchi com as leituras físicas do corpo
             auto& engine = TamagotchiEngine::GetInstance();
+            engine.SyncState(state.estadoNascimento, state.fome, state.diversao, state.saude);
             engine.Update(state.temperatura, state.umidade, state.rfidLido, state.rfidUID);
             
             // Define a expressão facial dinamicamente gerada pelo motor Tamagotchi

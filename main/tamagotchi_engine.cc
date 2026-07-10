@@ -374,3 +374,18 @@ void TamagotchiEngine::CopiaUID(uint8_t* dest, const uint8_t* src) {
     dest[3] = src[3];
     SaveState();
 }
+
+
+void TamagotchiEngine::SyncState(uint8_t estadoNasc, uint8_t fome, uint8_t diversao, uint8_t saude) {
+    if (estadoNasc == 2 && estado_nascimento_ != ESTADO_NASCIDO) {
+        estado_nascimento_ = ESTADO_NASCIDO;
+    } else if (estadoNasc == 1) {
+        estado_nascimento_ = ESTADO_CHOCANDO;
+        ultima_leitura_rfid_ = esp_timer_get_time() / 1000000; // Impede o timeout
+    } else if (estadoNasc == 0 && estado_nascimento_ != ESTADO_OVO && estado_nascimento_ != ESTADO_NASCIDO) {
+        estado_nascimento_ = ESTADO_OVO;
+    }
+    fome_ = fome;
+    diversao_ = diversao;
+    saude_ = saude;
+}
