@@ -97,46 +97,46 @@ void TamagotchiEngine::SaveState() {
     }
 }
 
-void TamagotchiEngine::Update(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID) {
+void TamagotchiEngine::Update() {
     uint64_t now = esp_timer_get_time() / 1000;
     
     // 1. Processa ciclo de incubação se for ovo ou chocando
     if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
-        ProcessarCicloIncubacao(rfidLido, rfidUID);
+        ProcessarCicloIncubacao(sensor_rfid_lido_, sensor_rfid_uid_);
         return;
     }
 
     // 1.5. Processa interações por RFID se nasceu
-    if (rfidLido && rfidUID) {
-        if (!EUIDZerado(uid_comida_) && ComparaUID(rfidUID, uid_comida_)) {
+    if (sensor_rfid_lido_ && sensor_rfid_uid_) {
+        if (!EUIDZerado(uid_comida_) && ComparaUID(sensor_rfid_uid_, uid_comida_)) {
             Feed();
-        } else if (!EUIDZerado(uid_brincar_) && ComparaUID(rfidUID, uid_brincar_)) {
+        } else if (!EUIDZerado(uid_brincar_) && ComparaUID(sensor_rfid_uid_, uid_brincar_)) {
             Play();
-        } else if (!EUIDZerado(uid_saude_) && ComparaUID(rfidUID, uid_saude_)) {
+        } else if (!EUIDZerado(uid_saude_) && ComparaUID(sensor_rfid_uid_, uid_saude_)) {
             Heal();
-        } else if (!EUIDZerado(uid_pet_) && ComparaUID(rfidUID, uid_pet_)) {
+        } else if (!EUIDZerado(uid_pet_) && ComparaUID(sensor_rfid_uid_, uid_pet_)) {
             Pet();
         } else {
             // Auto-aprendizado na ordem
             if (EUIDZerado(uid_comida_)) {
-                CopiaUID(uid_comida_, rfidUID);
+                CopiaUID(uid_comida_, sensor_rfid_uid_);
                 ESP_LOGI(TAG, "Cartão registrado para COMIDA!");
                 Feed();
             } else if (EUIDZerado(uid_brincar_)) {
-                if (!ComparaUID(rfidUID, uid_comida_)) {
-                    CopiaUID(uid_brincar_, rfidUID);
+                if (!ComparaUID(sensor_rfid_uid_, uid_comida_)) {
+                    CopiaUID(uid_brincar_, sensor_rfid_uid_);
                     ESP_LOGI(TAG, "Cartão registrado para BRINCAR!");
                     Play();
                 }
             } else if (EUIDZerado(uid_saude_)) {
-                if (!ComparaUID(rfidUID, uid_comida_) && !ComparaUID(rfidUID, uid_brincar_)) {
-                    CopiaUID(uid_saude_, rfidUID);
+                if (!ComparaUID(sensor_rfid_uid_, uid_comida_) && !ComparaUID(sensor_rfid_uid_, uid_brincar_)) {
+                    CopiaUID(uid_saude_, sensor_rfid_uid_);
                     ESP_LOGI(TAG, "Cartão registrado para SAUDE!");
                     Heal();
                 }
             } else if (EUIDZerado(uid_pet_)) {
-                if (!ComparaUID(rfidUID, uid_comida_) && !ComparaUID(rfidUID, uid_brincar_) && !ComparaUID(rfidUID, uid_saude_)) {
-                    CopiaUID(uid_pet_, rfidUID);
+                if (!ComparaUID(sensor_rfid_uid_, uid_comida_) && !ComparaUID(sensor_rfid_uid_, uid_brincar_) && !ComparaUID(sensor_rfid_uid_, uid_saude_)) {
+                    CopiaUID(uid_pet_, sensor_rfid_uid_);
                     ESP_LOGI(TAG, "Cartão registrado para PET!");
                     Pet();
                 }
@@ -240,12 +240,12 @@ void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfi
     } else if (estado_nascimento_ == ESTADO_OVO && rfidLido && rfidUID) {
         // Se a tag do pet estiver zerada, aprende ela
         if (EUIDZerado(uid_pet_)) {
-            CopiaUID(uid_pet_, rfidUID);
+            CopiaUID(uid_pet_, sensor_rfid_uid_);
             ESP_LOGI(TAG, "Cartão do PET registrado na incubação!");
         }
         
         // Só choca se for o cartão do pet correto
-        if (ComparaUID(rfidUID, uid_pet_)) {
+        if (ComparaUID(sensor_rfid_uid_, uid_pet_)) {
             estado_nascimento_ = ESTADO_CHOCANDO;
             segundos_chocados_ = 0;
             SaveState();
@@ -376,16 +376,19 @@ void TamagotchiEngine::CopiaUID(uint8_t* dest, const uint8_t* src) {
 }
 
 
-void TamagotchiEngine::SyncState(uint8_t estadoNasc, uint8_t fome, uint8_t diversao, uint8_t saude) {
-    if (estadoNasc == 2 && estado_nascimento_ != ESTADO_NASCIDO) {
-        estado_nascimento_ = ESTADO_NASCIDO;
-    } else if (estadoNasc == 1) {
-        estado_nascimento_ = ESTADO_CHOCANDO;
-        ultima_leitura_rfid_ = esp_timer_get_time() / 1000000; // Impede o timeout
-    } else if (estadoNasc == 0 && estado_nascimento_ != ESTADO_OVO && estado_nascimento_ != ESTADO_NASCIDO) {
-        estado_nascimento_ = ESTADO_OVO;
-    }
     fome_ = fome;
     diversao_ = diversao;
     saude_ = saude;
+}
+
+
+void TamagotchiEngine::SetSensorData(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID) {
+    sensor_temperatura_ = temperatura;
+    sensor_umidade_ = umidade;
+    sensor_rfid_lido_ = rfidLido;
+    if (rfidUID) {
+        memcpy(sensor_rfid_uid_, rfidUID, 4);
+    } else {
+        memset(sensor_rfid_uid_, 0, 4);
+    }
 }

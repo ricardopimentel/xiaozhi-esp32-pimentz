@@ -260,7 +260,7 @@ void Application::Run() {
             
             // Atualiza o motor do Tamagotchi periodicamente
             auto& engine = TamagotchiEngine::GetInstance();
-            engine.Update(0.0f, 0.0f, false, nullptr);
+            engine.Update();
             
             // Se ainda não nasceu, exibe o status de ovo/incubação na tela
             if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {

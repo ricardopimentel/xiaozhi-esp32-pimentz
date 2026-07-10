@@ -21,8 +21,8 @@ public:
     static TamagotchiEngine& GetInstance();
 
     void Initialize();
-    void Update(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID);
-    void SyncState(uint8_t estadoNasc, uint8_t fome, uint8_t diversao, uint8_t saude);
+    void Update();
+    void SetSensorData(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID);
     void SaveState();
     
     // Ações de cuidado
@@ -64,7 +64,13 @@ private:
     uint32_t segundos_de_vida_ = 0;
     uint32_t idade_dias_ = 0;
     
-    // UIDs de RFID para interação
+    // Sensor cache
+    float sensor_temperatura_ = 25.0f;
+    float sensor_umidade_ = 50.0f;
+    bool sensor_rfid_lido_ = false;
+    uint8_t sensor_rfid_uid_[4] = {0};
+
+    // UIDs de RFID para interacao
     uint8_t uid_comida_[4] = {0};
     uint8_t uid_brincar_[4] = {0};
     uint8_t uid_saude_[4] = {0};
