@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include "lcd_display.h"
 #include <lvgl.h>
 #include <esp_heap_caps.h>
@@ -1081,7 +1082,7 @@ void LcdDisplay::SetupUI() {
     size_t canvas_size = 256 * 128 * sizeof(lv_color_t);
     face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);
     if (face_canvas_buf_) {
-        lv_canvas_set_buffer(face_canvas_, face_canvas_buf_, 256, 128, LV_IMG_CF_TRUE_COLOR);
+        lv_canvas_set_buffer(face_canvas_, face_canvas_buf_, 256, 128, LV_COLOR_FORMAT_NATIVE);
         lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -10);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
     } else {
@@ -1651,7 +1652,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         draw_canvas_line(face_canvas_, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
     }
     
-    float temp = engine.GetTemperatura();
+    float temp = 25.0f; // DHT11 is on the body
     if (temp < 25.0f && temp > 0.0f) {
         int tremorMouth = (ms % 100 < 50) ? 2 : -2;
         draw_canvas_line(face_canvas_, 54*2, (48+tremorMouth)*2, 60*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
