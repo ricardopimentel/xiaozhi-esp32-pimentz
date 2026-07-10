@@ -1,6 +1,8 @@
 #include "lcd_display.h"
 #include "gif/lvgl_gif.h"
 #include "settings.h"
+#include "tamagotchi_engine.h"
+#include <lvgl.h>
 #include "lvgl_theme.h"
 #include "assets/lang_config.h"
 
