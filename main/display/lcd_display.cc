@@ -992,6 +992,44 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(low_battery_label_, lv_color_white(), 0);
     lv_obj_center(low_battery_label_);
     lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
+
+    /* Egg container (Egg layout) */
+    egg_obj_ = lv_obj_create(screen);
+    lv_obj_set_size(egg_obj_, 70, 90);
+    lv_obj_align(egg_obj_, LV_ALIGN_CENTER, 0, -10);
+    lv_obj_set_style_bg_color(egg_obj_, lv_color_hex(0xFFFDD0), 0); // Cream color for egg
+    lv_obj_set_style_radius(egg_obj_, 35, 0); // Oval/capsule shape!
+    lv_obj_set_style_border_color(egg_obj_, lv_color_hex(0xD2B48C), 0); // Light brown border
+    lv_obj_set_style_border_width(egg_obj_, 3, 0);
+    lv_obj_add_flag(egg_obj_, LV_OBJ_FLAG_HIDDEN); // Hidden by default
+
+    /* Hatch progress bar */
+    egg_bar_ = lv_bar_create(screen);
+    lv_obj_set_size(egg_bar_, 120, 10);
+    lv_obj_align_to(egg_bar_, egg_obj_, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
+    lv_bar_set_range(egg_bar_, 0, 15); // Hatch time: 15 seconds
+    lv_bar_set_value(egg_bar_, 0, LV_ANIM_OFF);
+    lv_obj_add_flag(egg_bar_, LV_OBJ_FLAG_HIDDEN);
+
+    // Cópia da lógica dos olhos dinâmicos do RoboESP32
+    left_eye_ = lv_obj_create(screen);
+    lv_obj_set_size(left_eye_, 40, 40);
+    lv_obj_set_style_bg_color(left_eye_, lv_color_hex(0x00FFFF), 0); // Cor Cyan
+    lv_obj_set_style_radius(left_eye_, 20, 0); // Olhos redondos
+    lv_obj_set_style_border_width(left_eye_, 0, 0);
+    lv_obj_align(left_eye_, LV_ALIGN_CENTER, -50, -10);
+    lv_obj_add_flag(left_eye_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
+
+    right_eye_ = lv_obj_create(screen);
+    lv_obj_set_size(right_eye_, 40, 40);
+    lv_obj_set_style_bg_color(right_eye_, lv_color_hex(0x00FFFF), 0); // Cor Cyan
+    lv_obj_set_style_radius(right_eye_, 20, 0); // Olhos redondos
+    lv_obj_set_style_border_width(right_eye_, 0, 0);
+    lv_obj_align(right_eye_, LV_ALIGN_CENTER, 50, -10);
+    lv_obj_add_flag(right_eye_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
+
+    // Timer para rodar as animações fluidas dos olhos (a cada 30ms)
+    eye_timer_ = lv_timer_create(EyeTimerCallback, 30, this);
 }
 
 void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
@@ -1306,5 +1344,136 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
                 lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
             }
         }
+    }
+}
+
+void LcdDisplay::UpdateStatusBar(bool update_all) {
+    LvglDisplay::UpdateStatusBar(update_all);
+    
+    // Atualiza o ovo e o progresso
+    auto& engine = TamagotchiEngine::GetInstance();
+    auto estado = engine.GetEstadoNascimento();
+    
+    if (estado != ESTADO_NASCIDO) {
+        // Se ainda não nasceu, esconde o emoji_box_ e os olhos virtuais
+        if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        if (left_eye_ != nullptr) lv_obj_add_flag(left_eye_, LV_OBJ_FLAG_HIDDEN);
+        if (right_eye_ != nullptr) lv_obj_add_flag(right_eye_, LV_OBJ_FLAG_HIDDEN);
+        
+        // Exibe o ovo e a barra de progresso
+        if (egg_obj_ != nullptr) {
+            lv_obj_remove_flag(egg_obj_, LV_OBJ_FLAG_HIDDEN);
+            if (estado == ESTADO_CHOCANDO) {
+                // Tremer o ovo!
+                lv_obj_align(egg_obj_, LV_ALIGN_CENTER, ((rand() % 5) - 2), -10 + ((rand() % 5) - 2));
+            } else {
+                lv_obj_align(egg_obj_, LV_ALIGN_CENTER, 0, -10);
+            }
+        }
+        if (egg_bar_ != nullptr) {
+            lv_obj_remove_flag(egg_bar_, LV_OBJ_FLAG_HIDDEN);
+            lv_bar_set_value(egg_bar_, engine.GetSegundosChocados(), LV_ANIM_OFF);
+        }
+    } else {
+        // Esconde o ovo e a barra
+        if (egg_obj_ != nullptr) lv_obj_add_flag(egg_obj_, LV_OBJ_FLAG_HIDDEN);
+        if (egg_bar_ != nullptr) lv_obj_add_flag(egg_bar_, LV_OBJ_FLAG_HIDDEN);
+        
+        // Esconde o emoji_box_ padrão (pois usaremos os olhos LVGL fluidos)
+        if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        
+        // Exibe os olhos virtuais fluidos
+        if (left_eye_ != nullptr) lv_obj_remove_flag(left_eye_, LV_OBJ_FLAG_HIDDEN);
+        if (right_eye_ != nullptr) lv_obj_remove_flag(right_eye_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void LcdDisplay::EyeTimerCallback(lv_timer_t* timer) {
+    LcdDisplay* display = static_cast<LcdDisplay*>(timer->user_data);
+    display->UpdateEyeAnimations();
+}
+
+void LcdDisplay::UpdateEyeAnimations() {
+    auto& engine = TamagotchiEngine::GetInstance();
+    if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {
+        return; // Só anima os olhos se o robô nasceu!
+    }
+    
+    // Variáveis estáticas de controle de animação (similar ao RoboESP32.ino)
+    static int blink_counter = 0;
+    static int blink_state = 0; // 0=normal, 1=fechando, 2=abrindo
+    static int eye_height = 40;
+    static int look_timer = 0;
+    static int look_x = 0;
+    static int look_y = 0;
+    static int target_look_x = 0;
+    static int target_look_y = 0;
+    
+    // 1. Processa o Piscar (Blink) dos olhos
+    blink_counter++;
+    if (blink_state == 0) {
+        // Pisca aleatoriamente a cada 3~6 segundos
+        if (blink_counter > (100 + (rand() % 100))) {
+            blink_state = 1; // Inicia o fechar de olhos
+            blink_counter = 0;
+        }
+    }
+    
+    if (blink_state == 1) {
+        eye_height -= 8;
+        if (eye_height <= 2) {
+            eye_height = 2;
+            blink_state = 2; // Inicia o abrir de olhos
+        }
+    } else if (blink_state == 2) {
+        eye_height += 8;
+        if (eye_height >= 40) {
+            eye_height = 40;
+            blink_state = 0; // Volta ao normal
+        }
+    }
+    
+    // 2. Processa o Olhar ao redor (Look around)
+    look_timer++;
+    if (look_timer > (150 + (rand() % 150))) {
+        look_timer = 0;
+        // 40% de chance de olhar para os lados, 60% de olhar para o centro
+        if ((rand() % 100) < 40) {
+            target_look_x = (rand() % 20) - 10;
+            target_look_y = (rand() % 12) - 6;
+        } else {
+            target_look_x = 0;
+            target_look_y = 0;
+        }
+    }
+    
+    // Interpolação suave para o olhar (easing)
+    if (look_x < target_look_x) look_x += 1;
+    else if (look_x > target_look_x) look_x -= 1;
+    if (look_y < target_look_y) look_y += 1;
+    else if (look_y > target_look_y) look_y -= 1;
+
+    // 3. Aplica o estilo baseado na emoção (Fome, Saúde, Tristeza, Raiva)
+    // Se estiver doente ou triste, muda a cor dos olhos para vermelho ou azul!
+    lv_color_t eye_color = lv_color_hex(0x00FFFF); // Cyan padrão (Feliz/Neutro)
+    
+    std::string emotion = engine.GetCurrentEmotion(0.0f, false, false);
+    if (emotion == "angry") {
+        eye_color = lv_color_hex(0xFF0000); // Vermelho para raiva / sarcástica
+    } else if (emotion == "sad" || emotion == "crying" || emotion == "confused") {
+        eye_color = lv_color_hex(0x0080FF); // Azul escuro para doente / triste
+    } else if (emotion == "loving") {
+        eye_color = lv_color_hex(0xFF66B2); // Rosa/pink para sensível
+    }
+    
+    if (left_eye_ != nullptr) {
+        lv_obj_set_size(left_eye_, 40, eye_height);
+        lv_obj_align(left_eye_, LV_ALIGN_CENTER, -50 + look_x, -10 + look_y);
+        lv_obj_set_style_bg_color(left_eye_, eye_color, 0);
+    }
+    if (right_eye_ != nullptr) {
+        lv_obj_set_size(right_eye_, 40, eye_height);
+        lv_obj_align(right_eye_, LV_ALIGN_CENTER, 50 + look_x, -10 + look_y);
+        lv_obj_set_style_bg_color(right_eye_, eye_color, 0);
     }
 }

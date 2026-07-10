@@ -35,6 +35,14 @@ protected:
     esp_timer_handle_t preview_timer_ = nullptr;
     std::unique_ptr<LvglImage> preview_image_cached_ = nullptr;
     bool hide_subtitle_ = false;  // Control whether to hide chat messages/subtitles
+    lv_obj_t* egg_obj_ = nullptr;
+    lv_obj_t* egg_bar_ = nullptr;
+    lv_obj_t* left_eye_ = nullptr;
+    lv_obj_t* right_eye_ = nullptr;
+    lv_timer_t* eye_timer_ = nullptr;
+    
+    static void EyeTimerCallback(lv_timer_t* timer);
+    void UpdateEyeAnimations();
 
     void InitializeLcdThemes();
     virtual bool Lock(int timeout_ms = 0) override;
@@ -51,6 +59,7 @@ public:
     virtual void ClearChatMessages() override;
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image) override;
     virtual void SetupUI() override;
+    virtual void UpdateStatusBar(bool update_all = false) override;
     // Add theme switching function
     virtual void SetTheme(Theme* theme) override;
     

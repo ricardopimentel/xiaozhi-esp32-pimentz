@@ -3,6 +3,8 @@
 #include <esp_wifi.h>
 #include <esp_log.h>
 #include <string.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include "application.h"
 #include "board.h"
 #include "display.h"
@@ -79,11 +81,18 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
 }
 
 void InitializeEspNowReceiver() {
-    esp_err_t err = esp_now_init();
-    if (err == ESP_OK) {
-        esp_now_register_recv_cb(esp_now_recv_cb);
-        ESP_LOGI(TAG, "Receptor ESP-NOW registrado com sucesso!");
-    } else {
-        ESP_LOGE(TAG, "Falha ao inicializar ESP-NOW: %s", esp_err_to_name(err));
+    int retries = 0;
+    esp_err_t err = ESP_OK;
+    while (retries < 10) {
+        err = esp_now_init();
+        if (err == ESP_OK) {
+            esp_now_register_recv_cb(esp_now_recv_cb);
+            ESP_LOGI(TAG, "Receptor ESP-NOW registrado com sucesso!");
+            return;
+        }
+        ESP_LOGW(TAG, "Falha ao inicializar ESP-NOW (tentativa %d): %s. Retentando em 1s...", retries + 1, esp_err_to_name(err));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        retries++;
     }
+    ESP_LOGE(TAG, "Falha definitiva ao inicializar ESP-NOW após 10s: %s", esp_err_to_name(err));
 }

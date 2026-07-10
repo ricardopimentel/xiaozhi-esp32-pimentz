@@ -3,9 +3,7 @@
     "builds": [
         {
             "name": "lc-s3-wifi-1.54tft",
-            "sdkconfig_append": [
-                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y"
-            ]
+            "sdkconfig_append": []
         }
     ]
 }
