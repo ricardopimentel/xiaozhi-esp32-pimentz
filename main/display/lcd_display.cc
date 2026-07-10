@@ -1013,22 +1013,18 @@ void LcdDisplay::SetupUI() {
     lv_bar_set_value(egg_bar_, 0, LV_ANIM_OFF);
     lv_obj_add_flag(egg_bar_, LV_OBJ_FLAG_HIDDEN);
 
-    // Cópia da lógica dos olhos dinâmicos do RoboESP32
-    left_eye_ = lv_obj_create(screen);
-    lv_obj_set_size(left_eye_, 40, 40);
-    lv_obj_set_style_bg_color(left_eye_, lv_color_hex(0x00FFFF), 0); // Cor Cyan
-    lv_obj_set_style_radius(left_eye_, 20, 0); // Olhos redondos
-    lv_obj_set_style_border_width(left_eye_, 0, 0);
-    lv_obj_align(left_eye_, LV_ALIGN_CENTER, -50, -10);
-    lv_obj_add_flag(left_eye_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
-
-    right_eye_ = lv_obj_create(screen);
-    lv_obj_set_size(right_eye_, 40, 40);
-    lv_obj_set_style_bg_color(right_eye_, lv_color_hex(0x00FFFF), 0); // Cor Cyan
-    lv_obj_set_style_radius(right_eye_, 20, 0); // Olhos redondos
-    lv_obj_set_style_border_width(right_eye_, 0, 0);
-    lv_obj_align(right_eye_, LV_ALIGN_CENTER, 50, -10);
-    lv_obj_add_flag(right_eye_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
+    // Criação do Canvas do Rosto OLED (256x128 pixels, escala 2x)
+    face_canvas_ = lv_canvas_create(screen);
+    size_t canvas_size = 256 * 128 * sizeof(lv_color_t);
+    face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);
+    if (face_canvas_buf_) {
+        lv_canvas_set_buffer(face_canvas_, face_canvas_buf_, 256, 128, LV_IMG_CF_TRUE_COLOR);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -10);
+        lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
+    } else {
+        ESP_LOGE(TAG, "Falha ao alocar buffer para o Canvas do rosto!");
+    }
+    InicializarParticulas();
 
     // Timer para rodar as animações fluidas dos olhos (a cada 30ms)
     eye_timer_ = lv_timer_create(EyeTimerCallback, 30, this);
@@ -1358,10 +1354,9 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
     ESP_LOGI(TAG, "UpdateStatusBar: estado=%d, segundos=%d", (int)estado, engine.GetSegundosChocados());
     
     if (estado != ESTADO_NASCIDO) {
-        // Se ainda não nasceu, esconde o emoji_box_ e os olhos virtuais
+        // Se ainda não nasceu, esconde o emoji_box_ e o rosto dinâmico
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-        if (left_eye_ != nullptr) lv_obj_add_flag(left_eye_, LV_OBJ_FLAG_HIDDEN);
-        if (right_eye_ != nullptr) lv_obj_add_flag(right_eye_, LV_OBJ_FLAG_HIDDEN);
+        if (face_canvas_ != nullptr) lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
         
         // Exibe o ovo e a barra de progresso
         if (egg_obj_ != nullptr) {
@@ -1385,9 +1380,8 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
         // Esconde o emoji_box_ padrão (pois usaremos os olhos LVGL fluidos)
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         
-        // Exibe os olhos virtuais fluidos
-        if (left_eye_ != nullptr) lv_obj_remove_flag(left_eye_, LV_OBJ_FLAG_HIDDEN);
-        if (right_eye_ != nullptr) lv_obj_remove_flag(right_eye_, LV_OBJ_FLAG_HIDDEN);
+        // Exibe o rosto dinâmico fluidos
+        if (face_canvas_ != nullptr) lv_obj_remove_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -1396,87 +1390,248 @@ void LcdDisplay::EyeTimerCallback(lv_timer_t* timer) {
     display->UpdateEyeAnimations();
 }
 
-void LcdDisplay::UpdateEyeAnimations() {
-    auto& engine = TamagotchiEngine::GetInstance();
-    if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {
-        return; // Só anima os olhos se o robô nasceu!
+void LcdDisplay::InicializarParticulas() {
+    for (int i = 0; i < 15; i++) {
+        particulasFisicas_[i].ativa = false;
     }
+}
+
+void LcdDisplay::CriarParticula(float x, float y, float vx, float vy, char tipo, int maxVida) {
+    for (int i = 0; i < 15; i++) {
+        if (!particulasFisicas_[i].ativa) {
+            particulasFisicas_[i].x = x;
+            particulasFisicas_[i].y = y;
+            particulasFisicas_[i].vx = vx;
+            particulasFisicas_[i].vy = vy;
+            particulasFisicas_[i].tipo = tipo;
+            particulasFisicas_[i].vida = maxVida;
+            particulasFisicas_[i].maxVida = maxVida;
+            particulasFisicas_[i].ativa = true;
+            break;
+        }
+    }
+}
+
+void LcdDisplay::AtualizarParticulas() {
+    for (int i = 0; i < 15; i++) {
+        if (particulasFisicas_[i].ativa) {
+            particulasFisicas_[i].x += particulasFisicas_[i].vx;
+            particulasFisicas_[i].y += particulasFisicas_[i].vy;
+            if (particulasFisicas_[i].tipo == 'S' || particulasFisicas_[i].tipo == 'L') {
+                particulasFisicas_[i].vy += 0.04;
+            } else if (particulasFisicas_[i].tipo == 'Z') {
+                particulasFisicas_[i].vx += (sin(esp_timer_get_time() / 100000.0) * 0.03);
+            } else {
+                particulasFisicas_[i].vy -= 0.025;
+                particulasFisicas_[i].vx += (sin(esp_timer_get_time() / 50000.0 + i) * 0.06);
+            }
+            particulasFisicas_[i].vida--;
+            if (particulasFisicas_[i].vida <= 0 || particulasFisicas_[i].y < 0 || particulasFisicas_[i].y > 64 || particulasFisicas_[i].x < 0 || particulasFisicas_[i].x > 128) {
+                particulasFisicas_[i].ativa = false;
+            }
+        }
+    }
+}
+
+void LcdDisplay::DesenharParticulas(int xOffset) {
+    if (!face_canvas_) return;
+    lv_color_t color = lv_color_hex(0xFFFFFF);
+    for (int i = 0; i < 15; i++) {
+        if (particulasFisicas_[i].ativa) {
+            int px = ((int)particulasFisicas_[i].x + xOffset) * 2;
+            int py = ((int)particulasFisicas_[i].y) * 2;
+            if (particulasFisicas_[i].tipo == 'H') {
+                DrawHeart(px/2, py/2);
+            } else if (particulasFisicas_[i].tipo == '+') {
+                lv_canvas_draw_line(face_canvas_, px, py-2, px, py+2, lv_color_hex(0x00FF00), 2);
+                lv_canvas_draw_line(face_canvas_, px-2, py, px+2, py, lv_color_hex(0x00FF00), 2);
+            } else if (particulasFisicas_[i].tipo == '*') {
+                lv_canvas_draw_line(face_canvas_, px-2, py-2, px+2, py+2, lv_color_hex(0xFFA500), 2);
+                lv_canvas_draw_line(face_canvas_, px-2, py+2, px+2, py-2, lv_color_hex(0xFFA500), 2);
+            } else if (particulasFisicas_[i].tipo == 'Z') {
+                lv_canvas_draw_line(face_canvas_, px-3, py-3, px+3, py-3, color, 2);
+                lv_canvas_draw_line(face_canvas_, px+3, py-3, px-3, py+3, color, 2);
+                lv_canvas_draw_line(face_canvas_, px-3, py+3, px+3, py+3, color, 2);
+            } else if (particulasFisicas_[i].tipo == 'S') {
+                lv_canvas_draw_rect(face_canvas_, px, py, 4, 6, lv_color_hex(0x87CEFA), 0, LV_OPA_COVER, lv_color_hex(0x87CEFA), 0);
+            } else if (particulasFisicas_[i].tipo == 'L') {
+                lv_canvas_draw_rect(face_canvas_, px, py, 4, 6, lv_color_hex(0x0080FF), 0, LV_OPA_COVER, lv_color_hex(0x0080FF), 0);
+                lv_canvas_draw_line(face_canvas_, px+2, py-4, px+2, py, lv_color_hex(0x0080FF), 2);
+            }
+        }
+    }
+}
+
+void LcdDisplay::DrawEye(float x, float y, float w, float h, float r) {
+    if (!face_canvas_) return;
+    int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
+    lv_canvas_draw_rect(face_canvas_, px - pw/2, py - ph/2, pw, ph, lv_color_hex(0xFFFFFF), 0, LV_OPA_COVER, lv_color_hex(0xFFFFFF), r*2);
+}
+
+void LcdDisplay::DrawEyeHappy(float x, float y, float w, float h, float r, float progress) {
+    if (!face_canvas_) return;
+    int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
+    lv_canvas_draw_arc(face_canvas_, px, py + ph/4, pw/2, 180, 360, lv_color_hex(0xFFFFFF), 4);
+}
+
+void LcdDisplay::DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft) {
+    if (!face_canvas_) return;
+    int px = x * 2; int py = y * 2; int pw = w * 2;
+    if (isLeft) {
+        lv_canvas_draw_line(face_canvas_, px - pw/2, py - pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        lv_canvas_draw_line(face_canvas_, px - pw/2, py + pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
+    } else {
+        lv_canvas_draw_line(face_canvas_, px + pw/2, py - pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        lv_canvas_draw_line(face_canvas_, px + pw/2, py + pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
+    }
+}
+
+void LcdDisplay::DrawHeart(int x, int y) {
+    if (!face_canvas_) return;
+    int px = x * 2; int py = y * 2;
+    lv_color_t c = lv_color_hex(0xFF0000);
+    lv_canvas_draw_line(face_canvas_, px-4, py-4, px, py, c, 3);
+    lv_canvas_draw_line(face_canvas_, px+4, py-4, px, py, c, 3);
+}
+
+void LcdDisplay::DrawLargeHeart(int x, int y, bool small) {
+    if (!face_canvas_) return;
+    int px = x * 2; int py = y * 2;
+    lv_color_t c = lv_color_hex(0xFF0000);
+    int size = small ? 4 : 8;
+    lv_canvas_draw_arc(face_canvas_, px - size, py - size, size, 135, 315, c, 4);
+    lv_canvas_draw_arc(face_canvas_, px + size, py - size, size, 225, 45, c, 4);
+    lv_canvas_draw_line(face_canvas_, px - size*2, py, px, py + size*2, c, 4);
+    lv_canvas_draw_line(face_canvas_, px + size*2, py, px, py + size*2, c, 4);
+}
+
+void LcdDisplay::DrawOledFace(int xOffset) {
+    if (!face_canvas_) return;
+    lv_canvas_fill_bg(face_canvas_, lv_color_black(), LV_OPA_COVER);
+    auto& engine = TamagotchiEngine::GetInstance();
     
-    // Variáveis estáticas de controle de animação (similar ao RoboESP32.ino)
-    static int blink_counter = 0;
-    static int blink_state = 0; // 0=normal, 1=fechando, 2=abrindo
-    static int eye_height = 40;
-    static int look_timer = 0;
-    static int look_x = 0;
-    static int look_y = 0;
-    static int target_look_x = 0;
-    static int target_look_y = 0;
+    float eyeLx = 44, eyeLy = 32, eyeLw = 12, eyeLh = 24, eyeRadius = 6;
+    float eyeRx = 84, eyeRy = 32, eyeRw = 12, eyeRh = 24;
     
-    // 1. Processa o Piscar (Blink) dos olhos
-    blink_counter++;
-    if (blink_state == 0) {
-        // Pisca aleatoriamente a cada 3~6 segundos
-        if (blink_counter > (100 + (rand() % 100))) {
-            blink_state = 1; // Inicia o fechar de olhos
+    int fome = engine.GetFome();
+    int diversao = engine.GetDiversao();
+    int saude = engine.GetSaude();
+    bool estaDoente = engine.EstaDoente();
+    
+    bool precisaComida = (fome <= 30);
+    bool precisaBrincar = (diversao <= 30);
+    bool precisaSaude = (saude <= 30 || estaDoente);
+    int numIcons = 0;
+    if (precisaComida) numIcons++;
+    if (precisaBrincar) numIcons++;
+    if (precisaSaude) numIcons++;
+
+    uint32_t ms = esp_timer_get_time() / 1000;
+    std::string emotion = engine.GetCurrentEmotion(0.0f, false, false);
+    
+    int tremorX = 0, tremorY = 0;
+    if (emotion == "confused") tremorX = (ms % 100 < 50) ? 1 : -1;
+    
+    if (emotion == "happy") {
+        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0);
+        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0);
+    } else if (emotion == "angry") {
+        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius);
+        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius);
+        lv_canvas_draw_line(face_canvas_, (eyeLx - 10 + xOffset)*2, (eyeLy - 12)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 8)*2, lv_color_hex(0xFF0000), 4);
+        lv_canvas_draw_line(face_canvas_, (eyeRx - 8 + xOffset)*2, (eyeRy - 8)*2, (eyeRx + 10 + xOffset)*2, (eyeRy - 12)*2, lv_color_hex(0xFF0000), 4);
+    } else if (emotion == "sad" || emotion == "crying") {
+        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius);
+        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius);
+        lv_canvas_draw_line(face_canvas_, (eyeLx - 8 + xOffset)*2, (eyeLy - 10)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 14)*2, lv_color_hex(0x0080FF), 4);
+        lv_canvas_draw_line(face_canvas_, (eyeRx - 8 + xOffset)*2, (eyeRy - 14)*2, (eyeRx + 8 + xOffset)*2, (eyeRy - 10)*2, lv_color_hex(0x0080FF), 4);
+    } else if (emotion == "loving") {
+        DrawLargeHeart(eyeLx + xOffset + tremorX, eyeLy + tremorY, (ms/400)%2);
+        DrawLargeHeart(eyeRx + xOffset + tremorX, eyeRy + tremorY, (ms/400)%2);
+    } else {
+        static int blink_counter = 0, blink_state = 0;
+        static float eye_h = 24;
+        blink_counter++;
+        if (blink_state == 0 && blink_counter > 100) {
+            if ((rand() % 100) < 20) blink_state = 1;
             blink_counter = 0;
         }
+        if (blink_state == 1) {
+            eye_h -= 4; if (eye_h <= 2) blink_state = 2;
+        } else if (blink_state == 2) {
+            eye_h += 4; if (eye_h >= 24) { eye_h = 24; blink_state = 0; }
+        }
+        static int look_timer = 0, look_x = 0, look_y = 0;
+        look_timer++;
+        if (look_timer > 150) {
+            look_timer = 0;
+            if ((rand()%100) < 40) { look_x = (rand()%10) - 5; look_y = (rand()%6) - 3; }
+            else { look_x = 0; look_y = 0; }
+        }
+        DrawEye(eyeLx + xOffset + tremorX + look_x, eyeLy + tremorY + look_y, eyeLw, eye_h, eyeRadius);
+        DrawEye(eyeRx + xOffset + tremorX + look_x, eyeRy + tremorY + look_y, eyeRw, eye_h, eyeRadius);
     }
     
-    if (blink_state == 1) {
-        eye_height -= 8;
-        if (eye_height <= 2) {
-            eye_height = 2;
-            blink_state = 2; // Inicia o abrir de olhos
-        }
-    } else if (blink_state == 2) {
-        eye_height += 8;
-        if (eye_height >= 40) {
-            eye_height = 40;
-            blink_state = 0; // Volta ao normal
-        }
+    float avgEyeX = (eyeLx + eyeRx) / 2.0, avgEyeY = (eyeLy + eyeRy) / 2.0;
+    int mouthShiftX = (avgEyeX - 64.0) * 0.85, mouthShiftY = (avgEyeY - 32.0) * 0.80;
+    lv_color_t mc = lv_color_hex(0xFFFFFF);
+    if (emotion == "sad" || emotion == "crying") {
+        lv_canvas_draw_line(face_canvas_, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
+        lv_canvas_draw_line(face_canvas_, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
+    } else if (emotion == "happy") {
+        lv_canvas_draw_line(face_canvas_, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, mc, 4);
+        lv_canvas_draw_line(face_canvas_, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
+    } else if (emotion == "angry") {
+        lv_canvas_draw_line(face_canvas_, (58 + mouthShiftX)*2, (49 + mouthShiftY)*2, (70 + mouthShiftX)*2, (49 + mouthShiftY)*2, mc, 4);
+    } else {
+        lv_canvas_draw_line(face_canvas_, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, mc, 4);
+        lv_canvas_draw_line(face_canvas_, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
     }
     
-    // 2. Processa o Olhar ao redor (Look around)
-    look_timer++;
-    if (look_timer > (150 + (rand() % 150))) {
-        look_timer = 0;
-        // 40% de chance de olhar para os lados, 60% de olhar para o centro
-        if ((rand() % 100) < 40) {
-            target_look_x = (rand() % 20) - 10;
-            target_look_y = (rand() % 12) - 6;
-        } else {
-            target_look_x = 0;
-            target_look_y = 0;
-        }
+    float temp = engine.GetTemperatura();
+    if (temp < 25.0f && temp > 0.0f) {
+        int tremorMouth = (ms % 100 < 50) ? 2 : -2;
+        lv_canvas_draw_line(face_canvas_, 54*2, (48+tremorMouth)*2, 60*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        lv_canvas_draw_line(face_canvas_, 60*2, (48-tremorMouth)*2, 66*2, (48+tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        lv_canvas_draw_line(face_canvas_, 66*2, (48+tremorMouth)*2, 72*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
     }
-    
-    // Interpolação suave para o olhar (easing)
-    if (look_x < target_look_x) look_x += 1;
-    else if (look_x > target_look_x) look_x -= 1;
-    if (look_y < target_look_y) look_y += 1;
-    else if (look_y > target_look_y) look_y -= 1;
 
-    // 3. Aplica o estilo baseado na emoção (Fome, Saúde, Tristeza, Raiva)
-    // Se estiver doente ou triste, muda a cor dos olhos para vermelho ou azul!
-    lv_color_t eye_color = lv_color_hex(0x00FFFF); // Cyan padrão (Feliz/Neutro)
-    
-    std::string emotion = engine.GetCurrentEmotion(0.0f, false, false);
-    if (emotion == "angry") {
-        eye_color = lv_color_hex(0xFF0000); // Vermelho para raiva / sarcástica
-    } else if (emotion == "sad" || emotion == "crying" || emotion == "confused") {
-        eye_color = lv_color_hex(0x0080FF); // Azul escuro para doente / triste
-    } else if (emotion == "loving") {
-        eye_color = lv_color_hex(0xFF66B2); // Rosa/pink para sensível
+    if (numIcons > 0) {
+        int totalW = (numIcons * 12) + ((numIcons - 1) * 4);
+        int startX = 64 - (totalW / 2) + xOffset + tremorX;
+        int drawY = 4 + tremorY;
+        lv_canvas_draw_rect(face_canvas_, (startX - 4)*2, (drawY - 3)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 0, LV_OPA_TRANSP, lv_color_hex(0xFFFFFF), 2*2);
+        lv_canvas_draw_line(face_canvas_, 64*2, (drawY+11)*2, 62*2, (drawY+14)*2, lv_color_hex(0xFFFFFF), 2);
+        
+        int currentX = startX;
+        if (precisaComida) {
+            lv_canvas_draw_rect(face_canvas_, (currentX + 3)*2, (drawY + 3)*2, 6*2, 2*2, lv_color_hex(0xFFA500), 0, LV_OPA_COVER, lv_color_hex(0xFFA500), 0);
+            currentX += 16;
+        }
+        if (precisaBrincar) {
+            lv_canvas_draw_rect(face_canvas_, currentX*2, (drawY - 1)*2, 12*2, 7*2, lv_color_hex(0x00FF00), 0, LV_OPA_TRANSP, lv_color_hex(0x00FF00), 2);
+            currentX += 16;
+        }
+        if (precisaSaude) {
+            lv_canvas_draw_line(face_canvas_, (currentX+6)*2, (drawY)*2, (currentX+6)*2, (drawY+6)*2, lv_color_hex(0xFF0000), 4);
+            lv_canvas_draw_line(face_canvas_, (currentX+3)*2, (drawY+3)*2, (currentX+9)*2, (drawY+3)*2, lv_color_hex(0xFF0000), 4);
+            currentX += 16;
+        }
     }
     
-    if (left_eye_ != nullptr) {
-        lv_obj_set_size(left_eye_, 40, eye_height);
-        lv_obj_align(left_eye_, LV_ALIGN_CENTER, -50 + look_x, -10 + look_y);
-        lv_obj_set_style_bg_color(left_eye_, eye_color, 0);
+    if (emotion == "crying") {
+        if ((rand() % 100) < 6) CriarParticula(eyeLx - 8, eyeLy + 6, -0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
+        if ((rand() % 100) < 6) CriarParticula(eyeRx + 8, eyeRy + 6,  0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
     }
-    if (right_eye_ != nullptr) {
-        lv_obj_set_size(right_eye_, 40, eye_height);
-        lv_obj_align(right_eye_, LV_ALIGN_CENTER, 50 + look_x, -10 + look_y);
-        lv_obj_set_style_bg_color(right_eye_, eye_color, 0);
-    }
+    if (temp > 32.0f && (rand() % 100) < 5) CriarParticula(rand()%120, 0, 0, 0.6 + (rand()%6)/10.0, 'S', 45);
+    if (emotion == "loving" && (rand() % 100) < 15) CriarParticula(64 + (rand()%30 - 15), 32, (rand()%10 - 5)/10.0, -0.5, 'H', 35);
+    
+    AtualizarParticulas();
+    DesenharParticulas(xOffset);
+}
+
+void LcdDisplay::UpdateEyeAnimations() {
+    auto& engine = TamagotchiEngine::GetInstance();
+    if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) return;
+    DrawOledFace(0);
 }

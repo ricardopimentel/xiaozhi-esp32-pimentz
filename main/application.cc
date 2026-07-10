@@ -281,7 +281,7 @@ void Application::Run() {
                 if (!nasceu_limpo) {
                     nasceu_limpo = true;
                     display->SetStatus(Lang::Strings::STANDBY);
-                    display->SetChatMessage("system", "Olá, eu nasci!");
+                    display->ClearChatMessages();
                     display->SetEmotion("happy");
                 }
             }

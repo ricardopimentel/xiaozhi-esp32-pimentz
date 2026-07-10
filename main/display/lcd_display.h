@@ -37,8 +37,34 @@ protected:
     bool hide_subtitle_ = false;  // Control whether to hide chat messages/subtitles
     lv_obj_t* egg_obj_ = nullptr;
     lv_obj_t* egg_bar_ = nullptr;
-    lv_obj_t* left_eye_ = nullptr;
-    lv_obj_t* right_eye_ = nullptr;
+    
+    lv_obj_t* face_canvas_ = nullptr;
+    uint8_t* face_canvas_buf_ = nullptr;
+    
+    struct ParticulaFisica {
+        float x;
+        float y;
+        float vx;
+        float vy;
+        char tipo;
+        int vida;
+        int maxVida;
+        bool ativa;
+    };
+    ParticulaFisica particulasFisicas_[15];
+    
+    void InicializarParticulas();
+    void CriarParticula(float x, float y, float vx, float vy, char tipo, int maxVida);
+    void AtualizarParticulas();
+    void DesenharParticulas(int xOffset);
+
+    void DrawEye(float x, float y, float w, float h, float r);
+    void DrawEyeHappy(float x, float y, float w, float h, float r, float progress);
+    void DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft);
+    void DrawLargeHeart(int x, int y, bool small);
+    void DrawHeart(int x, int y);
+    void DrawOledFace(int xOffset);
+
     lv_timer_t* eye_timer_ = nullptr;
     
     static void EyeTimerCallback(lv_timer_t* timer);
