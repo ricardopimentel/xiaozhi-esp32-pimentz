@@ -107,7 +107,7 @@ void TamagotchiEngine::Update() {
     }
 
     // 1.5. Processa interações por RFID se nasceu
-    if (sensor_rfid_lido_ && sensor_rfid_uid_) {
+    if (sensor_rfid_lido_) {
         if (!EUIDZerado(uid_comida_) && ComparaUID(sensor_rfid_uid_, uid_comida_)) {
             Feed();
         } else if (!EUIDZerado(uid_brincar_) && ComparaUID(sensor_rfid_uid_, uid_brincar_)) {
@@ -185,7 +185,7 @@ void TamagotchiEngine::Update() {
     }
 
     // 4. Lógica de Doença por Frio
-    if (temperatura < 18.0f && temperatura > 0.0f && !esta_doente_) {
+    if (sensor_temperatura_ < 18.0f && temperatura > 0.0f && !esta_doente_) {
         if (tempo_no_frio_ == 0) {
             tempo_no_frio_ = now;
         } else if (now - tempo_no_frio_ >= 60000) { // 1 minuto no frio
@@ -340,7 +340,7 @@ std::string TamagotchiEngine::GetCurrentEmotion(float temperatura, bool choque, 
     if (temperatura > 28.0f) {
         return "embarrassed";
     }
-    if (temperatura < 18.0f && temperatura > 0.0f) {
+    if (sensor_temperatura_ < 18.0f && temperatura > 0.0f) {
         return "confused";
     }
     if (esta_doente_) {
@@ -374,14 +374,6 @@ void TamagotchiEngine::CopiaUID(uint8_t* dest, const uint8_t* src) {
     dest[3] = src[3];
     SaveState();
 }
-
-
-    fome_ = fome;
-    diversao_ = diversao;
-    saude_ = saude;
-}
-
-
 void TamagotchiEngine::SetSensorData(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID) {
     sensor_temperatura_ = temperatura;
     sensor_umidade_ = umidade;
