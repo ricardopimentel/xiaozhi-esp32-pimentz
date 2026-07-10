@@ -46,6 +46,16 @@ void TamagotchiEngine::Initialize() {
         if (nvs_get_u8(handle, "vinculo", &vinculo) == ESP_OK) pontos_de_vinculo_ = vinculo;
         if (nvs_get_u32(handle, "segVida", &segVida) == ESP_OK) segundos_de_vida_ = segVida;
 
+        // Carrega os cartões RFID auto-aprendidos
+        size_t len = 4;
+        nvs_get_blob(handle, "uidComida", uid_comida_, &len);
+        len = 4;
+        nvs_get_blob(handle, "uidBrincar", uid_brincar_, &len);
+        len = 4;
+        nvs_get_blob(handle, "uidSaude", uid_saude_, &len);
+        len = 4;
+        nvs_get_blob(handle, "uidPet", uid_pet_, &len);
+
         nvs_close(handle);
         
         // Inicializa a personalidade baseada nos pontos salvos
@@ -73,6 +83,12 @@ void TamagotchiEngine::SaveState() {
         nvs_set_u8(handle, "vinculo", pontos_de_vinculo_);
         nvs_set_u32(handle, "segVida", segundos_de_vida_);
         
+        // Salva os cartões RFID auto-aprendidos
+        nvs_set_blob(handle, "uidComida", uid_comida_, 4);
+        nvs_set_blob(handle, "uidBrincar", uid_brincar_, 4);
+        nvs_set_blob(handle, "uidSaude", uid_saude_, 4);
+        nvs_set_blob(handle, "uidPet", uid_pet_, 4);
+        
         nvs_commit(handle);
         nvs_close(handle);
         
@@ -88,6 +104,44 @@ void TamagotchiEngine::Update(float temperatura, float umidade, bool rfidLido, c
     if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
         ProcessarCicloIncubacao(rfidLido, rfidUID);
         return;
+    }
+
+    // 1.5. Processa interações por RFID se nasceu
+    if (rfidLido && rfidUID) {
+        if (!EUIDZerado(uid_comida_) && ComparaUID(rfidUID, uid_comida_)) {
+            Feed();
+        } else if (!EUIDZerado(uid_brincar_) && ComparaUID(rfidUID, uid_brincar_)) {
+            Play();
+        } else if (!EUIDZerado(uid_saude_) && ComparaUID(rfidUID, uid_saude_)) {
+            Heal();
+        } else if (!EUIDZerado(uid_pet_) && ComparaUID(rfidUID, uid_pet_)) {
+            Pet();
+        } else {
+            // Auto-aprendizado na ordem
+            if (EUIDZerado(uid_comida_)) {
+                CopiaUID(uid_comida_, rfidUID);
+                ESP_LOGI(TAG, "Cartão registrado para COMIDA!");
+                Feed();
+            } else if (EUIDZerado(uid_brincar_)) {
+                if (!ComparaUID(rfidUID, uid_comida_)) {
+                    CopiaUID(uid_brincar_, rfidUID);
+                    ESP_LOGI(TAG, "Cartão registrado para BRINCAR!");
+                    Play();
+                }
+            } else if (EUIDZerado(uid_saude_)) {
+                if (!ComparaUID(rfidUID, uid_comida_) && !ComparaUID(rfidUID, uid_brincar_)) {
+                    CopiaUID(uid_saude_, rfidUID);
+                    ESP_LOGI(TAG, "Cartão registrado para SAUDE!");
+                    Heal();
+                }
+            } else if (EUIDZerado(uid_pet_)) {
+                if (!ComparaUID(rfidUID, uid_comida_) && !ComparaUID(rfidUID, uid_brincar_) && !ComparaUID(rfidUID, uid_saude_)) {
+                    CopiaUID(uid_pet_, rfidUID);
+                    ESP_LOGI(TAG, "Cartão registrado para PET!");
+                    Pet();
+                }
+            }
+        }
     }
 
     // 2. Ticks de vida do Robô Nascido
@@ -181,11 +235,20 @@ void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfi
                 NascerPet();
             }
         }
-    } else if (estado_nascimento_ == ESTADO_OVO && rfidLido) {
-        estado_nascimento_ = ESTADO_CHOCANDO;
-        segundos_chocados_ = 0;
-        SaveState();
-        ESP_LOGI(TAG, "Ovo detectado via RFID! Iniciando incubação...");
+    } else if (estado_nascimento_ == ESTADO_OVO && rfidLido && rfidUID) {
+        // Se a tag do pet estiver zerada, aprende ela
+        if (EUIDZerado(uid_pet_)) {
+            CopiaUID(uid_pet_, rfidUID);
+            ESP_LOGI(TAG, "Cartão do PET registrado na incubação!");
+        }
+        
+        // Só choca se for o cartão do pet correto
+        if (ComparaUID(rfidUID, uid_pet_)) {
+            estado_nascimento_ = ESTADO_CHOCANDO;
+            segundos_chocados_ = 0;
+            SaveState();
+            ESP_LOGI(TAG, "Ovo correto detectado! Iniciando incubação...");
+        }
     }
 }
 
@@ -289,4 +352,23 @@ std::string TamagotchiEngine::GetCurrentEmotion(float temperatura, bool choque, 
     }
     
     return "happy";
+}
+
+bool TamagotchiEngine::ComparaUID(const uint8_t* a, const uint8_t* b) const {
+    if (!a || !b) return false;
+    return (a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3]);
+}
+
+bool TamagotchiEngine::EUIDZerado(const uint8_t* a) const {
+    if (!a) return true;
+    return (a[0] == 0 && a[1] == 0 && a[2] == 0 && a[3] == 0);
+}
+
+void TamagotchiEngine::CopiaUID(uint8_t* dest, const uint8_t* src) {
+    if (!dest || !src) return;
+    dest[0] = src[0];
+    dest[1] = src[1];
+    dest[2] = src[2];
+    dest[3] = src[3];
+    SaveState();
 }

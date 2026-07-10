@@ -49,6 +49,10 @@ private:
     void NascerPet();
     void ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfidUID);
     void AtualizarVinculo(int8_t pontos);
+    
+    bool ComparaUID(const uint8_t* a, const uint8_t* b) const;
+    bool EUIDZerado(const uint8_t* a) const;
+    void CopiaUID(uint8_t* dest, const uint8_t* src);
 
     // Estados e atributos
     EstadoNascimento estado_nascimento_ = ESTADO_OVO;
@@ -58,6 +62,12 @@ private:
     bool esta_doente_ = false;
     uint32_t segundos_de_vida_ = 0;
     uint32_t idade_dias_ = 0;
+    
+    // UIDs de RFID para interação
+    uint8_t uid_comida_[4] = {0};
+    uint8_t uid_brincar_[4] = {0};
+    uint8_t uid_saude_[4] = {0};
+    uint8_t uid_pet_[4] = {0};
     
     Personalidade personalidade_natural_ = PERSONALIDADE_BASICA;
     Personalidade personalidade_ = PERSONALIDADE_BASICA;

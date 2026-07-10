@@ -32,13 +32,28 @@ struct __attribute__((packed)) RobotState {
   bool animacaoDance;
   uint8_t valorDado;
   char fala[64];
+  
+  // Novos campos para a Fase 2
+  bool rfidLido;
+  uint8_t rfidUID[4];
 };
 
 static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len) {
-    if (len == sizeof(RobotState)) {
+    size_t new_size = sizeof(RobotState);
+    size_t old_size = new_size - 5;
+    
+    if (len == new_size || len == old_size) {
         RobotState state;
-        memcpy(&state, data, sizeof(RobotState));
-        ESP_LOGI(TAG, "Recebido RobotState via ESP-NOW: Fome=%d, Diversao=%d, Humor=%d", state.fome, state.diversao, state.humor);
+        memset(&state, 0, sizeof(RobotState));
+        memcpy(&state, data, len); // Copia apenas o que foi enviado
+        
+        if (len == old_size) {
+            state.rfidLido = false;
+            memset(state.rfidUID, 0, 4);
+        }
+        
+        ESP_LOGI(TAG, "Recebido RobotState via ESP-NOW: Fome=%d, Diversao=%d, Humor=%d, RFID_Lido=%d", 
+                 state.fome, state.diversao, state.humor, state.rfidLido);
         
         // Executa a atualização da interface de forma thread-safe na fila principal da aplicação
         Application::GetInstance().Schedule([state]() {
@@ -46,9 +61,8 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             if (display == nullptr) return;
             
             // Atualiza o motor do Tamagotchi com as leituras físicas do corpo
-            // Temporariamente passamos falso/nullptr para o RFID até atualizarmos o protocolo de envio do corpo
             auto& engine = TamagotchiEngine::GetInstance();
-            engine.Update(state.temperatura, state.umidade, false, nullptr);
+            engine.Update(state.temperatura, state.umidade, state.rfidLido, state.rfidUID);
             
             // Define a expressão facial dinamicamente gerada pelo motor Tamagotchi
             std::string emotion = engine.GetCurrentEmotion(state.temperatura, state.choqueDetectado, state.obstaculoDetectado);
@@ -60,7 +74,7 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             }
         });
     } else {
-        ESP_LOGW(TAG, "Tamanho de pacote ESP-NOW incorreto: recebido %d, esperado %d", len, (int)sizeof(RobotState));
+        ESP_LOGW(TAG, "Tamanho de pacote ESP-NOW incorreto: recebido %d, esperados %d ou %d", len, (int)new_size, (int)old_size);
     }
 }
 
