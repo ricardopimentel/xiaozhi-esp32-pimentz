@@ -1,4 +1,6 @@
 
+#include "lcd_display.h"
+#include <lvgl.h>
 #include <esp_heap_caps.h>
 
 #if LVGL_VERSION_MAJOR >= 9
@@ -59,7 +61,7 @@ static void draw_canvas_arc(lv_obj_t * canvas, int x, int y, int radius, int sta
     lv_canvas_finish_layer(canvas, &layer);
 }
 #endif
-#include "lcd_display.h"
+
 #include "gif/lvgl_gif.h"
 #include "settings.h"
 #include "tamagotchi_engine.h"
