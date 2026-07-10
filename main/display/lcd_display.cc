@@ -1391,7 +1391,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
 }
 
 void LcdDisplay::EyeTimerCallback(lv_timer_t* timer) {
-    LcdDisplay* display = static_cast<LcdDisplay*>(timer->user_data);
+    LcdDisplay* display = static_cast<LcdDisplay*>(lv_timer_get_user_data(timer));
     display->UpdateEyeAnimations();
 }
 
