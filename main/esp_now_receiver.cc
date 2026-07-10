@@ -45,24 +45,37 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             if (display == nullptr) return;
             
             // Define a expressão facial com base no estado e sensores do corpo
-            if (state.estadoNascimento == 0 || state.estadoNascimento == 1) { // Ovo
+            if (state.estadoNascimento == 0 || state.estadoNascimento == 1) { // Ovo / Chocando
                 display->SetEmotion("neutral");
             } else if (state.petDormindo) {
                 display->SetEmotion("sleepy");
             } else if (state.choqueDetectado) {
-                display->SetEmotion("confused");
+                display->SetEmotion("confused"); // Tremendo / tonto
             } else if (state.obstaculoDetectado) {
-                display->SetEmotion("surprised");
+                display->SetEmotion("surprised"); // Susto / surpresa
+            } else if (state.fome > 75) {
+                display->SetEmotion("crying"); // Chorando de muita fome
+            } else if (state.fome > 50) {
+                display->SetEmotion("sad"); // Triste com fome moderada
+            } else if (state.temperatura > 28.0) {
+                display->SetEmotion("embarrassed"); // Suando no calor
+            } else if (state.temperatura < 18.0 && state.temperatura > 0) {
+                display->SetEmotion("confused"); // Tremendo no frio
             } else if (state.animacaoComendo) {
-                display->SetEmotion("silly");
+                display->SetEmotion("silly"); // Mastigando / língua para fora
             } else if (state.animacaoBrincando) {
-                display->SetEmotion("winking");
+                display->SetEmotion("winking"); // Piscando alegre
+            } else if (state.animacaoAcariciado || state.humor == 2) {
+                display->SetEmotion("loving"); // Apaixonado / carinho / carente
+            } else if (state.humor == 3) {
+                display->SetEmotion("confused"); // Doente
             } else {
+                // Humor geral
                 switch (state.humor) {
                     case 0: display->SetEmotion("happy"); break;
                     case 1: display->SetEmotion("neutral"); break;
-                    case 2: display->SetEmotion("sad"); break;
-                    case 3: display->SetEmotion("sad"); break; // doente
+                    case 2: display->SetEmotion("loving"); break;
+                    case 3: display->SetEmotion("confused"); break;
                     default: display->SetEmotion("neutral"); break;
                 }
             }
