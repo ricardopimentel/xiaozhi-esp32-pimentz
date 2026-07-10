@@ -6,6 +6,7 @@
 #include "application.h"
 #include "board.h"
 #include "display.h"
+#include "tamagotchi_engine.h"
 
 static const char* TAG = "ESP_NOW_RX";
 
@@ -44,41 +45,14 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             auto display = Board::GetInstance().GetDisplay();
             if (display == nullptr) return;
             
-            // Define a expressão facial com base no estado e sensores do corpo
-            if (state.estadoNascimento == 0 || state.estadoNascimento == 1) { // Ovo / Chocando
-                display->SetEmotion("neutral");
-            } else if (state.petDormindo) {
-                display->SetEmotion("sleepy");
-            } else if (state.choqueDetectado) {
-                display->SetEmotion("confused"); // Tremendo / tonto
-            } else if (state.obstaculoDetectado) {
-                display->SetEmotion("surprised"); // Susto / surpresa
-            } else if (state.fome > 75) {
-                display->SetEmotion("crying"); // Chorando de muita fome
-            } else if (state.fome > 50) {
-                display->SetEmotion("sad"); // Triste com fome moderada
-            } else if (state.temperatura > 28.0) {
-                display->SetEmotion("embarrassed"); // Suando no calor
-            } else if (state.temperatura < 18.0 && state.temperatura > 0) {
-                display->SetEmotion("confused"); // Tremendo no frio
-            } else if (state.animacaoComendo) {
-                display->SetEmotion("silly"); // Mastigando / língua para fora
-            } else if (state.animacaoBrincando) {
-                display->SetEmotion("winking"); // Piscando alegre
-            } else if (state.animacaoAcariciado || state.humor == 2) {
-                display->SetEmotion("loving"); // Apaixonado / carinho / carente
-            } else if (state.humor == 3) {
-                display->SetEmotion("confused"); // Doente
-            } else {
-                // Humor geral
-                switch (state.humor) {
-                    case 0: display->SetEmotion("happy"); break;
-                    case 1: display->SetEmotion("neutral"); break;
-                    case 2: display->SetEmotion("loving"); break;
-                    case 3: display->SetEmotion("confused"); break;
-                    default: display->SetEmotion("neutral"); break;
-                }
-            }
+            // Atualiza o motor do Tamagotchi com as leituras físicas do corpo
+            // Temporariamente passamos falso/nullptr para o RFID até atualizarmos o protocolo de envio do corpo
+            auto& engine = TamagotchiEngine::GetInstance();
+            engine.Update(state.temperatura, state.umidade, false, nullptr);
+            
+            // Define a expressão facial dinamicamente gerada pelo motor Tamagotchi
+            std::string emotion = engine.GetCurrentEmotion(state.temperatura, state.choqueDetectado, state.obstaculoDetectado);
+            display->SetEmotion(emotion.c_str());
             
             // Exibe balão de texto se o robô estiver com uma fala ativa
             if (strlen(state.fala) > 0) {

@@ -37,6 +37,7 @@ set(SOURCES "audio/audio_codec.cc"
             "device_state_machine.cc"
             "assets.cc"
             "esp_now_receiver.cc"
+            "tamagotchi_engine.cc"
             "main.cc"
             )
 

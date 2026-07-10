@@ -10,6 +10,7 @@
 #include "assets.h"
 #include "settings.h"
 #include "esp_now_receiver.h"
+#include "tamagotchi_engine.h"
 
 #include <cstring>
 #include <esp_log.h>
@@ -62,6 +63,9 @@ bool Application::SetDeviceState(DeviceState state) {
 void Application::Initialize() {
     auto& board = Board::GetInstance();
     SetDeviceState(kDeviceStateStarting);
+    
+    // Inicializa o motor do Tamagotchi
+    TamagotchiEngine::GetInstance().Initialize();
 
     // Setup the display
     auto display = board.GetDisplay();
