@@ -225,9 +225,11 @@ void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfi
     
     if (estado_nascimento_ == ESTADO_CHOCANDO) {
         static uint64_t last_chocando_tick = 0;
-        if (now - last_chocando_tick >= 1000) {
+        uint64_t diff = now - last_chocando_tick;
+        if (diff >= 1000) {
             segundos_chocados_++;
             last_chocando_tick = now;
+            ESP_LOGI(TAG, "Incubação: %d segundos chocados", segundos_chocados_);
             if (segundos_chocados_ % 10 == 0) {
                 SaveState();
             }

@@ -1355,6 +1355,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
     // Atualiza o ovo e o progresso
     auto& engine = TamagotchiEngine::GetInstance();
     auto estado = engine.GetEstadoNascimento();
+    ESP_LOGI(TAG, "UpdateStatusBar: estado=%d, segundos=%d", (int)estado, engine.GetSegundosChocados());
     
     if (estado != ESTADO_NASCIDO) {
         // Se ainda não nasceu, esconde o emoji_box_ e os olhos virtuais
