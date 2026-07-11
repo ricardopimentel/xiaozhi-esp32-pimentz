@@ -1069,12 +1069,19 @@ void LcdDisplay::SetupUI() {
     face_canvas_ = lv_canvas_create(screen);
     size_t canvas_size = 256 * 128 * sizeof(lv_color_t);
     face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);
+    if (!face_canvas_buf_) {
+        ESP_LOGW(TAG, "Falha ao alocar Canvas na SPIRAM. Tentando RAM interna...");
+        face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_DEFAULT);
+    }
+    
     if (face_canvas_buf_) {
         lv_canvas_set_buffer(face_canvas_, face_canvas_buf_, 256, 128, LV_COLOR_FORMAT_NATIVE);
         lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -10);
-        lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrão até nascer
+        lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrao ate nascer
     } else {
-        ESP_LOGE(TAG, "Falha ao alocar buffer para o Canvas do rosto!");
+        ESP_LOGE(TAG, "Falha CRITICA ao alocar buffer para o Canvas do rosto! Desativando rosto.");
+        lv_obj_del(face_canvas_);
+        face_canvas_ = nullptr;
     }
     InicializarParticulas();
 
