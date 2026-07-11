@@ -61,7 +61,7 @@ protected:
     void DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer);
     void DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer);
     void DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer);
-    void DrawLargeHeart(int x, int y, bool small);
+    void DrawLargeHeart(int x, int y, bool small, lv_layer_t* layer);
     void DrawHeart(int x, int y, lv_layer_t* layer);
     void DrawOledFace(int xOffset);
 

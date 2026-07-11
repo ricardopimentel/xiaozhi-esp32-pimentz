@@ -1546,7 +1546,7 @@ void LcdDisplay::DrawHeart(int x, int y, lv_layer_t* layer) {
     draw_canvas_line(layer, px+4, py-4, px, py, c, 3);
 }
 
-void LcdDisplay::DrawLargeHeart(int x, int y, bool small) {
+void LcdDisplay::DrawLargeHeart(int x, int y, bool small, lv_layer_t* layer) {
     if (!face_canvas_) return;
     int px = x * 2; int py = y * 2;
     lv_color_t c = lv_color_hex(0xFF0000);
