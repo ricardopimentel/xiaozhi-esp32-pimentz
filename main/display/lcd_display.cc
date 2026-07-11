@@ -1075,7 +1075,7 @@ void LcdDisplay::SetupUI() {
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrao ate nascer
     } else {
         ESP_LOGE(TAG, "Falha CRITICA ao alocar buffer para o Canvas do rosto! Desativando rosto.");
-        lv_obj_del(face_canvas_);
+        // lv_obj_del(face_canvas_); // Comentado para evitar panico no LVGL
         face_canvas_ = nullptr;
     }
     InicializarParticulas();
