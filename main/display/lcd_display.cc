@@ -1606,8 +1606,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         draw_canvas_line(layer, (eyeLx - 8 + xOffset)*2, (eyeLy - 10)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 14)*2, lv_color_hex(0x0080FF), 4);
         draw_canvas_line(layer, (eyeRx - 8 + xOffset)*2, (eyeRy - 14)*2, (eyeRx + 8 + xOffset)*2, (eyeRy - 10)*2, lv_color_hex(0x0080FF), 4);
     } else if (emotion == "loving") {
-        DrawLargeHeart(eyeLx + xOffset + tremorX, eyeLy + tremorY, (ms/400)%2);
-        DrawLargeHeart(eyeRx + xOffset + tremorX, eyeRy + tremorY, (ms/400)%2);
+        DrawLargeHeart(eyeLx + xOffset + tremorX, eyeLy + tremorY, (ms/400)%2, layer);
+        DrawLargeHeart(eyeRx + xOffset + tremorX, eyeRy + tremorY, (ms/400)%2, layer);
     } else {
         static int blink_counter = 0, blink_state = 0;
         static float eye_h = 24;
