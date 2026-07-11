@@ -56,13 +56,13 @@ protected:
     void InicializarParticulas();
     void CriarParticula(float x, float y, float vx, float vy, char tipo, int maxVida);
     void AtualizarParticulas();
-    void DesenharParticulas(int xOffset);
+    void DesenharParticulas(int xOffset, lv_layer_t* layer);
 
-    void DrawEye(float x, float y, float w, float h, float r);
-    void DrawEyeHappy(float x, float y, float w, float h, float r, float progress);
-    void DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft);
+    void DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer);
+    void DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer);
+    void DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer);
     void DrawLargeHeart(int x, int y, bool small);
-    void DrawHeart(int x, int y);
+    void DrawHeart(int x, int y, lv_layer_t* layer);
     void DrawOledFace(int xOffset);
 
     lv_timer_t* eye_timer_ = nullptr;

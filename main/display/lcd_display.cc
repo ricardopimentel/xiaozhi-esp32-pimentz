@@ -5,35 +5,27 @@
 #include <esp_heap_caps.h>
 
 #if LVGL_VERSION_MAJOR >= 9
-static void draw_canvas_line(lv_obj_t * canvas, int x1, int y1, int x2, int y2, lv_color_t color, int width) {
-    lv_layer_t layer;
-    lv_canvas_init_layer(canvas, &layer);
+static void draw_canvas_line(lv_layer_t * layer, int x1, int y1, int x2, int y2, lv_color_t color, int width) {
     lv_draw_line_dsc_t dsc;
     lv_draw_line_dsc_init(&dsc);
     dsc.color = color;
     dsc.width = width;
     dsc.p1.x = x1; dsc.p1.y = y1;
     dsc.p2.x = x2; dsc.p2.y = y2;
-    lv_draw_line(&layer, &dsc);
-    lv_canvas_finish_layer(canvas, &layer);
-}
+    lv_draw_line(layer, &dsc);
+    }
 
-static void draw_canvas_rect(lv_obj_t * canvas, int x, int y, int w, int h, lv_color_t color, int radius) {
-    lv_layer_t layer;
-    lv_canvas_init_layer(canvas, &layer);
+static void draw_canvas_rect(lv_layer_t * layer, int x, int y, int w, int h, lv_color_t color, int radius) {
     lv_draw_rect_dsc_t dsc;
     lv_draw_rect_dsc_init(&dsc);
     dsc.bg_color = color;
     dsc.bg_opa = LV_OPA_COVER;
     dsc.radius = radius;
     lv_area_t area = {x, y, x + w, y + h};
-    lv_draw_rect(&layer, &dsc, &area);
-    lv_canvas_finish_layer(canvas, &layer);
-}
+    lv_draw_rect(layer, &dsc, &area);
+    }
 
-static void draw_canvas_rect_empty(lv_obj_t * canvas, int x, int y, int w, int h, lv_color_t border_color, int border_width, int radius) {
-    lv_layer_t layer;
-    lv_canvas_init_layer(canvas, &layer);
+static void draw_canvas_rect_empty(lv_layer_t * layer, int x, int y, int w, int h, lv_color_t border_color, int border_width, int radius) {
     lv_draw_rect_dsc_t dsc;
     lv_draw_rect_dsc_init(&dsc);
     dsc.bg_opa = LV_OPA_TRANSP;
@@ -42,13 +34,10 @@ static void draw_canvas_rect_empty(lv_obj_t * canvas, int x, int y, int w, int h
     dsc.border_opa = LV_OPA_COVER;
     dsc.radius = radius;
     lv_area_t area = {x, y, x + w, y + h};
-    lv_draw_rect(&layer, &dsc, &area);
-    lv_canvas_finish_layer(canvas, &layer);
-}
+    lv_draw_rect(layer, &dsc, &area);
+    }
 
-static void draw_canvas_arc(lv_obj_t * canvas, int x, int y, int radius, int start_angle, int end_angle, lv_color_t color, int width) {
-    lv_layer_t layer;
-    lv_canvas_init_layer(canvas, &layer);
+static void draw_canvas_arc(lv_layer_t * layer, int x, int y, int radius, int start_angle, int end_angle, lv_color_t color, int width) {
     lv_draw_arc_dsc_t dsc;
     lv_draw_arc_dsc_init(&dsc);
     dsc.color = color;
@@ -58,9 +47,8 @@ static void draw_canvas_arc(lv_obj_t * canvas, int x, int y, int radius, int sta
     dsc.radius = radius;
     dsc.start_angle = start_angle;
     dsc.end_angle = end_angle;
-    lv_draw_arc(&layer, &dsc);
-    lv_canvas_finish_layer(canvas, &layer);
-}
+    lv_draw_arc(layer, &dsc);
+    }
 #endif
 
 #include "gif/lvgl_gif.h"
@@ -1497,7 +1485,7 @@ void LcdDisplay::AtualizarParticulas() {
     }
 }
 
-void LcdDisplay::DesenharParticulas(int xOffset) {
+void LcdDisplay::DesenharParticulas(int xOffset, lv_layer_t* layer) {
     if (!face_canvas_) return;
     lv_color_t color = lv_color_hex(0xFFFFFF);
     for (int i = 0; i < 15; i++) {
@@ -1505,57 +1493,57 @@ void LcdDisplay::DesenharParticulas(int xOffset) {
             int px = ((int)particulasFisicas_[i].x + xOffset) * 2;
             int py = ((int)particulasFisicas_[i].y) * 2;
             if (particulasFisicas_[i].tipo == 'H') {
-                DrawHeart(px/2, py/2);
+                DrawHeart(px/2, py/2, layer);
             } else if (particulasFisicas_[i].tipo == '+') {
-                draw_canvas_line(face_canvas_, px, py-2, px, py+2, lv_color_hex(0x00FF00), 2);
-                draw_canvas_line(face_canvas_, px-2, py, px+2, py, lv_color_hex(0x00FF00), 2);
+                draw_canvas_line(layer, px, py-2, px, py+2, lv_color_hex(0x00FF00), 2);
+                draw_canvas_line(layer, px-2, py, px+2, py, lv_color_hex(0x00FF00), 2);
             } else if (particulasFisicas_[i].tipo == '*') {
-                draw_canvas_line(face_canvas_, px-2, py-2, px+2, py+2, lv_color_hex(0xFFA500), 2);
-                draw_canvas_line(face_canvas_, px-2, py+2, px+2, py-2, lv_color_hex(0xFFA500), 2);
+                draw_canvas_line(layer, px-2, py-2, px+2, py+2, lv_color_hex(0xFFA500), 2);
+                draw_canvas_line(layer, px-2, py+2, px+2, py-2, lv_color_hex(0xFFA500), 2);
             } else if (particulasFisicas_[i].tipo == 'Z') {
-                draw_canvas_line(face_canvas_, px-3, py-3, px+3, py-3, color, 2);
-                draw_canvas_line(face_canvas_, px+3, py-3, px-3, py+3, color, 2);
-                draw_canvas_line(face_canvas_, px-3, py+3, px+3, py+3, color, 2);
+                draw_canvas_line(layer, px-3, py-3, px+3, py-3, color, 2);
+                draw_canvas_line(layer, px+3, py-3, px-3, py+3, color, 2);
+                draw_canvas_line(layer, px-3, py+3, px+3, py+3, color, 2);
             } else if (particulasFisicas_[i].tipo == 'S') {
-                draw_canvas_rect(face_canvas_, px, py, 4, 6, lv_color_hex(0x87CEFA), 0);
+                draw_canvas_rect(layer, px, py, 4, 6, lv_color_hex(0x87CEFA), 0);
             } else if (particulasFisicas_[i].tipo == 'L') {
-                draw_canvas_rect(face_canvas_, px, py, 4, 6, lv_color_hex(0x0080FF), 0);
-                draw_canvas_line(face_canvas_, px+2, py-4, px+2, py, lv_color_hex(0x0080FF), 2);
+                draw_canvas_rect(layer, px, py, 4, 6, lv_color_hex(0x0080FF), 0);
+                draw_canvas_line(layer, px+2, py-4, px+2, py, lv_color_hex(0x0080FF), 2);
             }
         }
     }
 }
 
-void LcdDisplay::DrawEye(float x, float y, float w, float h, float r) {
+void LcdDisplay::DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer) {
     if (!face_canvas_) return;
     int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
-    draw_canvas_rect(face_canvas_, px - pw/2, py - ph/2, pw, ph, lv_color_hex(0xFFFFFF), r*2);
+    draw_canvas_rect(layer, px - pw/2, py - ph/2, pw, ph, lv_color_hex(0xFFFFFF), r*2);
 }
 
-void LcdDisplay::DrawEyeHappy(float x, float y, float w, float h, float r, float progress) {
+void LcdDisplay::DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer) {
     if (!face_canvas_) return;
     int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
-    draw_canvas_arc(face_canvas_, px, py + ph/4, pw/2, 180, 360, lv_color_hex(0xFFFFFF), 4);
+    draw_canvas_arc(layer, px, py + ph/4, pw/2, 180, 360, lv_color_hex(0xFFFFFF), 4);
 }
 
-void LcdDisplay::DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft) {
+void LcdDisplay::DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer) {
     if (!face_canvas_) return;
     int px = x * 2; int py = y * 2; int pw = w * 2;
     if (isLeft) {
-        draw_canvas_line(face_canvas_, px - pw/2, py - pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(face_canvas_, px - pw/2, py + pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, px - pw/2, py - pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, px - pw/2, py + pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
     } else {
-        draw_canvas_line(face_canvas_, px + pw/2, py - pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(face_canvas_, px + pw/2, py + pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, px + pw/2, py - pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, px + pw/2, py + pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
     }
 }
 
-void LcdDisplay::DrawHeart(int x, int y) {
+void LcdDisplay::DrawHeart(int x, int y, lv_layer_t* layer) {
     if (!face_canvas_) return;
     int px = x * 2; int py = y * 2;
     lv_color_t c = lv_color_hex(0xFF0000);
-    draw_canvas_line(face_canvas_, px-4, py-4, px, py, c, 3);
-    draw_canvas_line(face_canvas_, px+4, py-4, px, py, c, 3);
+    draw_canvas_line(layer, px-4, py-4, px, py, c, 3);
+    draw_canvas_line(layer, px+4, py-4, px, py, c, 3);
 }
 
 void LcdDisplay::DrawLargeHeart(int x, int y, bool small) {
@@ -1563,15 +1551,23 @@ void LcdDisplay::DrawLargeHeart(int x, int y, bool small) {
     int px = x * 2; int py = y * 2;
     lv_color_t c = lv_color_hex(0xFF0000);
     int size = small ? 4 : 8;
-    draw_canvas_arc(face_canvas_, px - size, py - size, size, 135, 315, c, 4);
-    draw_canvas_arc(face_canvas_, px + size, py - size, size, 225, 45, c, 4);
-    draw_canvas_line(face_canvas_, px - size*2, py, px, py + size*2, c, 4);
-    draw_canvas_line(face_canvas_, px + size*2, py, px, py + size*2, c, 4);
+    draw_canvas_arc(layer, px - size, py - size, size, 135, 315, c, 4);
+    draw_canvas_arc(layer, px + size, py - size, size, 225, 45, c, 4);
+    draw_canvas_line(layer, px - size*2, py, px, py + size*2, c, 4);
+    draw_canvas_line(layer, px + size*2, py, px, py + size*2, c, 4);
 }
 
 void LcdDisplay::DrawOledFace(int xOffset) {
     if (!face_canvas_) return;
     lv_canvas_fill_bg(face_canvas_, lv_color_black(), LV_OPA_COVER);
+#if LVGL_VERSION_MAJOR >= 9
+    lv_layer_t layer_obj;
+    lv_canvas_init_layer(face_canvas_, &layer_obj);
+    lv_layer_t* layer = &layer_obj;
+#else
+    lv_layer_t* layer = nullptr;
+#endif
+
     auto& engine = TamagotchiEngine::GetInstance();
     
     float eyeLx = 44, eyeLy = 32, eyeLw = 12, eyeLh = 24, eyeRadius = 6;
@@ -1597,18 +1593,18 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if (emotion == "confused") tremorX = (ms % 100 < 50) ? 1 : -1;
     
     if (emotion == "happy") {
-        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0);
-        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0);
+        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (emotion == "angry") {
-        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius);
-        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius);
-        draw_canvas_line(face_canvas_, (eyeLx - 10 + xOffset)*2, (eyeLy - 12)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 8)*2, lv_color_hex(0xFF0000), 4);
-        draw_canvas_line(face_canvas_, (eyeRx - 8 + xOffset)*2, (eyeRy - 8)*2, (eyeRx + 10 + xOffset)*2, (eyeRy - 12)*2, lv_color_hex(0xFF0000), 4);
+        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, layer);
+        draw_canvas_line(layer, (eyeLx - 10 + xOffset)*2, (eyeLy - 12)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 8)*2, lv_color_hex(0xFF0000), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset)*2, (eyeRy - 8)*2, (eyeRx + 10 + xOffset)*2, (eyeRy - 12)*2, lv_color_hex(0xFF0000), 4);
     } else if (emotion == "sad" || emotion == "crying") {
-        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius);
-        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius);
-        draw_canvas_line(face_canvas_, (eyeLx - 8 + xOffset)*2, (eyeLy - 10)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 14)*2, lv_color_hex(0x0080FF), 4);
-        draw_canvas_line(face_canvas_, (eyeRx - 8 + xOffset)*2, (eyeRy - 14)*2, (eyeRx + 8 + xOffset)*2, (eyeRy - 10)*2, lv_color_hex(0x0080FF), 4);
+        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, layer);
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset)*2, (eyeLy - 10)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 14)*2, lv_color_hex(0x0080FF), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset)*2, (eyeRy - 14)*2, (eyeRx + 8 + xOffset)*2, (eyeRy - 10)*2, lv_color_hex(0x0080FF), 4);
     } else if (emotion == "loving") {
         DrawLargeHeart(eyeLx + xOffset + tremorX, eyeLy + tremorY, (ms/400)%2);
         DrawLargeHeart(eyeRx + xOffset + tremorX, eyeRy + tremorY, (ms/400)%2);
@@ -1632,53 +1628,53 @@ void LcdDisplay::DrawOledFace(int xOffset) {
             if ((rand()%100) < 40) { look_x = (rand()%10) - 5; look_y = (rand()%6) - 3; }
             else { look_x = 0; look_y = 0; }
         }
-        DrawEye(eyeLx + xOffset + tremorX + look_x, eyeLy + tremorY + look_y, eyeLw, eye_h, eyeRadius);
-        DrawEye(eyeRx + xOffset + tremorX + look_x, eyeRy + tremorY + look_y, eyeRw, eye_h, eyeRadius);
+        DrawEye(eyeLx + xOffset + tremorX + look_x, eyeLy + tremorY + look_y, eyeLw, eye_h, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX + look_x, eyeRy + tremorY + look_y, eyeRw, eye_h, eyeRadius, layer);
     }
     
     float avgEyeX = (eyeLx + eyeRx) / 2.0, avgEyeY = (eyeLy + eyeRy) / 2.0;
     int mouthShiftX = (avgEyeX - 64.0) * 0.85, mouthShiftY = (avgEyeY - 32.0) * 0.80;
     lv_color_t mc = lv_color_hex(0xFFFFFF);
     if (emotion == "sad" || emotion == "crying") {
-        draw_canvas_line(face_canvas_, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
-        draw_canvas_line(face_canvas_, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
     } else if (emotion == "happy") {
-        draw_canvas_line(face_canvas_, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, mc, 4);
-        draw_canvas_line(face_canvas_, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
     } else if (emotion == "angry") {
-        draw_canvas_line(face_canvas_, (58 + mouthShiftX)*2, (49 + mouthShiftY)*2, (70 + mouthShiftX)*2, (49 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (58 + mouthShiftX)*2, (49 + mouthShiftY)*2, (70 + mouthShiftX)*2, (49 + mouthShiftY)*2, mc, 4);
     } else {
-        draw_canvas_line(face_canvas_, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, mc, 4);
-        draw_canvas_line(face_canvas_, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
     }
     
     float temp = 25.0f; // DHT11 is on the body
     if (temp < 25.0f && temp > 0.0f) {
         int tremorMouth = (ms % 100 < 50) ? 2 : -2;
-        draw_canvas_line(face_canvas_, 54*2, (48+tremorMouth)*2, 60*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
-        draw_canvas_line(face_canvas_, 60*2, (48-tremorMouth)*2, 66*2, (48+tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
-        draw_canvas_line(face_canvas_, 66*2, (48+tremorMouth)*2, 72*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        draw_canvas_line(layer, 54*2, (48+tremorMouth)*2, 60*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        draw_canvas_line(layer, 60*2, (48-tremorMouth)*2, 66*2, (48+tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        draw_canvas_line(layer, 66*2, (48+tremorMouth)*2, 72*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
     }
 
     if (numIcons > 0) {
         int totalW = (numIcons * 12) + ((numIcons - 1) * 4);
         int startX = 64 - (totalW / 2) + xOffset + tremorX;
         int drawY = 4 + tremorY;
-        draw_canvas_rect_empty(face_canvas_, (startX - 4)*2, (drawY - 3)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 2*2, 0);
-        draw_canvas_line(face_canvas_, 64*2, (drawY+11)*2, 62*2, (drawY+14)*2, lv_color_hex(0xFFFFFF), 2);
+        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY - 3)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 2*2, 0);
+        draw_canvas_line(layer, 64*2, (drawY+11)*2, 62*2, (drawY+14)*2, lv_color_hex(0xFFFFFF), 2);
         
         int currentX = startX;
         if (precisaComida) {
-            draw_canvas_rect(face_canvas_, (currentX + 3)*2, (drawY + 3)*2, 6*2, 2*2, lv_color_hex(0xFFA500), 0);
+            draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 3)*2, 6*2, 2*2, lv_color_hex(0xFFA500), 0);
             currentX += 16;
         }
         if (precisaBrincar) {
-            draw_canvas_rect_empty(face_canvas_, currentX*2, (drawY - 1)*2, 12*2, 7*2, lv_color_hex(0x00FF00), 2, 0);
+            draw_canvas_rect_empty(layer, currentX*2, (drawY - 1)*2, 12*2, 7*2, lv_color_hex(0x00FF00), 2, 0);
             currentX += 16;
         }
         if (precisaSaude) {
-            draw_canvas_line(face_canvas_, (currentX+6)*2, (drawY)*2, (currentX+6)*2, (drawY+6)*2, lv_color_hex(0xFF0000), 4);
-            draw_canvas_line(face_canvas_, (currentX+3)*2, (drawY+3)*2, (currentX+9)*2, (drawY+3)*2, lv_color_hex(0xFF0000), 4);
+            draw_canvas_line(layer, (currentX+6)*2, (drawY)*2, (currentX+6)*2, (drawY+6)*2, lv_color_hex(0xFF0000), 4);
+            draw_canvas_line(layer, (currentX+3)*2, (drawY+3)*2, (currentX+9)*2, (drawY+3)*2, lv_color_hex(0xFF0000), 4);
             currentX += 16;
         }
     }
@@ -1691,7 +1687,11 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if (emotion == "loving" && (rand() % 100) < 15) CriarParticula(64 + (rand()%30 - 15), 32, (rand()%10 - 5)/10.0, -0.5, 'H', 35);
     
     AtualizarParticulas();
-    DesenharParticulas(xOffset);
+    DesenharParticulas(xOffset, layer);
+
+#if LVGL_VERSION_MAJOR >= 9
+    lv_canvas_finish_layer(face_canvas_, &layer_obj);
+#endif
 }
 
 void LcdDisplay::UpdateEyeAnimations() {
