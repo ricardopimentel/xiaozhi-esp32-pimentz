@@ -1068,12 +1068,7 @@ void LcdDisplay::SetupUI() {
     // Criação do Canvas do Rosto OLED (256x128 pixels, escala 2x)
     face_canvas_ = lv_canvas_create(screen);
     size_t canvas_size = 256 * 128 * sizeof(lv_color_t);
-    face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);
-    if (!face_canvas_buf_) {
-        ESP_LOGW(TAG, "Falha ao alocar Canvas na SPIRAM. Tentando RAM interna...");
-        face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_DEFAULT);
-    }
-    
+    face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);    
     if (face_canvas_buf_) {
         lv_canvas_set_buffer(face_canvas_, face_canvas_buf_, 256, 128, LV_COLOR_FORMAT_NATIVE);
         lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -10);
