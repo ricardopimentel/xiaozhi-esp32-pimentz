@@ -185,7 +185,7 @@ void TamagotchiEngine::Update() {
     }
 
     // 4. Lógica de Doença por Frio
-    if (sensor_temperatura_ < 18.0f && temperatura > 0.0f && !esta_doente_) {
+    if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f && !esta_doente_) {
         if (tempo_no_frio_ == 0) {
             tempo_no_frio_ = now;
         } else if (now - tempo_no_frio_ >= 60000) { // 1 minuto no frio
@@ -340,7 +340,7 @@ std::string TamagotchiEngine::GetCurrentEmotion(float temperatura, bool choque, 
     if (temperatura > 28.0f) {
         return "embarrassed";
     }
-    if (sensor_temperatura_ < 18.0f && temperatura > 0.0f) {
+    if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f) {
         return "confused";
     }
     if (esta_doente_) {
