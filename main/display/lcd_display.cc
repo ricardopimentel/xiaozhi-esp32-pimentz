@@ -1423,6 +1423,8 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
 void LcdDisplay::UpdateStatusBar(bool update_all) {
     LvglDisplay::UpdateStatusBar(update_all);
     
+    DisplayLockGuard lock(this); // Proteção ABSOLUTA do ovo na LVGL
+    
     // Atualiza o ovo e o progresso
     auto& engine = TamagotchiEngine::GetInstance();
     auto estado = engine.GetEstadoNascimento();
