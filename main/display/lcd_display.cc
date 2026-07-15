@@ -1,6 +1,7 @@
 
 #include <math.h>
 #include "lcd_display.h"
+#include "application.h"
 #include <lvgl.h>
 #include <esp_heap_caps.h>
 
