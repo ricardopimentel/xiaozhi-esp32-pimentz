@@ -337,10 +337,10 @@ std::string TamagotchiEngine::GetCurrentEmotion(float temperatura, bool choque, 
     if (obstaculo) {
         return "surprised";
     }
-    if (fome_ > 75) {
+    if (fome_ < 25 || diversao_ < 25 || saude_ < 25) {
         return "crying";
     }
-    if (fome_ > 50) {
+    if (fome_ < 50 || diversao_ < 50 || saude_ < 50) {
         return "sad";
     }
     if (temperatura > 28.0f) {
