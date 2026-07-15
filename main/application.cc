@@ -264,7 +264,7 @@ void Application::Run() {
             
             // Se ainda não nasceu, exibe o status de ovo/incubação na tela
             if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {
-                if (!Board::GetInstance().GetNetwork()->IsConnected()) {
+                if (GetDeviceState() == kDeviceStateWifiConfiguring || GetDeviceState() == kDeviceStateStarting) {
                     display->SetStatus("AGUARDANDO WIFI");
                     display->SetChatMessage("system", "Configure o WiFi pelo celular (ou aguarde conectar) antes de chocar o ovo.");
                     display->SetEmotion("neutral");
