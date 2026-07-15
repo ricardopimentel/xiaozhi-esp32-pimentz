@@ -108,6 +108,7 @@ void TamagotchiEngine::Update() {
 
     // 1.5. Processa interações por RFID se nasceu
     if (sensor_rfid_lido_) {
+        bool consumido = true;
         if (!EUIDZerado(uid_comida_) && ComparaUID(sensor_rfid_uid_, uid_comida_)) {
             Feed();
         } else if (!EUIDZerado(uid_brincar_) && ComparaUID(sensor_rfid_uid_, uid_brincar_)) {
@@ -139,9 +140,12 @@ void TamagotchiEngine::Update() {
                     CopiaUID(uid_pet_, sensor_rfid_uid_);
                     ESP_LOGI(TAG, "Cartão registrado para PET!");
                     Pet();
+                } else {
+                    consumido = false;
                 }
             }
         }
+        if (consumido) sensor_rfid_lido_ = false; // Consome a leitura para evitar processamento duplo
     }
 
     // 2. Ticks de vida do Robô Nascido
@@ -251,6 +255,8 @@ void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfi
             SaveState();
             ESP_LOGI(TAG, "Ovo correto detectado! Iniciando incubação...");
         }
+        // Consome para garantir que o pulso não afete mais nada
+        sensor_rfid_lido_ = false;
     }
 }
 
