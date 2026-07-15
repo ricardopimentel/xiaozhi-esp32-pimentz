@@ -1430,7 +1430,8 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
     auto estado = engine.GetEstadoNascimento();
     ESP_LOGI(TAG, "UpdateStatusBar: estado=%d, segundos=%d", (int)estado, engine.GetSegundosChocados());
     
-    if (estado != ESTADO_NASCIDO) {
+    bool connected = Board::GetInstance().GetNetwork()->IsConnected();
+    if (estado != ESTADO_NASCIDO && connected) {
         // Se ainda não nasceu, esconde o emoji_box_ e o rosto dinâmico
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         if (face_canvas_ != nullptr) lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
