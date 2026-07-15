@@ -1177,6 +1177,12 @@ void LcdDisplay::ClearChatMessages() {
 #endif
 
 void LcdDisplay::SetEmotion(const char* emotion) {
+    static std::string last_emotion = "";
+    if (emotion && last_emotion == emotion) {
+        return; // Ignora se a emoção não mudou (evita vazamento de memória e travamento da CPU recarregando o GIF a 5 FPS via ESP-NOW)
+    }
+    if (emotion) last_emotion = emotion;
+    
     if (!setup_ui_called_) {
         ESP_LOGW(TAG, "SetEmotion('%s') called before SetupUI() - emotion will not be displayed!", emotion);
     }
