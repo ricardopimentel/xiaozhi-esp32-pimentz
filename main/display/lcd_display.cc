@@ -1624,10 +1624,29 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
         DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (emotion == "angry") {
-        DrawEye(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, layer);
-        DrawEye(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, layer);
-        draw_canvas_line(layer, (eyeLx - 10 + xOffset)*2, (eyeLy - 12)*2, (eyeLx + 8 + xOffset)*2, (eyeLy - 8)*2, lv_color_hex(0xFF0000), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset)*2, (eyeRy - 8)*2, (eyeRx + 10 + xOffset)*2, (eyeRy - 12)*2, lv_color_hex(0xFF0000), 4);
+        static int blink_counter_angry = 0, blink_state_angry = 0;
+        static float eye_h_angry = 24;
+        blink_counter_angry++;
+        if (blink_state_angry == 0 && blink_counter_angry > 100) {
+            if ((rand() % 100) < 20) blink_state_angry = 1;
+            blink_counter_angry = 0;
+        }
+        if (blink_state_angry == 1) {
+            eye_h_angry -= 4; if (eye_h_angry <= 2) blink_state_angry = 2;
+        } else if (blink_state_angry == 2) {
+            eye_h_angry += 4; if (eye_h_angry >= 24) { eye_h_angry = 24; blink_state_angry = 0; }
+        }
+        static int look_timer_angry = 0, look_x_angry = 0, look_y_angry = 0;
+        look_timer_angry++;
+        if (look_timer_angry > 150) {
+            look_timer_angry = 0;
+            if ((rand()%100) < 40) { look_x_angry = (rand()%10) - 5; look_y_angry = (rand()%6) - 3; }
+            else { look_x_angry = 0; look_y_angry = 0; }
+        }
+        DrawEye(eyeLx + xOffset + tremorX + look_x_angry, eyeLy + tremorY + look_y_angry, eyeLw, eye_h_angry, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX + look_x_angry, eyeRy + tremorY + look_y_angry, eyeRw, eye_h_angry, eyeRadius, layer);
+        draw_canvas_line(layer, (eyeLx - 10 + xOffset + look_x_angry)*2, (eyeLy - 12 + look_y_angry)*2, (eyeLx + 8 + xOffset + look_x_angry)*2, (eyeLy - 8 + look_y_angry)*2, lv_color_hex(0xFF0000), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + look_x_angry)*2, (eyeRy - 8 + look_y_angry)*2, (eyeRx + 10 + xOffset + look_x_angry)*2, (eyeRy - 12 + look_y_angry)*2, lv_color_hex(0xFF0000), 4);
     } else if (emotion == "sad" || emotion == "crying") {
         static int blink_counter_sad = 0, blink_state_sad = 0;
         static float eye_h_sad = 24;
