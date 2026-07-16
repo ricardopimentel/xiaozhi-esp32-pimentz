@@ -38,24 +38,23 @@ struct __attribute__((packed)) RobotState {
   // Novos campos para a Fase 2
   bool rfidLido;
   uint8_t rfidUID[4];
+  
+  // Novos campos para a arquitetura Cérebro-Corpo
+  uint8_t rfidAcao;
+  uint16_t somNivel;
+  bool botaoPressionado;
 };
 
 static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len) {
-    size_t new_size = sizeof(RobotState);
-    size_t old_size = new_size - 5;
+    size_t max_size = sizeof(RobotState);
     
-    if (len == new_size || len == old_size) {
+    if (len >= 90 && len <= max_size) {
         RobotState state;
         memset(&state, 0, sizeof(RobotState));
         memcpy(&state, data, len); // Copia apenas o que foi enviado
         
-        if (len == old_size) {
-            state.rfidLido = false;
-            memset(state.rfidUID, 0, 4);
-        }
-        
-        ESP_LOGI(TAG, "Recebido RobotState via ESP-NOW: Fome=%d, Diversao=%d, Humor=%d, RFID_Lido=%d", 
-                 state.fome, state.diversao, state.humor, state.rfidLido);
+        ESP_LOGI(TAG, "Recebido RobotState via ESP-NOW: Fome=%d, Diversao=%d, Humor=%d, RFID_Lido=%d, RFID_Acao=%d", 
+                 state.fome, state.diversao, state.humor, state.rfidLido, state.rfidAcao);
         
         // Garantia absoluta de terminação nula para evitar estouro de memória no std::string (Watchdog/OOM)
         state.fala[sizeof(state.fala) - 1] = '\0';
@@ -67,11 +66,16 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             
             // Atualiza o motor do Tamagotchi com as leituras físicas do corpo
             auto& engine = TamagotchiEngine::GetInstance();
-            engine.SetSensorData(state.temperatura, state.umidade, state.rfidLido, state.rfidUID);
+            engine.SetSensorData(state.temperatura, state.umidade, state.luzPorcento,
+                                 state.choqueDetectado, state.obstaculoDetectado,
+                                 state.botaoPressionado, state.somNivel,
+                                 state.rfidLido, state.rfidAcao, state.rfidUID);
+            engine.SetAnimationState(state.animacaoComendo, state.animacaoBrincando,
+                                     state.animacaoCurando, state.animacaoAcariciado);
             engine.Update();
             
             // Define a expressão facial dinamicamente gerada pelo motor Tamagotchi
-            std::string emotion = engine.GetCurrentEmotion(state.temperatura, state.choqueDetectado, state.obstaculoDetectado);
+            std::string emotion = engine.GetCurrentEmotion();
             display->SetEmotion(emotion.c_str());
             
             // Exibe balão de texto se o robô estiver com uma fala ativa
@@ -80,7 +84,7 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             }
         });
     } else {
-        ESP_LOGW(TAG, "Tamanho de pacote ESP-NOW incorreto: recebido %d, esperados %d ou %d", len, (int)new_size, (int)old_size);
+        ESP_LOGW(TAG, "Tamanho de pacote ESP-NOW incorreto: recebido %d, esperado entre 90 e %d", len, (int)max_size);
     }
 }
 

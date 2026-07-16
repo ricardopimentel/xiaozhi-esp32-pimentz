@@ -1614,13 +1614,43 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if (precisaBrincar) numIcons++;
     if (precisaSaude) numIcons++;
 
-    uint32_t ms = esp_timer_get_time() / 1000;
-    std::string emotion = engine.GetCurrentEmotion(0.0f, false, false);
+    uint32_t ms = esp_timer_get_t    std::string emotion = engine.GetCurrentEmotion();
     
     int tremorX = 0, tremorY = 0;
     if (emotion == "confused") tremorX = (ms % 100 < 50) ? 1 : -1;
     
-    if (emotion == "happy") {
+    // Tremedeira física se estiver frio (< 18C)
+    float temp_celsius = engine.GetSensorTemperatura();
+    if (temp_celsius < 18.0f && temp_celsius > 0.0f) {
+        tremorX += (ms % 80 < 40) ? 2 : -2;
+        tremorY += (ms % 60 < 30) ? 1 : -1;
+    }
+    
+    // Tremedeira forte se houver chacoalhão/choque detectado pelo sensor físico
+    if (engine.GetSensorChoque()) {
+        tremorX += (ms % 60 < 30) ? 4 : -4;
+        tremorY += (ms % 40 < 20) ? 3 : -3;
+    }
+    
+    // Captura flags de animação ditadas pelo corpo ou engine
+    bool comendo = engine.GetAnimacaoComendo();
+    bool brincando = engine.GetAnimacaoBrincando() || engine.GetAnimacaoAcariciado();
+    bool curando = engine.GetAnimacaoCurando();
+    
+    if (comendo) {
+        // Olhos piscando de satisfação na mastigação
+        int chewY = (ms / 150) % 2 == 0 ? 2 : -2;
+        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY + chewY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY + chewY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+    } else if (brincando) {
+        // Olhos felizes piscando alegremente
+        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+    } else if (emotion == "sleeping") {
+        // Olhos fechados (linhas retas de dormir)
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX)*2, (eyeLy + tremorY)*2, (eyeLx + 8 + xOffset + tremorX)*2, (eyeLy + tremorY)*2, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX)*2, (eyeRy + tremorY)*2, (eyeRx + 8 + xOffset + tremorX)*2, (eyeRy + tremorY)*2, lv_color_hex(0xFFFFFF), 4);
+    } else if (emotion == "happy") {
         DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
         DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (emotion == "angry") {
@@ -1701,7 +1731,22 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     float avgEyeX = (eyeLx + eyeRx) / 2.0, avgEyeY = (eyeLy + eyeRy) / 2.0;
     int mouthShiftX = (avgEyeX - 64.0) * 0.85, mouthShiftY = (avgEyeY - 32.0) * 0.80;
     lv_color_t mc = lv_color_hex(0xFFFFFF);
-    if (emotion == "sad" || emotion == "crying") {
+    
+    if (comendo) {
+        // Boca abrindo/fechando senoidalmente para simular mastigação
+        if ((ms / 150) % 2 == 0) {
+            draw_canvas_line(layer, (58 + mouthShiftX)*2, (49 + mouthShiftY)*2, (70 + mouthShiftX)*2, (49 + mouthShiftY)*2, mc, 4);
+        } else {
+            draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 4*2, mc, 2);
+        }
+    } else if (emotion == "sleeping") {
+        // Boca redonda pequena bocejando/dormindo
+        draw_canvas_rect(layer, (62 + mouthShiftX)*2, (48 + mouthShiftY)*2, 4*2, 4*2, mc, 2);
+    } else if (brincando) {
+        // Sorriso grande aberto
+        draw_canvas_line(layer, (58 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (53 + mouthShiftY)*2, mc, 4);
+        draw_canvas_line(layer, (64 + mouthShiftX)*2, (53 + mouthShiftY)*2, (70 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
+    } else if (emotion == "sad" || emotion == "crying") {
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
     } else if (emotion == "happy") {
@@ -1714,14 +1759,14 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (50 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
     }
     
-    float temp = 25.0f; // DHT11 is on the body
-    if (temp < 25.0f && temp > 0.0f) {
+    float temp = engine.GetSensorTemperatura();
+    if (temp < 18.0f && temp > 0.0f) {
         int tremorMouth = (ms % 100 < 50) ? 2 : -2;
         draw_canvas_line(layer, 54*2, (48+tremorMouth)*2, 60*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
         draw_canvas_line(layer, 60*2, (48-tremorMouth)*2, 66*2, (48+tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
         draw_canvas_line(layer, 66*2, (48+tremorMouth)*2, 72*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
     }
-
+ 
     if (numIcons > 0) {
         int totalW = (numIcons * 12) + ((numIcons - 1) * 4);
         int startX = 64 - (totalW / 2) + xOffset + tremorX;
@@ -1748,6 +1793,24 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if (emotion == "crying") {
         if ((rand() % 100) < 6) CriarParticula(eyeLx - 8, eyeLy + 6, -0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
         if ((rand() % 100) < 6) CriarParticula(eyeRx + 8, eyeRy + 6,  0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
+    }
+    if (emotion == "sleeping") {
+        if ((rand() % 100) < 3) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, 0.2 + (rand()%4)/10.0, -0.3 - (rand()%4)/10.0, 'Z', 50);
+    }
+    if (comendo) {
+        if ((rand() % 100) < 15) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, ((rand()%10)-5)/10.0, 0.5 + (rand()%5)/10.0, '*', 30);
+    }
+    if (curando) {
+        if ((rand() % 100) < 15) CriarParticula(64 + mouthShiftX + (rand()%30-15), 48 + mouthShiftY + (rand()%20-10), 0, -0.6 - (rand()%4)/10.0, '+', 40);
+    }
+    if (brincando && (rand() % 100) < 15) {
+        CriarParticula(64 + mouthShiftX + (rand()%30 - 15), 32, (rand()%10 - 5)/10.0, -0.5, 'H', 35);
+    }
+    if (temp > 28.0f) {
+        if ((rand() % 100) < 5) {
+            CriarParticula(eyeLx - 8, eyeLy - 4, -0.1, 0.3, 'S', 30);
+            CriarParticula(eyeRx + 8, eyeRy - 4, 0.1, 0.3, 'S', 30);
+        }
     }
     if (temp > 32.0f && (rand() % 100) < 5) CriarParticula(rand()%120, 0, 0, 0.6 + (rand()%6)/10.0, 'S', 45);
     if (emotion == "loving" && (rand() % 100) < 15) CriarParticula(64 + (rand()%30 - 15), 32, (rand()%10 - 5)/10.0, -0.5, 'H', 35);

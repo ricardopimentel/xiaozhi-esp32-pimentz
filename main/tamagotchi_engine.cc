@@ -46,16 +46,6 @@ void TamagotchiEngine::Initialize() {
         if (nvs_get_u8(handle, "vinculo", &vinculo) == ESP_OK) pontos_de_vinculo_ = vinculo;
         if (nvs_get_u32(handle, "segVida", &segVida) == ESP_OK) segundos_de_vida_ = segVida;
 
-        // Carrega os cartões RFID auto-aprendidos
-        size_t len = 4;
-        nvs_get_blob(handle, "uidComida", uid_comida_, &len);
-        len = 4;
-        nvs_get_blob(handle, "uidBrincar", uid_brincar_, &len);
-        len = 4;
-        nvs_get_blob(handle, "uidSaude", uid_saude_, &len);
-        len = 4;
-        nvs_get_blob(handle, "uidPet", uid_pet_, &len);
-
         nvs_close(handle);
         
         // Inicializa a personalidade baseada nos pontos salvos
@@ -83,12 +73,6 @@ void TamagotchiEngine::SaveState() {
         nvs_set_u8(handle, "vinculo", pontos_de_vinculo_);
         nvs_set_u32(handle, "segVida", segundos_de_vida_);
         
-        // Salva os cartões RFID auto-aprendidos
-        nvs_set_blob(handle, "uidComida", uid_comida_, 4);
-        nvs_set_blob(handle, "uidBrincar", uid_brincar_, 4);
-        nvs_set_blob(handle, "uidSaude", uid_saude_, 4);
-        nvs_set_blob(handle, "uidPet", uid_pet_, 4);
-        
         nvs_commit(handle);
         nvs_close(handle);
         
@@ -106,46 +90,19 @@ void TamagotchiEngine::Update() {
         return;
     }
 
-    // 1.5. Processa interações por RFID se nasceu
-    if (sensor_rfid_lido_) {
-        bool consumido = true;
-        if (!EUIDZerado(uid_comida_) && ComparaUID(sensor_rfid_uid_, uid_comida_)) {
+    // 1.5. Processa interações por RFID interpretadas pelo Corpo
+    if (sensor_rfid_lido_ && sensor_rfid_acao_ > 0) {
+        if (sensor_rfid_acao_ == 1) {
             Feed();
-        } else if (!EUIDZerado(uid_brincar_) && ComparaUID(sensor_rfid_uid_, uid_brincar_)) {
+        } else if (sensor_rfid_acao_ == 2) {
             Play();
-        } else if (!EUIDZerado(uid_saude_) && ComparaUID(sensor_rfid_uid_, uid_saude_)) {
+        } else if (sensor_rfid_acao_ == 3) {
             Heal();
-        } else if (!EUIDZerado(uid_pet_) && ComparaUID(sensor_rfid_uid_, uid_pet_)) {
+        } else if (sensor_rfid_acao_ == 4) {
             Pet();
-        } else {
-            // Auto-aprendizado na ordem
-            if (EUIDZerado(uid_comida_)) {
-                CopiaUID(uid_comida_, sensor_rfid_uid_);
-                ESP_LOGI(TAG, "Cartão registrado para COMIDA!");
-                Feed();
-            } else if (EUIDZerado(uid_brincar_)) {
-                if (!ComparaUID(sensor_rfid_uid_, uid_comida_)) {
-                    CopiaUID(uid_brincar_, sensor_rfid_uid_);
-                    ESP_LOGI(TAG, "Cartão registrado para BRINCAR!");
-                    Play();
-                }
-            } else if (EUIDZerado(uid_saude_)) {
-                if (!ComparaUID(sensor_rfid_uid_, uid_comida_) && !ComparaUID(sensor_rfid_uid_, uid_brincar_)) {
-                    CopiaUID(uid_saude_, sensor_rfid_uid_);
-                    ESP_LOGI(TAG, "Cartão registrado para SAUDE!");
-                    Heal();
-                }
-            } else if (EUIDZerado(uid_pet_)) {
-                if (!ComparaUID(sensor_rfid_uid_, uid_comida_) && !ComparaUID(sensor_rfid_uid_, uid_brincar_) && !ComparaUID(sensor_rfid_uid_, uid_saude_)) {
-                    CopiaUID(uid_pet_, sensor_rfid_uid_);
-                    ESP_LOGI(TAG, "Cartão registrado para PET!");
-                    Pet();
-                } else {
-                    consumido = false;
-                }
-            }
         }
-        if (consumido) sensor_rfid_lido_ = false; // Consome a leitura para evitar processamento duplo
+        sensor_rfid_lido_ = false; // Consome a leitura para evitar processamento duplo
+        sensor_rfid_acao_ = 0;     // Consome a ação
     }
 
     // 2. Ticks de vida do Robô Nascido
@@ -326,32 +283,51 @@ void TamagotchiEngine::Pet() {
     SaveState();
 }
 
-std::string TamagotchiEngine::GetCurrentEmotion(float temperatura, bool choque, bool obstaculo) const {
+std::string TamagotchiEngine::GetCurrentEmotion() const {
     if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
         return "neutral";
     }
     
-    if (choque) {
+    // 1. Sono se estiver escuro
+    if (sensor_luz_porcento_ < 10) {
+        return "sleeping";
+    }
+    
+    // 2. Chacoalhão/Choque
+    if (sensor_choque_) {
         return "confused";
     }
-    if (obstaculo) {
+    
+    // 3. Proximidade/Obstáculo
+    if (sensor_obstaculo_) {
         return "surprised";
     }
+    
+    // 4. Som alto / Susto
+    if (sensor_som_nivel_ >= 280) {
+        return "surprised";
+    }
+    
+    // 5. Atributos muito baixos
     if (fome_ < 25 || diversao_ < 25 || saude_ < 25) {
         return "crying";
     }
     if (fome_ < 50 || diversao_ < 50 || saude_ < 50) {
         return "sad";
     }
-    if (temperatura > 28.0f) {
+    if (esta_doente_) {
+        return "confused";
+    }
+    
+    // 6. Temperaturas extremas
+    if (sensor_temperatura_ > 28.0f) {
         return "embarrassed";
     }
     if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f) {
         return "confused";
     }
-    if (esta_doente_) {
-        return "confused";
-    }
+    
+    // 7. Emoções básicas por personalidade
     if (personalidade_ == PERSONALIDADE_SARCASTICA) {
         return "angry";
     }
@@ -380,10 +356,16 @@ void TamagotchiEngine::CopiaUID(uint8_t* dest, const uint8_t* src) {
     dest[3] = src[3];
     SaveState();
 }
-void TamagotchiEngine::SetSensorData(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID) {
+void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t luz, bool choque, bool obstaculo, bool botao, uint16_t som, bool rfidLido, uint8_t rfidAcao, const uint8_t* rfidUID) {
     sensor_temperatura_ = temperatura;
     sensor_umidade_ = umidade;
+    sensor_luz_porcento_ = luz;
+    sensor_choque_ = choque;
+    sensor_obstaculo_ = obstaculo;
+    sensor_botao_pressionado_ = botao;
+    sensor_som_nivel_ = som;
     sensor_rfid_lido_ = rfidLido;
+    sensor_rfid_acao_ = rfidAcao;
     if (rfidUID) {
         memcpy(sensor_rfid_uid_, rfidUID, 4);
     } else {

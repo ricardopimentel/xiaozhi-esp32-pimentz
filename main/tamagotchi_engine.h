@@ -22,7 +22,13 @@ public:
 
     void Initialize();
     void Update();
-    void SetSensorData(float temperatura, float umidade, bool rfidLido, const uint8_t* rfidUID);
+    void SetSensorData(float temperatura, float umidade, uint8_t luz, bool choque, bool obstaculo, bool botao, uint16_t som, bool rfidLido, uint8_t rfidAcao, const uint8_t* rfidUID);
+    void SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado) {
+        sensor_animacao_comendo_ = comendo;
+        sensor_animacao_brincando_ = brincando;
+        sensor_animacao_curando_ = curando;
+        sensor_animacao_acariciado_ = acariciado;
+    }
     void SaveState();
     
     // Ações de cuidado
@@ -41,7 +47,19 @@ public:
     Personalidade GetPersonalidade() const { return personalidade_; }
     uint16_t GetSegundosChocados() const { return segundos_chocados_; }
     
-    std::string GetCurrentEmotion(float temperatura, bool choque, bool obstaculo) const;
+    float GetSensorTemperatura() const { return sensor_temperatura_; }
+    float GetSensorUmidade() const { return sensor_umidade_; }
+    uint8_t GetSensorLuz() const { return sensor_luz_porcento_; }
+    bool GetSensorChoque() const { return sensor_choque_; }
+    bool GetSensorObstaculo() const { return sensor_obstaculo_; }
+    bool GetSensorBotao() const { return sensor_botao_pressionado_; }
+    uint16_t GetSensorSom() const { return sensor_som_nivel_; }
+    bool GetAnimacaoComendo() const { return sensor_animacao_comendo_; }
+    bool GetAnimacaoBrincando() const { return sensor_animacao_brincando_; }
+    bool GetAnimacaoCurando() const { return sensor_animacao_curando_; }
+    bool GetAnimacaoAcariciado() const { return sensor_animacao_acariciado_; }
+    
+    std::string GetCurrentEmotion() const;
 
 private:
     TamagotchiEngine();
@@ -67,8 +85,20 @@ private:
     // Sensor cache
     float sensor_temperatura_ = 25.0f;
     float sensor_umidade_ = 50.0f;
+    uint8_t sensor_luz_porcento_ = 100;
+    bool sensor_choque_ = false;
+    bool sensor_obstaculo_ = false;
+    bool sensor_botao_pressionado_ = false;
+    uint16_t sensor_som_nivel_ = 0;
     bool sensor_rfid_lido_ = false;
+    uint8_t sensor_rfid_acao_ = 0;
     uint8_t sensor_rfid_uid_[4] = {0};
+
+    // Animation flags from ESP-NOW
+    bool sensor_animacao_comendo_ = false;
+    bool sensor_animacao_brincando_ = false;
+    bool sensor_animacao_curando_ = false;
+    bool sensor_animacao_acariciado_ = false;
 
     // UIDs de RFID para interacao
     uint8_t uid_comida_[4] = {0};
