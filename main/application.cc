@@ -165,9 +165,6 @@ void Application::Initialize() {
 
     // Update the status bar immediately to show the network state
     display->UpdateStatusBar(true);
-
-    // Initialize ESP-NOW receiver to listen to the body controller
-    InitializeEspNowReceiver();
 }
 
 void Application::Run() {
@@ -302,6 +299,11 @@ void Application::Run() {
 
 void Application::HandleNetworkConnectedEvent() {
     ESP_LOGI(TAG, "Network connected");
+    if (!esp_now_initialized_) {
+        ESP_LOGI(TAG, "Inicializando ESP-NOW de forma segura (apos WiFi)...");
+        InitializeEspNowReceiver();
+        esp_now_initialized_ = true;
+    }
     auto state = GetDeviceState();
 
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
