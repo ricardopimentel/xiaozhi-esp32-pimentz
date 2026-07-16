@@ -1614,7 +1614,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if (precisaBrincar) numIcons++;
     if (precisaSaude) numIcons++;
 
-    uint32_t ms = esp_timer_get_t    std::string emotion = engine.GetCurrentEmotion();
+    uint32_t ms = esp_timer_get_time() / 1000;
+    std::string emotion = engine.GetCurrentEmotion();
     
     int tremorX = 0, tremorY = 0;
     if (emotion == "confused") tremorX = (ms % 100 < 50) ? 1 : -1;
