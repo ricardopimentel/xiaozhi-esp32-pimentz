@@ -97,6 +97,45 @@ void TamagotchiEngine::Update() {
         } else if (sensor_rfid_acao_ == 2) {
             Play();
         } else if (sensor_rfid_acao_ == 3) {
+void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade) {
+    tempo_ultimo_pacote_espnow_ = esp_timer_get_time() / 1000;
+    modo_autonomo_ = false;
+
+    fome_ = fome;
+    diversao_ = diversao;
+    saude_ = saude;
+    if (vinculo > 0) {
+        pontos_de_vinculo_ = vinculo;
+        AtualizarVinculo(0);
+    }
+    if (estNasc <= 2) {
+        estado_nascimento_ = static_cast<EstadoNascimento>(estNasc);
+    }
+    if (idade > 0) {
+        idade_dias_ = idade;
+    }
+}
+
+void TamagotchiEngine::Update() {
+    uint64_t now = esp_timer_get_time() / 1000;
+    
+    // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
+    if (now - tempo_ultimo_pacote_espnow_ > 3000) {
+        modo_autonomo_ = true;
+    }
+
+    if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
+        ProcessarCicloIncubacao(sensor_rfid_lido_, sensor_rfid_uid_);
+        return;
+    }
+    
+    // 1. Processamento do RFID recebido do corpo
+    if (sensor_rfid_lido_ && sensor_rfid_acao_ > 0) {
+        if (sensor_rfid_acao_ == 1) {
+            Feed();
+        } else if (sensor_rfid_acao_ == 2) {
+            Play();
+        } else if (sensor_rfid_acao_ == 3) {
             Heal();
         } else if (sensor_rfid_acao_ == 4) {
             Pet();
@@ -105,53 +144,63 @@ void TamagotchiEngine::Update() {
         sensor_rfid_acao_ = 0;     // Consome a ação
     }
 
-    // 2. Ticks de vida do Robô Nascido
-    uint64_t elapsed = now - last_tick_time_;
-    if (elapsed >= 1000) {
-        segundos_de_vida_ += (elapsed / 1000);
-        idade_dias_ = segundos_de_vida_ / 86400;
-        last_tick_time_ = now;
-    }
+    // 2. Lógica de cálculo e decaimento local (Modo Autônomo / Offline)
+    if (modo_autonomo_) {
+        uint64_t elapsed = now - last_tick_time_;
+        if (elapsed >= 1000) {
+            segundos_de_vida_ += (elapsed / 1000);
+            idade_dias_ = segundos_de_vida_ / 86400;
+            last_tick_time_ = now;
+        }
 
-    // 3. Decaimento de Atributos dependendo da Personalidade
-    // Fome decai periodicamente
-    uint32_t intervalo_fome = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? (INTERVALO_FOME * 2) / 3 : INTERVALO_FOME;
-    static uint64_t last_fome_tick = 0;
-    if (now - last_fome_tick >= intervalo_fome) {
-        fome_ = std::max(0, fome_ - 1);
-        last_fome_tick = now;
-        SaveState();
-    }
-
-    // Diversão decai periodicamente
-    uint32_t intervalo_brincar = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? (INTERVALO_BRINCAR * 2) / 3 : 
-                                 (personalidade_natural_ == PERSONALIDADE_SARCASTICA) ? (INTERVALO_BRINCAR * 5) / 3 : INTERVALO_BRINCAR;
-    static uint64_t last_brincar_tick = 0;
-    if (now - last_brincar_tick >= intervalo_brincar) {
-        diversao_ = std::max(0, diversao_ - 1);
-        last_brincar_tick = now;
-        SaveState();
-    }
-
-    // Saúde decai se estiver faminto e entediado, ou se estiver doente
-    uint32_t intervalo_saude = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? INTERVALO_SAUDE / 2 : INTERVALO_SAUDE;
-    static uint64_t last_saude_tick = 0;
-    if (now - last_saude_tick >= intervalo_saude) {
-        uint8_t limiar = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? 50 : 30;
-        if ((fome_ <= limiar && diversao_ <= limiar) || esta_doente_) {
-            saude_ = std::max(0, saude_ - 1);
+        // Fome decai periodicamente
+        uint32_t intervalo_fome = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? (INTERVALO_FOME * 2) / 3 : INTERVALO_FOME;
+        static uint64_t last_fome_tick = 0;
+        if (now - last_fome_tick >= intervalo_fome) {
+            fome_ = std::max(0, fome_ - 1);
+            last_fome_tick = now;
             SaveState();
         }
-        last_saude_tick = now;
+
+        // Diversão decai periodicamente
+        uint32_t intervalo_brincar = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? (INTERVALO_BRINCAR * 2) / 3 : 
+                                     (personalidade_natural_ == PERSONALIDADE_SARCASTICA) ? (INTERVALO_BRINCAR * 5) / 3 : INTERVALO_BRINCAR;
+        static uint64_t last_brincar_tick = 0;
+        if (now - last_brincar_tick >= intervalo_brincar) {
+            diversao_ = std::max(0, diversao_ - 1);
+            last_brincar_tick = now;
+            SaveState();
+        }
+
+        // Saúde decai se estiver faminto e entediado, ou doente
+        uint32_t intervalo_saude = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? INTERVALO_SAUDE / 2 : INTERVALO_SAUDE;
+        static uint64_t last_saude_tick = 0;
+        if (now - last_saude_tick >= intervalo_saude) {
+            uint8_t limiar = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? 50 : 30;
+            if ((fome_ <= limiar && diversao_ <= limiar) || esta_doente_) {
+                saude_ = std::max(0, saude_ - 1);
+                SaveState();
+            }
+            last_saude_tick = now;
+        }
+
+        // Atualização periódica do Vínculo
+        if (now - last_vinculo_check_ >= 10000) {
+            last_vinculo_check_ = now;
+            if (fome_ >= 70 && diversao_ >= 70 && saude_ >= 70 && !esta_doente_) {
+                AtualizarVinculo(1);
+            } else if (fome_ < 30 || diversao_ < 30 || saude_ < 30 || esta_doente_) {
+                AtualizarVinculo(-1);
+            }
+        }
     }
 
-    // 4. Lógica de Doença por Frio
+    // 3. Lógica de Doença por Frio (Sensor)
     if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f && !esta_doente_) {
         if (tempo_no_frio_ == 0) {
             tempo_no_frio_ = now;
-        } else if (now - tempo_no_frio_ >= 60000) { // 1 minuto no frio
+        } else if (now - tempo_no_frio_ >= 60000) {
             tempo_no_frio_ = now;
-            // 5% de chance de adoecer por minuto no frio
             if ((rand() % 100) < 5) {
                 esta_doente_ = true;
                 SaveState();
@@ -162,20 +211,18 @@ void TamagotchiEngine::Update() {
         tempo_no_frio_ = 0;
     }
 
-    // 5. Atualização periódica do Vínculo
-    if (now - last_vinculo_check_ >= 10000) {
-        last_vinculo_check_ = now;
-        if (fome_ >= 70 && diversao_ >= 70 && saude_ >= 70 && !esta_doente_) {
-            AtualizarVinculo(1); // Ganha afeto
-        } else if (fome_ < 30 || diversao_ < 30 || saude_ < 30 || esta_doente_) {
-            AtualizarVinculo(-1); // Perde afeto
-        }
+    // 4. Atualiza personalidade com base nos pontos de vínculo
+    if (pontos_de_vinculo_ < 40) {
+        personalidade_natural_ = PERSONALIDADE_SARCASTICA;
+    } else if (pontos_de_vinculo_ < 80) {
+        personalidade_natural_ = PERSONALIDADE_BASICA;
+    } else {
+        personalidade_natural_ = PERSONALIDADE_SENSIVEL;
     }
-
-    // 6. Atualiza personalidade atual (dinâmica com base no humor)
+    
     uint8_t limiarTriste = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? 50 : 30;
     if (fome_ <= limiarTriste || diversao_ <= limiarTriste) {
-        personalidade_ = PERSONALIDADE_SARCASTICA; // Fica irritado/sarcástico sob negligência
+        personalidade_ = PERSONALIDADE_SARCASTICA;
     } else {
         personalidade_ = personalidade_natural_;
     }

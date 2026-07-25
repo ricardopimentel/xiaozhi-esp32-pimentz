@@ -100,6 +100,11 @@ private:
     bool sensor_animacao_curando_ = false;
     bool sensor_animacao_acariciado_ = false;
 
+    // Métodos de Sincronização e Modo Autônomo
+    void SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade);
+    bool IsModoAutonomo() const { return modo_autonomo_; }
+    int8_t GetPontosDeVinculo() const { return pontos_de_vinculo_; }
+
     // UIDs de RFID para interacao
     uint8_t uid_comida_[4] = {0};
     uint8_t uid_brincar_[4] = {0};
@@ -111,7 +116,9 @@ private:
     int8_t pontos_de_vinculo_ = 0;
     uint16_t segundos_chocados_ = 0;
     
-    // Timers
+    // Sincronização e Timers
+    bool modo_autonomo_ = true;
+    uint64_t tempo_ultimo_pacote_espnow_ = 0;
     uint64_t last_tick_time_ = 0;
     uint64_t last_save_time_ = 0;
     uint64_t tempo_no_frio_ = 0;
