@@ -1686,6 +1686,10 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         // Olhos fechados (linhas retas de dormir)
         draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
         draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy + tremorY + current_look_y)*2, (eyeRx + 8 + xOffset + tremorX + current_look_x)*2, (eyeRy + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
+    } else if (emotion == "surprised") {
+        // Olhos grandes e arregalados de surpresa/atenção ao som
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y - 2, 16, 32, 10, layer);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y - 2, 16, 32, 10, layer);
     } else if (emotion == "happy") {
         DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
         DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
@@ -1764,6 +1768,9 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (emotion == "sad" || emotion == "crying") {
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
+    } else if (emotion == "surprised") {
+        // Boca em 'o' de surpresa/atenção
+        draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 6*2, mc, 2);
     } else if (emotion == "happy") {
         draw_canvas_line(layer, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (52 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);

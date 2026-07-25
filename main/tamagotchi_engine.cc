@@ -303,8 +303,8 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "surprised";
     }
     
-    // 4. Som alto / Susto
-    if (sensor_som_nivel_ >= 280) {
+    // 4. Som alto / Susto / Chamado
+    if (sensor_som_nivel_ >= 180) {
         return "surprised";
     }
     
