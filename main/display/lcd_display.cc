@@ -1745,6 +1745,11 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         }
         DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eye_h, eyeRadius, layer);
         DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eye_h, eyeRadius, layer);
+        
+        if (engine.GetPersonalidade() == PERSONALIDADE_SARCASTICA) {
+            draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy - 10 + current_look_y)*2, (eyeLx + 6 + xOffset + current_look_x)*2, (eyeLy - 6 + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);
+            draw_canvas_line(layer, (eyeRx - 6 + xOffset + current_look_x)*2, (eyeRy - 6 + current_look_y)*2, (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy - 10 + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);
+        }
     }
     
     int mouthShiftX = (int)(current_look_x * 0.85f);

@@ -327,15 +327,8 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "confused";
     }
     
-    // 7. Emoções básicas por personalidade
-    if (personalidade_ == PERSONALIDADE_SARCASTICA) {
-        return "angry";
-    }
-    if (personalidade_ == PERSONALIDADE_SENSIVEL) {
-        return "loving";
-    }
-    
-    return "happy";
+    // 7. Estado normal base (Olhos padrão do robô com olhar ao redor e boca)
+    return "neutral";
 }
 
 bool TamagotchiEngine::ComparaUID(const uint8_t* a, const uint8_t* b) const {
