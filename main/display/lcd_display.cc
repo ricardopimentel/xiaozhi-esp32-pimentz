@@ -1638,22 +1638,57 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     bool brincando = engine.GetAnimacaoBrincando() || engine.GetAnimacaoAcariciado();
     bool curando = engine.GetAnimacaoCurando();
     
+    // Interpolação suave para o deslocamento dos olhos (Lerp)
+    static float target_look_x = 0.0f;
+    static float target_look_y = 0.0f;
+    static float current_look_x = 0.0f;
+    static float current_look_y = 0.0f;
+    static int look_timer = 0;
+
+    if (comendo || brincando || emotion == "sleeping") {
+        target_look_x = 0.0f;
+        target_look_y = 0.0f;
+    } else {
+        look_timer++;
+        if (look_timer > 200) {
+            look_timer = 0;
+            int r = rand() % 100;
+            if (r < 35) {
+                target_look_x = (float)((rand() % 8) - 10); // olha para esquerda
+                target_look_y = (float)((rand() % 4) - 2);
+            } else if (r < 70) {
+                target_look_x = (float)((rand() % 8) + 3);  // olha para direita
+                target_look_y = (float)((rand() % 4) - 2);
+            } else if (r < 85) {
+                target_look_x = (float)((rand() % 6) - 3);  // olha para cima/baixo
+                target_look_y = (float)((rand() % 6) - 3);
+            } else {
+                target_look_x = 0.0f;                       // centro
+                target_look_y = 0.0f;
+            }
+        }
+    }
+
+    // Aplica Lerp a cada frame para deslocar suavemente os olhos
+    current_look_x += (target_look_x - current_look_x) * 0.15f;
+    current_look_y += (target_look_y - current_look_y) * 0.15f;
+    
     if (comendo) {
         // Olhos piscando de satisfação na mastigação
         int chewY = (ms / 150) % 2 == 0 ? 2 : -2;
-        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY + chewY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY + chewY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + chewY + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + chewY + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (brincando) {
         // Olhos felizes piscando alegremente
-        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (emotion == "sleeping") {
         // Olhos fechados (linhas retas de dormir)
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX)*2, (eyeLy + tremorY)*2, (eyeLx + 8 + xOffset + tremorX)*2, (eyeLy + tremorY)*2, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX)*2, (eyeRy + tremorY)*2, (eyeRx + 8 + xOffset + tremorX)*2, (eyeRy + tremorY)*2, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy + tremorY + current_look_y)*2, (eyeRx + 8 + xOffset + tremorX + current_look_x)*2, (eyeRy + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
     } else if (emotion == "happy") {
-        DrawEyeHappy(eyeLx + xOffset + tremorX, eyeLy + tremorY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX, eyeRy + tremorY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (emotion == "angry") {
         static int blink_counter_angry = 0, blink_state_angry = 0;
         static float eye_h_angry = 24;
@@ -1667,17 +1702,10 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         } else if (blink_state_angry == 2) {
             eye_h_angry += 4; if (eye_h_angry >= 24) { eye_h_angry = 24; blink_state_angry = 0; }
         }
-        static int look_timer_angry = 0, look_x_angry = 0, look_y_angry = 0;
-        look_timer_angry++;
-        if (look_timer_angry > 300) {
-            look_timer_angry = 0;
-            if ((rand()%100) < 40) { look_x_angry = (rand()%10) - 5; look_y_angry = (rand()%6) - 3; }
-            else { look_x_angry = 0; look_y_angry = 0; }
-        }
-        DrawEye(eyeLx + xOffset + tremorX + look_x_angry, eyeLy + tremorY + look_y_angry, eyeLw, eye_h_angry, eyeRadius, layer);
-        DrawEye(eyeRx + xOffset + tremorX + look_x_angry, eyeRy + tremorY + look_y_angry, eyeRw, eye_h_angry, eyeRadius, layer);
-        draw_canvas_line(layer, (eyeLx - 10 + xOffset + look_x_angry)*2, (eyeLy - 12 + look_y_angry)*2, (eyeLx + 8 + xOffset + look_x_angry)*2, (eyeLy - 8 + look_y_angry)*2, lv_color_hex(0xFF0000), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + look_x_angry)*2, (eyeRy - 8 + look_y_angry)*2, (eyeRx + 10 + xOffset + look_x_angry)*2, (eyeRy - 12 + look_y_angry)*2, lv_color_hex(0xFF0000), 4);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eye_h_angry, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eye_h_angry, eyeRadius, layer);
+        draw_canvas_line(layer, (eyeLx - 10 + xOffset + current_look_x)*2, (eyeLy - 12 + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy - 8 + current_look_y)*2, lv_color_hex(0xFF0000), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + current_look_x)*2, (eyeRy - 8 + current_look_y)*2, (eyeRx + 10 + xOffset + current_look_x)*2, (eyeRy - 12 + current_look_y)*2, lv_color_hex(0xFF0000), 4);
     } else if (emotion == "sad" || emotion == "crying") {
         static int blink_counter_sad = 0, blink_state_sad = 0;
         static float eye_h_sad = 24;
@@ -1691,20 +1719,13 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         } else if (blink_state_sad == 2) {
             eye_h_sad += 4; if (eye_h_sad >= 24) { eye_h_sad = 24; blink_state_sad = 0; }
         }
-        static int look_timer_sad = 0, look_x_sad = 0, look_y_sad = 0;
-        look_timer_sad++;
-        if (look_timer_sad > 300) {
-            look_timer_sad = 0;
-            if ((rand()%100) < 40) { look_x_sad = (rand()%10) - 5; look_y_sad = (rand()%6) - 3; }
-            else { look_x_sad = 0; look_y_sad = 0; }
-        }
-        DrawEye(eyeLx + xOffset + tremorX + look_x_sad, eyeLy + tremorY + look_y_sad, eyeLw, eye_h_sad, eyeRadius, layer);
-        DrawEye(eyeRx + xOffset + tremorX + look_x_sad, eyeRy + tremorY + look_y_sad, eyeRw, eye_h_sad, eyeRadius, layer);
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + look_x_sad)*2, (eyeLy - 10 + look_y_sad)*2, (eyeLx + 8 + xOffset + look_x_sad)*2, (eyeLy - 14 + look_y_sad)*2, lv_color_hex(0x0080FF), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + look_x_sad)*2, (eyeRy - 14 + look_y_sad)*2, (eyeRx + 8 + xOffset + look_x_sad)*2, (eyeRy - 10 + look_y_sad)*2, lv_color_hex(0x0080FF), 4);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eye_h_sad, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eye_h_sad, eyeRadius, layer);
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy - 10 + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy - 14 + current_look_y)*2, lv_color_hex(0x0080FF), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + current_look_x)*2, (eyeRy - 14 + current_look_y)*2, (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy - 10 + current_look_y)*2, lv_color_hex(0x0080FF), 4);
     } else if (emotion == "loving") {
-        DrawLargeHeart(eyeLx + xOffset + tremorX, eyeLy + tremorY, (ms/400)%2, layer);
-        DrawLargeHeart(eyeRx + xOffset + tremorX, eyeRy + tremorY, (ms/400)%2, layer);
+        DrawLargeHeart(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, (ms/400)%2, layer);
+        DrawLargeHeart(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, (ms/400)%2, layer);
     } else {
         static int blink_counter = 0, blink_state = 0;
         static float eye_h = 24;
@@ -1718,19 +1739,12 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         } else if (blink_state == 2) {
             eye_h += 4; if (eye_h >= 24) { eye_h = 24; blink_state = 0; }
         }
-        static int look_timer = 0, look_x = 0, look_y = 0;
-        look_timer++;
-        if (look_timer > 300) {
-            look_timer = 0;
-            if ((rand()%100) < 40) { look_x = (rand()%10) - 5; look_y = (rand()%6) - 3; }
-            else { look_x = 0; look_y = 0; }
-        }
-        DrawEye(eyeLx + xOffset + tremorX + look_x, eyeLy + tremorY + look_y, eyeLw, eye_h, eyeRadius, layer);
-        DrawEye(eyeRx + xOffset + tremorX + look_x, eyeRy + tremorY + look_y, eyeRw, eye_h, eyeRadius, layer);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eye_h, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eye_h, eyeRadius, layer);
     }
     
-    float avgEyeX = (eyeLx + eyeRx) / 2.0, avgEyeY = (eyeLy + eyeRy) / 2.0;
-    int mouthShiftX = (avgEyeX - 64.0) * 0.85, mouthShiftY = (avgEyeY - 32.0) * 0.80;
+    int mouthShiftX = (int)(current_look_x * 0.85f);
+    int mouthShiftY = (int)(current_look_y * 0.80f);
     lv_color_t mc = lv_color_hex(0xFFFFFF);
     
     if (comendo) {
@@ -1763,9 +1777,9 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     float temp = engine.GetSensorTemperatura();
     if (temp < 18.0f && temp > 0.0f) {
         int tremorMouth = (ms % 100 < 50) ? 2 : -2;
-        draw_canvas_line(layer, 54*2, (48+tremorMouth)*2, 60*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
-        draw_canvas_line(layer, 60*2, (48-tremorMouth)*2, 66*2, (48+tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
-        draw_canvas_line(layer, 66*2, (48+tremorMouth)*2, 72*2, (48-tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        draw_canvas_line(layer, (54 + mouthShiftX)*2, (48 + mouthShiftY + tremorMouth)*2, (60 + mouthShiftX)*2, (48 + mouthShiftY - tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        draw_canvas_line(layer, (60 + mouthShiftX)*2, (48 + mouthShiftY - tremorMouth)*2, (66 + mouthShiftX)*2, (48 + mouthShiftY + tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
+        draw_canvas_line(layer, (66 + mouthShiftX)*2, (48 + mouthShiftY + tremorMouth)*2, (72 + mouthShiftX)*2, (48 + mouthShiftY - tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
     }
  
     if (numIcons > 0) {
@@ -1792,8 +1806,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
     
     if (emotion == "crying") {
-        if ((rand() % 100) < 6) CriarParticula(eyeLx - 8, eyeLy + 6, -0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
-        if ((rand() % 100) < 6) CriarParticula(eyeRx + 8, eyeRy + 6,  0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
+        if ((rand() % 100) < 6) CriarParticula(eyeLx - 8 + current_look_x, eyeLy + 6 + current_look_y, -0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
+        if ((rand() % 100) < 6) CriarParticula(eyeRx + 8 + current_look_x, eyeRy + 6 + current_look_y,  0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
     }
     if (emotion == "sleeping") {
         if ((rand() % 100) < 3) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, 0.2 + (rand()%4)/10.0, -0.3 - (rand()%4)/10.0, 'Z', 50);
@@ -1809,8 +1823,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
     if (temp > 28.0f) {
         if ((rand() % 100) < 5) {
-            CriarParticula(eyeLx - 8, eyeLy - 4, -0.1, 0.3, 'S', 30);
-            CriarParticula(eyeRx + 8, eyeRy - 4, 0.1, 0.3, 'S', 30);
+            CriarParticula(eyeLx - 8 + current_look_x, eyeLy - 4 + current_look_y, -0.1, 0.3, 'S', 30);
+            CriarParticula(eyeRx + 8 + current_look_x, eyeRy - 4 + current_look_y, 0.1, 0.3, 'S', 30);
         }
     }
     if (temp > 32.0f && (rand() % 100) < 5) CriarParticula(rand()%120, 0, 0, 0.6 + (rand()%6)/10.0, 'S', 45);
