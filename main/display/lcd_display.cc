@@ -1669,7 +1669,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         }
         static int look_timer_angry = 0, look_x_angry = 0, look_y_angry = 0;
         look_timer_angry++;
-        if (look_timer_angry > 150) {
+        if (look_timer_angry > 300) {
             look_timer_angry = 0;
             if ((rand()%100) < 40) { look_x_angry = (rand()%10) - 5; look_y_angry = (rand()%6) - 3; }
             else { look_x_angry = 0; look_y_angry = 0; }
@@ -1693,7 +1693,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         }
         static int look_timer_sad = 0, look_x_sad = 0, look_y_sad = 0;
         look_timer_sad++;
-        if (look_timer_sad > 150) {
+        if (look_timer_sad > 300) {
             look_timer_sad = 0;
             if ((rand()%100) < 40) { look_x_sad = (rand()%10) - 5; look_y_sad = (rand()%6) - 3; }
             else { look_x_sad = 0; look_y_sad = 0; }
@@ -1720,7 +1720,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         }
         static int look_timer = 0, look_x = 0, look_y = 0;
         look_timer++;
-        if (look_timer > 150) {
+        if (look_timer > 300) {
             look_timer = 0;
             if ((rand()%100) < 40) { look_x = (rand()%10) - 5; look_y = (rand()%6) - 3; }
             else { look_x = 0; look_y = 0; }
