@@ -31,6 +31,11 @@ public:
     }
     void SaveState();
     
+    // Métodos de Sincronização e Modo Autônomo
+    void SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade);
+    bool IsModoAutonomo() const { return modo_autonomo_; }
+    int8_t GetPontosDeVinculo() const { return pontos_de_vinculo_; }
+    
     // Ações de cuidado
     void Feed();
     void Play();
@@ -99,11 +104,6 @@ private:
     bool sensor_animacao_brincando_ = false;
     bool sensor_animacao_curando_ = false;
     bool sensor_animacao_acariciado_ = false;
-
-    // Métodos de Sincronização e Modo Autônomo
-    void SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade);
-    bool IsModoAutonomo() const { return modo_autonomo_; }
-    int8_t GetPontosDeVinculo() const { return pontos_de_vinculo_; }
 
     // UIDs de RFID para interacao
     uint8_t uid_comida_[4] = {0};
