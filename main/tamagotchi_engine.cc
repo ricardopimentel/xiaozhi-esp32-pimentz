@@ -81,22 +81,6 @@ void TamagotchiEngine::SaveState() {
     }
 }
 
-void TamagotchiEngine::Update() {
-    uint64_t now = esp_timer_get_time() / 1000;
-    
-    // 1. Processa ciclo de incubação se for ovo ou chocando
-    if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
-        ProcessarCicloIncubacao(sensor_rfid_lido_, sensor_rfid_uid_);
-        return;
-    }
-
-    // 1.5. Processa interações por RFID interpretadas pelo Corpo
-    if (sensor_rfid_lido_ && sensor_rfid_acao_ > 0) {
-        if (sensor_rfid_acao_ == 1) {
-            Feed();
-        } else if (sensor_rfid_acao_ == 2) {
-            Play();
-        } else if (sensor_rfid_acao_ == 3) {
 void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade) {
     tempo_ultimo_pacote_espnow_ = esp_timer_get_time() / 1000;
     modo_autonomo_ = false;
