@@ -29,6 +29,7 @@ public:
     
     // Métodos de Sincronização e Modo Autônomo
     void SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade);
+    void SetWebThresholds(uint16_t limPlay, uint16_t limSusto, uint8_t luzB, uint8_t luzA, float tempB, float tempA);
     bool IsModoAutonomo() const { return modo_autonomo_; }
     int8_t GetPontosDeVinculo() const { return pontos_de_vinculo_; }
     
@@ -114,6 +115,13 @@ private:
     
     // Sincronização, Animações e Timers
     bool modo_autonomo_ = true;
+    uint16_t limiar_brincar_ = 130;
+    uint16_t limiar_susto_ = 700;
+    uint8_t limiar_luz_baixo_ = 10;
+    uint8_t limiar_luz_alto_ = 80;
+    float limiar_temp_baixo_ = 18.0f;
+    float limiar_temp_alto_ = 28.0f;
+    
     uint8_t tipo_reacao_ociosa_ = 0;
     uint64_t tempo_fim_reacao_ociosa_ = 0;
     uint64_t tempo_proxima_reacao_ociosa_ = 0;

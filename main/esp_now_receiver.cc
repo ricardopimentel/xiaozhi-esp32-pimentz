@@ -43,6 +43,14 @@ struct __attribute__((packed)) RobotState {
   uint8_t rfidAcao;
   uint16_t somNivel;
   bool botaoPressionado;
+
+  // Limiares configuráveis da página web
+  uint16_t limiarBrincar;
+  uint16_t limiarSusto;
+  uint8_t limiarLuzBaixo;
+  uint8_t limiarLuzAlto;
+  float limiarTempBaixo;
+  float limiarTempAlto;
 };
 
 static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len) {
@@ -68,6 +76,9 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             auto& engine = TamagotchiEngine::GetInstance();
             engine.SyncRemoteState(state.fome, state.diversao, state.saude, 
                                   0, 0, state.estadoNascimento, state.idadeDias);
+            engine.SetWebThresholds(state.limiarBrincar, state.limiarSusto,
+                                    state.limiarLuzBaixo, state.limiarLuzAlto,
+                                    state.limiarTempBaixo, state.limiarTempAlto);
             engine.SetSensorData(state.temperatura, state.umidade, state.luzPorcento,
                                  state.choqueDetectado, state.obstaculoDetectado,
                                  state.botaoPressionado, state.somNivel,

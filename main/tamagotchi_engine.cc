@@ -393,13 +393,22 @@ void TamagotchiEngine::Pet() {
     SaveState();
 }
 
+void TamagotchiEngine::SetWebThresholds(uint16_t limPlay, uint16_t limSusto, uint8_t luzB, uint8_t luzA, float tempB, float tempA) {
+    if (limPlay > 0) limiar_brincar_ = limPlay;
+    if (limSusto > 0) limiar_susto_ = limSusto;
+    if (luzB > 0) limiar_luz_baixo_ = luzB;
+    if (luzA > 0) limiar_luz_alto_ = luzA;
+    if (tempB > 0.0f) limiar_temp_baixo_ = tempB;
+    if (tempA > 0.0f) limiar_temp_alto_ = tempA;
+}
+
 std::string TamagotchiEngine::GetCurrentEmotion() const {
     if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
         return "neutral";
     }
     
-    // 1. Sono se estiver escuro
-    if (sensor_luz_porcento_ < 10) {
+    // 1. Sono se estiver escuro (usa limiar_luz_baixo_)
+    if (sensor_luz_porcento_ < limiar_luz_baixo_) {
         return "sleeping";
     }
     
@@ -413,8 +422,8 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "surprised";
     }
     
-    // 4. Som alto / Susto / Chamado
-    if (sensor_som_nivel_ >= 180) {
+    // 4. Som alto / Susto / Chamado (usa limiar_brincar_ configurado na web)
+    if (sensor_som_nivel_ >= limiar_brincar_) {
         return "surprised";
     }
     
@@ -429,11 +438,11 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "confused";
     }
     
-    // 6. Temperaturas extremas
-    if (sensor_temperatura_ > 28.0f) {
+    // 6. Temperaturas extremas (usa limiar_temp_alto_ e limiar_temp_baixo_ configurados na web)
+    if (sensor_temperatura_ > limiar_temp_alto_) {
         return "embarrassed";
     }
-    if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f) {
+    if (sensor_temperatura_ < limiar_temp_baixo_ && sensor_temperatura_ > 0.0f) {
         return "confused";
     }
     
