@@ -59,6 +59,7 @@ public:
     bool GetAnimacaoComendo() const { return sensor_animacao_comendo_; }
     bool GetAnimacaoBrincando() const { return sensor_animacao_brincando_; }
     bool GetAnimacaoCurando() const { return sensor_animacao_curando_; }
+    bool GetAnimacaoAcariciado() const { return sensor_animacao_acariciado_; }
     float GetLimiarTempBaixo() const { return limiar_temp_baixo_; }
     float GetLimiarTempAlto() const { return limiar_temp_alto_; }
     uint16_t GetLimiarBrincar() const { return limiar_brincar_; }
