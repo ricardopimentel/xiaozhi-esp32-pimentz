@@ -1620,11 +1620,12 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     int tremorX = 0, tremorY = 0;
     if (emotion == "confused") tremorX = (ms % 100 < 50) ? 1 : -1;
     
-    // Tremedeira física se estiver frio (< 18C)
+    // Tremedeira física se estiver frio (temperatura < limiarTempBaixo)
     float temp_celsius = engine.GetSensorTemperatura();
-    if (temp_celsius < 18.0f && temp_celsius > 0.0f) {
-        tremorX += (ms % 80 < 40) ? 2 : -2;
-        tremorY += (ms % 60 < 30) ? 1 : -1;
+    float limiar_frio = engine.GetLimiarTempBaixo();
+    if ((temp_celsius < limiar_frio && temp_celsius > 0.0f) || emotion == "cold") {
+        tremorX += (ms % 80 < 40) ? 3 : -3;
+        tremorY += (ms % 60 < 30) ? 2 : -2;
     }
     
     // Tremedeira forte se houver chacoalhão/choque detectado pelo sensor físico
@@ -1710,6 +1711,10 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         // Olhos de coração para personalidade sensível
         DrawLargeHeart(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, (ms/400)%2, layer);
         DrawLargeHeart(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, (ms/400)%2, layer);
+    } else if (emotion == "cold") {
+        // Olhos encolhidos de frio tremendo
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, 14, 20, 4, layer);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, 14, 20, 4, layer);
     } else if (emotion == "sleeping") {
         // Olhos fechados (linhas retas de dormir)
         draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
@@ -1821,7 +1826,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
     
     float temp = engine.GetSensorTemperatura();
-    if (temp < 18.0f && temp > 0.0f) {
+    float limiarFrio = engine.GetLimiarTempBaixo();
+    if ((temp < limiarFrio && temp > 0.0f) || emotion == "cold") {
         int tremorMouth = (ms % 100 < 50) ? 2 : -2;
         draw_canvas_line(layer, (54 + mouthShiftX)*2, (48 + mouthShiftY + tremorMouth)*2, (60 + mouthShiftX)*2, (48 + mouthShiftY - tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
         draw_canvas_line(layer, (60 + mouthShiftX)*2, (48 + mouthShiftY - tremorMouth)*2, (66 + mouthShiftX)*2, (48 + mouthShiftY + tremorMouth)*2, lv_color_hex(0x00FFFF), 3);

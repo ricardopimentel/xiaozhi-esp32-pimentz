@@ -79,6 +79,9 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             engine.SetWebThresholds(state.limiarBrincar, state.limiarSusto,
                                     state.limiarLuzBaixo, state.limiarLuzAlto,
                                     state.limiarTempBaixo, state.limiarTempAlto);
+            
+            ESP_LOGD(TAG, "Limiares Web Recebidos via ESP-NOW: Brincar=%d, Susto=%d, TempFrio=%.1f, TempCalor=%.1f",
+                     state.limiarBrincar, state.limiarSusto, state.limiarTempBaixo, state.limiarTempAlto);
             engine.SetSensorData(state.temperatura, state.umidade, state.luzPorcento,
                                  state.choqueDetectado, state.obstaculoDetectado,
                                  state.botaoPressionado, state.somNivel,

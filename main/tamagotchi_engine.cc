@@ -443,7 +443,7 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "embarrassed";
     }
     if (sensor_temperatura_ < limiar_temp_baixo_ && sensor_temperatura_ > 0.0f) {
-        return "confused";
+        return "cold";
     }
     
     // 7. Estado normal base (Olhos padrão do robô com olhar ao redor e boca)
