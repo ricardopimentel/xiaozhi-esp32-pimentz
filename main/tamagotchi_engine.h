@@ -23,12 +23,8 @@ public:
     void Initialize();
     void Update();
     void SetSensorData(float temperatura, float umidade, uint8_t luz, bool choque, bool obstaculo, bool botao, uint16_t som, bool rfidLido, uint8_t rfidAcao, const uint8_t* rfidUID);
-    void SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado) {
-        sensor_animacao_comendo_ = comendo;
-        sensor_animacao_brincando_ = brincando;
-        sensor_animacao_curando_ = curando;
-        sensor_animacao_acariciado_ = acariciado;
-    }
+    void SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado);
+    uint8_t GetTipoReacaoOciosa() const { return tipo_reacao_ociosa_; }
     void SaveState();
     
     // Métodos de Sincronização e Modo Autônomo
@@ -116,8 +112,15 @@ private:
     int8_t pontos_de_vinculo_ = 0;
     uint16_t segundos_chocados_ = 0;
     
-    // Sincronização e Timers
+    // Sincronização, Animações e Timers
     bool modo_autonomo_ = true;
+    uint8_t tipo_reacao_ociosa_ = 0;
+    uint64_t tempo_fim_reacao_ociosa_ = 0;
+    uint64_t tempo_proxima_reacao_ociosa_ = 0;
+    uint64_t tempo_inicio_animacao_comendo_ = 0;
+    uint64_t tempo_inicio_animacao_brincando_ = 0;
+    uint64_t tempo_inicio_animacao_curando_ = 0;
+    uint64_t tempo_inicio_animacao_acariciado_ = 0;
     uint64_t tempo_ultimo_pacote_espnow_ = 0;
     uint64_t last_tick_time_ = 0;
     uint64_t last_save_time_ = 0;

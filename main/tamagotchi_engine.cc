@@ -81,6 +81,20 @@ void TamagotchiEngine::SaveState() {
     }
 }
 
+void TamagotchiEngine::SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado) {
+    uint64_t now = esp_timer_get_time() / 1000;
+    
+    if (comendo && !sensor_animacao_comendo_) tempo_inicio_animacao_comendo_ = now;
+    if (brincando && !sensor_animacao_brincando_) tempo_inicio_animacao_brincando_ = now;
+    if (curando && !sensor_animacao_curando_) tempo_inicio_animacao_curando_ = now;
+    if (acariciado && !sensor_animacao_acariciado_) tempo_inicio_animacao_acariciado_ = now;
+
+    sensor_animacao_comendo_ = comendo;
+    sensor_animacao_brincando_ = brincando;
+    sensor_animacao_curando_ = curando;
+    sensor_animacao_acariciado_ = acariciado;
+}
+
 void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade) {
     tempo_ultimo_pacote_espnow_ = esp_timer_get_time() / 1000;
     modo_autonomo_ = false;
@@ -106,6 +120,71 @@ void TamagotchiEngine::Update() {
     // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
     if (now - tempo_ultimo_pacote_espnow_ > 3000) {
         modo_autonomo_ = true;
+    }
+
+    // Proteção contra loop infinito de animações de ação (timeout de 6 segundos)
+    if (sensor_animacao_comendo_ && (now - tempo_inicio_animacao_comendo_ > 6000)) sensor_animacao_comendo_ = false;
+    if (sensor_animacao_brincando_ && (now - tempo_inicio_animacao_brincando_ > 6000)) sensor_animacao_brincando_ = false;
+    if (sensor_animacao_curando_ && (now - tempo_inicio_animacao_curando_ > 6000)) sensor_animacao_curando_ = false;
+    if (sensor_animacao_acariciado_ && (now - tempo_inicio_animacao_acariciado_ > 6000)) sensor_animacao_acariciado_ = false;
+
+    // Lógica de Micro-Animações Ociosas (Idle)
+    if (estado_nascimento_ == ESTADO_NASCIDO && sensor_luz_porcento_ >= 10 &&
+        !sensor_animacao_comendo_ && !sensor_animacao_brincando_ && 
+        !sensor_animacao_curando_ && !sensor_animacao_acariciado_) {
+        
+        if (tipo_reacao_ociosa_ != 0 && now > tempo_fim_reacao_ociosa_) {
+            tipo_reacao_ociosa_ = 0;
+            tempo_proxima_reacao_ociosa_ = now + (25000 + (rand() % 20000)); // 25 a 45 segundos
+        }
+        
+        if (tipo_reacao_ociosa_ == 0 && now > tempo_proxima_reacao_ociosa_) {
+            int r = rand() % 100;
+            Personalidade pers = GetPersonalidade();
+            
+            if (pers == PERSONALIDADE_SARCASTICA) {
+                if (r < 33) {
+                    tipo_reacao_ociosa_ = 2; // Revirar olhos (2s)
+                    tempo_fim_reacao_ociosa_ = now + 2000;
+                } else if (r < 66) {
+                    tipo_reacao_ociosa_ = 8; // Olhos >< boca rabugenta (2s)
+                    tempo_fim_reacao_ociosa_ = now + 2000;
+                } else {
+                    tipo_reacao_ociosa_ = 9; // Olhos - - boca VVV (2s)
+                    tempo_fim_reacao_ociosa_ = now + 2000;
+                }
+            } else if (pers == PERSONALIDADE_SENSIVEL) {
+                if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f) {
+                    tipo_reacao_ociosa_ = 4; // Tremedeira frio (2.5s)
+                    tempo_fim_reacao_ociosa_ = now + 2500;
+                } else {
+                    if (r < 33) {
+                        tipo_reacao_ociosa_ = 12; // Olhos coração H (2s)
+                        tempo_fim_reacao_ociosa_ = now + 2000;
+                    } else if (r < 66) {
+                        tipo_reacao_ociosa_ = 7; // Sorridente com corações subindo (2s)
+                        tempo_fim_reacao_ociosa_ = now + 2000;
+                    } else {
+                        tipo_reacao_ociosa_ = 14; // Beijo (2s)
+                        tempo_fim_reacao_ociosa_ = now + 2000;
+                    }
+                }
+            } else { // PERSONALIDADE_BASICA
+                if (r < 33) {
+                    tipo_reacao_ociosa_ = 1; // Assobio (2.5s)
+                    tempo_fim_reacao_ociosa_ = now + 2500;
+                } else if (r < 66) {
+                    tipo_reacao_ociosa_ = 10; // Piscadela (2s)
+                    tempo_fim_reacao_ociosa_ = now + 2000;
+                } else {
+                    tipo_reacao_ociosa_ = 11; // Olhos feliz >< sorriso (2s)
+                    tempo_fim_reacao_ociosa_ = now + 2000;
+                }
+            }
+        }
+    } else if (sensor_animacao_comendo_ || sensor_animacao_brincando_ || sensor_animacao_curando_ || sensor_animacao_acariciado_) {
+        tipo_reacao_ociosa_ = 0;
+        tempo_proxima_reacao_ociosa_ = now + 30000;
     }
 
     if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {

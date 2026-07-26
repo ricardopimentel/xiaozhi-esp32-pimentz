@@ -1673,15 +1673,43 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     current_look_x += (target_look_x - current_look_x) * 0.15f;
     current_look_y += (target_look_y - current_look_y) * 0.15f;
     
+    uint8_t idleTipo = engine.GetTipoReacaoOciosa();
+
     if (comendo) {
         // Olhos piscando de satisfação na mastigação
         int chewY = (ms / 150) % 2 == 0 ? 2 : -2;
         DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + chewY + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
         DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + chewY + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
-    } else if (brincando) {
+    } else if (brincando || idleTipo == 11) {
         // Olhos felizes piscando alegremente
         DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
         DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+    } else if (idleTipo == 2) {
+        // Revirar olhos (5 fases de rotação ociosa sarcástica)
+        int faseRot = (ms / 350) % 5;
+        float rotX = 0, rotY = 0;
+        if (faseRot == 1) { rotX = -6; rotY = 2; }
+        else if (faseRot == 2) { rotX = -5; rotY = -4; }
+        else if (faseRot == 3) { rotX = 5; rotY = -4; }
+        else if (faseRot == 4) { rotX = 6; rotY = 2; }
+        DrawEye(eyeLx + xOffset + rotX, eyeLy + rotY, eyeLw, eyeLh, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + rotX, eyeRy + rotY, eyeRw, eyeRh, eyeRadius, layer);
+    } else if (idleTipo == 8) {
+        // Deboche rabugento: olhos >< fechados
+        DrawEyeHappy(eyeLx + xOffset + current_look_x, eyeLy + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
+        DrawEyeHappy(eyeRx + xOffset + current_look_x, eyeRy + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+    } else if (idleTipo == 9) {
+        // Desdém irritado: olhos em traço - -
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + current_look_x)*2, (eyeRy + current_look_y)*2, (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
+    } else if (idleTipo == 10) {
+        // Piscadela de um olho (olho esquerdo fechado, olho direito aberto)
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
+        DrawEye(eyeRx + xOffset + current_look_x, eyeRy + current_look_y, eyeRw, eyeRh, eyeRadius, layer);
+    } else if (idleTipo == 12 || idleTipo == 7 || idleTipo == 14) {
+        // Olhos de coração para personalidade sensível
+        DrawLargeHeart(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, (ms/400)%2, layer);
+        DrawLargeHeart(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, (ms/400)%2, layer);
     } else if (emotion == "sleeping") {
         // Olhos fechados (linhas retas de dormir)
         draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
@@ -1766,13 +1794,19 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (emotion == "sleeping") {
         // Boca redonda pequena bocejando/dormindo
         draw_canvas_rect(layer, (62 + mouthShiftX)*2, (48 + mouthShiftY)*2, 4*2, 4*2, mc, 2);
-    } else if (brincando) {
+    } else if (brincando || idleTipo == 11) {
         // Sorriso grande aberto
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (53 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (53 + mouthShiftY)*2, (70 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
-    } else if (emotion == "sad" || emotion == "crying") {
+    } else if (idleTipo == 1) {
+        // Assobio: boca em 'o' pequena
+        draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 4*2, mc, 2);
+    } else if (idleTipo == 8 || idleTipo == 9 || emotion == "sad" || emotion == "crying") {
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
+    } else if (idleTipo == 14) {
+        // Beijo: biquinho
+        draw_canvas_rect(layer, (62 + mouthShiftX)*2, (48 + mouthShiftY)*2, 3*2, 3*2, mc, 2);
     } else if (emotion == "surprised") {
         // Boca em 'o' de surpresa/atenção
         draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 6*2, mc, 2);
