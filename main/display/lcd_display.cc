@@ -49,7 +49,11 @@ static void draw_canvas_arc(lv_layer_t * layer, int x, int y, int radius, int st
     dsc.start_angle = start_angle;
     dsc.end_angle = end_angle;
     lv_draw_arc(layer, &dsc);
-    }
+}
+
+static void draw_canvas_disc(lv_layer_t * layer, int cx, int cy, int radius, lv_color_t color) {
+    draw_canvas_rect(layer, cx - radius, cy - radius, radius * 2, radius * 2, color, radius);
+}
 #endif
 
 #include "gif/lvgl_gif.h"
