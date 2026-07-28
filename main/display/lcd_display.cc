@@ -1645,9 +1645,6 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     std::string emotion = engine.GetCurrentEmotion();
     
     int tremorX = 0, tremorY = 0;
-    // Tremedeira física se estiver frio (apenas na boca, olhos firmes)
-    float temp_celsius = engine.GetSensorTemperatura();
-    float limiar_frio = engine.GetLimiarTempBaixo();
     
     // Tremedeira forte se houver chacoalhão/choque detectado pelo sensor físico
     if (engine.GetSensorChoque()) {
@@ -1697,6 +1694,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     
     // Gingado senoidal corporal ao brincar/feliz e respiração suave
     float swayX = (brincando || emotion == "happy") ? (sin(ms * 0.008f) * 1.5f) : 0.0f;
+    float swayY = (brincando || emotion == "happy") ? (cos(ms * 0.008f) * 1.0f) : 0.0f;
     float breathY = (emotion == "sleeping" || emotion == "sad" || emotion == "crying") ? (sin(ms * 0.0025f) * 1.2f) : 0.0f;
     uint8_t idleTipo = engine.GetTipoReacaoOciosa();
     float reactionProgress = 1.0f;
