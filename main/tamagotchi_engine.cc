@@ -102,6 +102,8 @@ void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t s
     fome_ = fome;
     diversao_ = diversao;
     saude_ = saude;
+    personalidade_ = static_cast<Personalidade>(pers);
+    personalidade_natural_ = static_cast<Personalidade>(pers);
     if (vinculo > 0) {
         pontos_de_vinculo_ = vinculo;
         AtualizarVinculo(0);
@@ -275,20 +277,22 @@ void TamagotchiEngine::Update() {
         tempo_no_frio_ = 0;
     }
 
-    // 4. Atualiza personalidade com base nos pontos de vínculo
-    if (pontos_de_vinculo_ < 40) {
-        personalidade_natural_ = PERSONALIDADE_SARCASTICA;
-    } else if (pontos_de_vinculo_ < 80) {
-        personalidade_natural_ = PERSONALIDADE_BASICA;
-    } else {
-        personalidade_natural_ = PERSONALIDADE_SENSIVEL;
-    }
-    
-    uint8_t limiarTriste = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? 50 : 30;
-    if (fome_ <= limiarTriste || diversao_ <= limiarTriste) {
-        personalidade_ = PERSONALIDADE_SARCASTICA;
-    } else {
-        personalidade_ = personalidade_natural_;
+    // 4. Atualiza personalidade com base nos pontos de vínculo apenas no Modo Autônomo
+    if (modo_autonomo_) {
+        if (pontos_de_vinculo_ < 40) {
+            personalidade_natural_ = PERSONALIDADE_SARCASTICA;
+        } else if (pontos_de_vinculo_ < 80) {
+            personalidade_natural_ = PERSONALIDADE_BASICA;
+        } else {
+            personalidade_natural_ = PERSONALIDADE_SENSIVEL;
+        }
+        
+        uint8_t limiarTriste = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? 50 : 30;
+        if (fome_ <= limiarTriste || diversao_ <= limiarTriste) {
+            personalidade_ = PERSONALIDADE_SARCASTICA;
+        } else {
+            personalidade_ = personalidade_natural_;
+        }
     }
 }
 
