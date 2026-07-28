@@ -1559,8 +1559,21 @@ void LcdDisplay::DrawEye(float x, float y, float w, float h, float r, lv_layer_t
 
 void LcdDisplay::DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer) {
     if (!face_canvas_) return;
+    progress = std::max(0.0f, std::min(1.0f, progress));
     int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
-    draw_canvas_arc(layer, px, py + ph/4, pw/2, 180, 360, lv_color_hex(0xFFFFFF), 4);
+    
+    if (progress < 0.25f) {
+        // Transição suave de abertura do olho para o início da curvatura
+        float factor = progress / 0.25f;
+        float curH = h * (1.0f - factor * 0.4f);
+        DrawEye(x, y, w, curH, r, layer);
+    } else {
+        // Transição contínua para a meia lua arredondada
+        float arcProgress = (progress - 0.25f) / 0.75f;
+        int arcRadius = (pw / 2);
+        int offsetY = (ph / 4) * arcProgress;
+        draw_canvas_arc(layer, px, py + offsetY, arcRadius, 180, 360, lv_color_hex(0xFFFFFF), 4);
+    }
 }
 
 void LcdDisplay::DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer) {
@@ -1684,10 +1697,20 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     
     // Gingado senoidal corporal ao brincar/feliz e respiração suave
     float swayX = (brincando || emotion == "happy") ? (sin(ms * 0.008f) * 1.5f) : 0.0f;
-    float swayY = (brincando || emotion == "happy") ? (cos(ms * 0.008f) * 1.0f) : 0.0f;
     float breathY = (emotion == "sleeping" || emotion == "sad" || emotion == "crying") ? (sin(ms * 0.0025f) * 1.2f) : 0.0f;
-    
     uint8_t idleTipo = engine.GetTipoReacaoOciosa();
+    float reactionProgress = 1.0f;
+    uint64_t tStart = engine.GetTempoInicioReacaoOciosa();
+    uint64_t tFim = engine.GetTempoFimReacaoOciosa();
+    if (idleTipo != 0 && tFim > tStart && ms >= tStart && ms <= tFim) {
+        float elapsed = (ms - tStart);
+        float remain = (tFim - ms);
+        if (elapsed < 350.0f) {
+            reactionProgress = elapsed / 350.0f; // Transição suave de entrada (0.0 -> 1.0)
+        } else if (remain < 350.0f) {
+            reactionProgress = remain / 350.0f;  // Transição suave de saída (1.0 -> 0.0)
+        }
+    }
 
     if (comendo) {
         // Olhos piscando de satisfação na mastigação
@@ -1695,9 +1718,9 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, eyeLy + tremorY + chewY + current_look_y + swayY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
         DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, eyeRy + tremorY + chewY + current_look_y + swayY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
     } else if (brincando || idleTipo == 11) {
-        // Olhos felizes piscando alegremente com gingado
-        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, eyeLy + tremorY + current_look_y + swayY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, eyeRy + tremorY + current_look_y + swayY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+        // Olhos felizes piscando alegremente com transição de meia-lua
+        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, eyeLy + tremorY + current_look_y + swayY, eyeLw, eyeLh, eyeRadius, reactionProgress, layer);
+        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, eyeRy + tremorY + current_look_y + swayY, eyeRw, eyeRh, eyeRadius, reactionProgress, layer);
     } else if (idleTipo == 2) {
         // Revirar pupilas em órbita circular senoidal dentro dos olhos (Sarcástico)
         float rotAngulo = ms * 0.01f;
@@ -1717,9 +1740,9 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         draw_canvas_disc(layer, pLx, pLy, 3*2, lv_color_hex(0x000000));
         draw_canvas_disc(layer, pRx, pRy, 3*2, lv_color_hex(0x000000));
     } else if (idleTipo == 8) {
-        // Deboche rabugento: olhos >< fechados
-        DrawEyeHappy(eyeLx + xOffset + current_look_x, eyeLy + current_look_y, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + current_look_x, eyeRy + current_look_y, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+        // Deboche rabugento com transição de meia-lua
+        DrawEyeHappy(eyeLx + xOffset + current_look_x, eyeLy + current_look_y, eyeLw, eyeLh, eyeRadius, reactionProgress, layer);
+        DrawEyeHappy(eyeRx + xOffset + current_look_x, eyeLy + current_look_y, eyeRw, eyeRh, eyeRadius, reactionProgress, layer);
     } else if (idleTipo == 9) {
         // Desdém irritado: olhos em traço - -
         draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
@@ -1879,25 +1902,33 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
  
     if (numIcons > 0) {
-        int totalW = (numIcons * 12) + ((numIcons - 1) * 4);
+        int totalW = (numIcons * 14) + ((numIcons - 1) * 4);
         int startX = 64 - (totalW / 2); // Balão 100% fixo no centro da tela
         int drawY = 4;                  // Balão 100% fixo no topo da tela
-        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY - 3)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 2*2, 0);
+        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY - 3)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 2*2, 2*2);
         draw_canvas_line(layer, 64*2, (drawY+11)*2, 62*2, (drawY+14)*2, lv_color_hex(0xFFFFFF), 2);
         
         int currentX = startX;
         if (precisaComida) {
-            draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 3)*2, 6*2, 2*2, lv_color_hex(0xFFA500), 0);
-            currentX += 16;
+            // Ícone 1: Tigela de Comida (Laranja/Amarelo)
+            draw_canvas_arc(layer, (currentX + 6)*2, (drawY + 7)*2, 5*2, 0, 180, lv_color_hex(0xFFA500), 2);
+            draw_canvas_line(layer, (currentX + 1)*2, (drawY + 7)*2, (currentX + 11)*2, (drawY + 7)*2, lv_color_hex(0xFFA500), 2);
+            draw_canvas_disc(layer, (currentX + 6)*2, (drawY + 4)*2, 3*2, lv_color_hex(0xFF8C00));
+            currentX += 18;
         }
         if (precisaBrincar) {
-            draw_canvas_rect_empty(layer, currentX*2, (drawY - 1)*2, 12*2, 7*2, lv_color_hex(0x00FF00), 2, 0);
-            currentX += 16;
+            // Ícone 2: Controle de Videogame / Gamepad (Verde)
+            draw_canvas_rect(layer, currentX*2, (drawY + 3)*2, 12*2, 7*2, lv_color_hex(0x00FF66), 2*2);
+            draw_canvas_disc(layer, (currentX + 3)*2, (drawY + 6)*2, 1*2, lv_color_hex(0x000000));
+            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 6)*2, 1*2, lv_color_hex(0x000000));
+            currentX += 18;
         }
         if (precisaSaude) {
-            draw_canvas_line(layer, (currentX+6)*2, (drawY)*2, (currentX+6)*2, (drawY+6)*2, lv_color_hex(0xFF0000), 4);
-            draw_canvas_line(layer, (currentX+3)*2, (drawY+3)*2, (currentX+9)*2, (drawY+3)*2, lv_color_hex(0xFF0000), 4);
-            currentX += 16;
+            // Ícone 3: Emblema Médico com Cruz Branca (Vermelho)
+            draw_canvas_disc(layer, (currentX + 6)*2, (drawY + 6)*2, 5*2, lv_color_hex(0xFF3333));
+            draw_canvas_line(layer, (currentX + 6)*2, (drawY + 3)*2, (currentX + 6)*2, (drawY + 9)*2, lv_color_hex(0xFFFFFF), 2);
+            draw_canvas_line(layer, (currentX + 3)*2, (drawY + 6)*2, (currentX + 9)*2, (drawY + 6)*2, lv_color_hex(0xFFFFFF), 2);
+            currentX += 18;
         }
     }
     

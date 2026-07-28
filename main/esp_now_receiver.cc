@@ -18,6 +18,7 @@ struct __attribute__((packed)) RobotState {
   uint8_t saude;
   uint8_t humor;           // 0=FELIZ, 1=ENTEDIADO, 2=CARENTE, 3=DOENTE
   uint8_t estadoNascimento; // 0=OVO, 1=CHOCANDO, 2=NASCIDO
+  uint8_t personalidade;   // 0=BASICA, 1=SARCASTICA, 2=SENSIVEL
   uint32_t idadeDias;
   float temperatura;
   float umidade;
@@ -75,7 +76,7 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             // Atualiza o motor do Tamagotchi com as leituras físicas do corpo
             auto& engine = TamagotchiEngine::GetInstance();
             engine.SyncRemoteState(state.fome, state.diversao, state.saude, 
-                                  0, 0, state.estadoNascimento, state.idadeDias);
+                                  0, state.personalidade, state.estadoNascimento, state.idadeDias);
             engine.SetWebThresholds(state.limiarBrincar, state.limiarSusto,
                                     state.limiarLuzBaixo, state.limiarLuzAlto,
                                     state.limiarTempBaixo, state.limiarTempAlto);

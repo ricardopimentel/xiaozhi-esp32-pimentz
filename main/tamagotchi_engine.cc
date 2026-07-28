@@ -141,6 +141,7 @@ void TamagotchiEngine::Update() {
         if (tipo_reacao_ociosa_ == 0 && now > tempo_proxima_reacao_ociosa_) {
             int r = rand() % 100;
             Personalidade pers = GetPersonalidade();
+            tempo_inicio_reacao_ociosa_ = now;
             
             if (pers == PERSONALIDADE_SARCASTICA) {
                 if (r < 33) {

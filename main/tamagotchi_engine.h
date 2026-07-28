@@ -65,6 +65,8 @@ public:
     uint16_t GetLimiarBrincar() const { return limiar_brincar_; }
     uint16_t GetLimiarSusto() const { return limiar_susto_; }
     uint8_t GetLimiarLuzBaixo() const { return limiar_luz_baixo_; }
+    uint64_t GetTempoInicioReacaoOciosa() const { return tempo_inicio_reacao_ociosa_; }
+    uint64_t GetTempoFimReacaoOciosa() const { return tempo_fim_reacao_ociosa_; }
     
     std::string GetCurrentEmotion() const;
 
@@ -128,6 +130,7 @@ private:
     float limiar_temp_alto_ = 28.0f;
     
     uint8_t tipo_reacao_ociosa_ = 0;
+    uint64_t tempo_inicio_reacao_ociosa_ = 0;
     uint64_t tempo_fim_reacao_ociosa_ = 0;
     uint64_t tempo_proxima_reacao_ociosa_ = 0;
     uint64_t tempo_inicio_animacao_comendo_ = 0;
