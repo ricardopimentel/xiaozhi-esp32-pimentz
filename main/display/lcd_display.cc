@@ -1818,24 +1818,28 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         } else if (blink_state == 2) {
             eye_h += 4; if (eye_h >= 24) { eye_h = 24; blink_state = 0; }
         }
-        bool isSarcastic = (engine.GetPersonalidade() == PERSONALIDADE_SARCASTICA);
-        float render_h = isSarcastic ? (eye_h * 0.5f) : eye_h;
-        float render_ly = isSarcastic ? (eyeLy + tremorY + current_look_y + eye_h * 0.25f) : (eyeLy + tremorY + current_look_y);
-        float render_ry = isSarcastic ? (eyeRy + tremorY + current_look_y + eye_h * 0.25f) : (eyeRy + tremorY + current_look_y);
-
-        DrawEye(eyeLx + xOffset + tremorX + current_look_x, render_ly, eyeLw, render_h, isSarcastic ? 2 : eyeRadius, layer);
-        DrawEye(eyeRx + xOffset + tremorX + current_look_x, render_ry, eyeRw, render_h, isSarcastic ? 2 : eyeRadius, layer);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eye_h, eyeRadius, layer);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eye_h, eyeRadius, layer);
         
+        bool isSarcastic = (engine.GetPersonalidade() == PERSONALIDADE_SARCASTICA || fome <= 30 || diversao <= 30);
         if (isSarcastic) {
-            // Linha reta da pálpebra plana horizontal no topo do olho semicerrado
+            // Corta a metade superior dos olhos com caixa preta (idêntico ao RoboESP32.ino)
+            int cutH = (int)(eye_h * 0.45f);
             int lx = (eyeLx + xOffset + current_look_x) * 2;
+            int ly = (eyeLy + tremorY + current_look_y - eye_h/2.0f) * 2;
             int rx = (eyeRx + xOffset + current_look_x) * 2;
-            int topY = (render_ly - render_h/2.0f) * 2;
-            int lw = (eyeLw + 2) * 2;
-            int rw = (eyeRw + 2) * 2;
+            int ry = (eyeRy + tremorY + current_look_y - eye_h/2.0f) * 2;
+            int lw = (eyeLw + 4) * 2;
+            int rw = (eyeRw + 4) * 2;
 
-            draw_canvas_line(layer, lx - lw/2, topY, lx + lw/2, topY, lv_color_hex(0xFFFFFF), 4);
-            draw_canvas_line(layer, rx - rw/2, topY, rx + rw/2, topY, lv_color_hex(0xFFFFFF), 4);
+            // Caixa preta cobrindo os 45% superiores dos olhos
+            draw_canvas_rect(layer, lx - lw/2, ly - 2, lw, cutH * 2 + 2, lv_color_hex(0x000000), 0);
+            draw_canvas_rect(layer, rx - rw/2, ry - 2, rw, cutH * 2 + 2, lv_color_hex(0x000000), 0);
+
+            // Linha branca reta da pálpebra semicerrada na linha de corte
+            int cutLineY = ly + cutH * 2;
+            draw_canvas_line(layer, lx - lw/2, cutLineY, lx + lw/2, cutLineY, lv_color_hex(0xFFFFFF), 4);
+            draw_canvas_line(layer, rx - rw/2, cutLineY, rx + rw/2, cutLineY, lv_color_hex(0xFFFFFF), 4);
 
             // Sobrancelhas irônicas inclinadas
             draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy - 12 + current_look_y)*2, (eyeLx + 6 + xOffset + current_look_x)*2, (eyeLy - 8 + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);

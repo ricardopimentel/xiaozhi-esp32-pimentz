@@ -47,6 +47,7 @@ public:
     bool EstaDoente() const { return esta_doente_; }
     uint32_t GetIdadeDias() const { return idade_dias_; }
     Personalidade GetPersonalidade() const { return personalidade_; }
+    void SetPersonalidade(Personalidade p) { personalidade_ = p; personalidade_natural_ = p; }
     uint16_t GetSegundosChocados() const { return segundos_chocados_; }
     
     float GetSensorTemperatura() const { return sensor_temperatura_; }
