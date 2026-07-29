@@ -28,7 +28,7 @@ public:
     void SaveState();
     
     // Métodos de Sincronização e Modo Autônomo
-    void SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade);
+    void SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t humor, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade);
     void SetWebThresholds(uint16_t limPlay, uint16_t limSusto, uint8_t luzB, uint8_t luzA, float tempB, float tempA);
     bool IsModoAutonomo() const { return modo_autonomo_; }
     int8_t GetPontosDeVinculo() const { return pontos_de_vinculo_; }

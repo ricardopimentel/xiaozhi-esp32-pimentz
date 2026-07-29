@@ -95,7 +95,7 @@ void TamagotchiEngine::SetAnimationState(bool comendo, bool brincando, bool cura
     sensor_animacao_acariciado_ = acariciado;
 }
 
-void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade) {
+void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t humor, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade) {
     tempo_ultimo_pacote_espnow_ = esp_timer_get_time() / 1000;
     modo_autonomo_ = false;
 
