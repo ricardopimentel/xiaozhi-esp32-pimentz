@@ -433,15 +433,16 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "surprised";
     }
     
-    // 5. Atributos muito baixos
-    if (fome_ < 25 || diversao_ < 25 || saude_ < 25) {
-        return "crying";
+    // 5. Atributos muito baixos (Muito tempo sem comer/brincar = Zangado)
+    if (fome_ <= 15 || diversao_ <= 15 || saude_ <= 15) {
+        return "angry";
     }
-    if (fome_ < 50 || diversao_ < 50 || saude_ < 50) {
+    // Atributos moderadamente baixos (Triste)
+    if (fome_ <= 50 || diversao_ <= 50 || saude_ <= 50) {
         return "sad";
     }
     if (esta_doente_) {
-        return "confused";
+        return "sad";
     }
     
     // 6. Temperaturas extremas (usa limiar_temp_alto_ e limiar_temp_baixo_ configurados na web)
