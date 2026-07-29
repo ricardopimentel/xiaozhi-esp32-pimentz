@@ -102,6 +102,7 @@ void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t s
     fome_ = fome;
     diversao_ = diversao;
     saude_ = saude;
+    humor_ = humor;
     personalidade_ = static_cast<Personalidade>(pers);
     personalidade_natural_ = static_cast<Personalidade>(pers);
     if (vinculo > 0) {

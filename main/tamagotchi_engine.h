@@ -48,6 +48,7 @@ public:
     uint32_t GetIdadeDias() const { return idade_dias_; }
     Personalidade GetPersonalidade() const { return personalidade_; }
     void SetPersonalidade(Personalidade p) { personalidade_ = p; personalidade_natural_ = p; }
+    uint8_t GetHumor() const { return humor_; }
     uint16_t GetSegundosChocados() const { return segundos_chocados_; }
     
     float GetSensorTemperatura() const { return sensor_temperatura_; }
@@ -88,6 +89,7 @@ private:
     uint8_t fome_ = 100;
     uint8_t diversao_ = 100;
     uint8_t saude_ = 100;
+    uint8_t humor_ = 0;
     bool esta_doente_ = false;
     uint32_t segundos_de_vida_ = 0;
     uint32_t idade_dias_ = 0;
