@@ -855,11 +855,9 @@ def main():
     elif wakenet_model_names:
         print(f"  Note: Found wakenet models {wakenet_model_names} but wake word type is not ESP/AFE, skipping")
     
-    # 2. Error check: if USE_CUSTOM_WAKE_WORD=y but no multinet models selected, report error
+    # 2. Warning check: if USE_CUSTOM_WAKE_WORD=y but no multinet models selected, report warning
     if wake_word_config['use_custom_wake_word'] and not multinet_model_names:
-        print("Error: USE_CUSTOM_WAKE_WORD is enabled but no multinet models are selected in sdkconfig")
-        print("Please select appropriate CONFIG_SR_MN_* options in menuconfig, or disable USE_CUSTOM_WAKE_WORD")
-        sys.exit(1)
+        print("Note: USE_CUSTOM_WAKE_WORD is enabled but no multinet models are selected in sdkconfig, proceeding with built-in commands")
     
     # 3. Only package multinet models if USE_CUSTOM_WAKE_WORD=y
     if wake_word_config['use_custom_wake_word']:
