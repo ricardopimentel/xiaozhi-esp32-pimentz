@@ -92,10 +92,16 @@ bool CustomWakeWord::Initialize(AudioCodec* codec, srmodel_list_t* models_list) 
 #ifdef CONFIG_CUSTOM_WAKE_WORD
         threshold_ = CONFIG_CUSTOM_WAKE_WORD_THRESHOLD / 100.0f;
         commands_.push_back({CONFIG_CUSTOM_WAKE_WORD, CONFIG_CUSTOM_WAKE_WORD_DISPLAY, "wake"});
+#else
+        threshold_ = 0.5f;
+        commands_.push_back({"luquinhas", "Luquinhas", "wake"});
 #endif
     } else {
         models_ = models_list;
         ParseWakenetModelConfig();
+        if (commands_.empty()) {
+            commands_.push_back({"luquinhas", "Luquinhas", "wake"});
+        }
     }
 
     if (models_ == nullptr || models_->num == -1) {

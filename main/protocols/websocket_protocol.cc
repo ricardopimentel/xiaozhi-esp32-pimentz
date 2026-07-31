@@ -3,6 +3,7 @@
 #include "system_info.h"
 #include "application.h"
 #include "settings.h"
+#include "tamagotchi_engine.h"
 
 #include <cstring>
 #include <cJSON.h>
@@ -212,6 +213,11 @@ std::string WebsocketProtocol::GetHelloMessage() {
     cJSON_AddBoolToObject(features, "mcp", true);
     cJSON_AddItemToObject(root, "features", features);
     cJSON_AddStringToObject(root, "transport", "websocket");
+
+    // Transmite a personalidade, métricas e humor atual em linguagem natural
+    std::string prompt = TamagotchiEngine::GetInstance().GetSystemPromptContext();
+    cJSON_AddStringToObject(root, "system_prompt", prompt.c_str());
+
     cJSON* audio_params = cJSON_CreateObject();
     cJSON_AddStringToObject(audio_params, "format", "opus");
     cJSON_AddNumberToObject(audio_params, "sample_rate", 16000);

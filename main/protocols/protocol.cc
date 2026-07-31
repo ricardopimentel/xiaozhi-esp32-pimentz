@@ -1,5 +1,6 @@
 #include "protocol.h"
-
+#include "tamagotchi_engine.h"
+#include <cJSON.h>
 #include <esp_log.h>
 
 #define TAG "Protocol"
@@ -55,17 +56,28 @@ void Protocol::SendWakeWordDetected(const std::string& wake_word) {
 }
 
 void Protocol::SendStartListening(ListeningMode mode) {
-    std::string message = "{\"session_id\":\"" + session_id_ + "\"";
-    message += ",\"type\":\"listen\",\"state\":\"start\"";
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "session_id", session_id_.c_str());
+    cJSON_AddStringToObject(root, "type", "listen");
+    cJSON_AddStringToObject(root, "state", "start");
     if (mode == kListeningModeRealtime) {
-        message += ",\"mode\":\"realtime\"";
+        cJSON_AddStringToObject(root, "mode", "realtime");
     } else if (mode == kListeningModeAutoStop) {
-        message += ",\"mode\":\"auto\"";
+        cJSON_AddStringToObject(root, "mode", "auto");
     } else {
-        message += ",\"mode\":\"manual\"";
+        cJSON_AddStringToObject(root, "mode", "manual");
     }
-    message += "}";
-    SendText(message);
+
+    // Envia a personalidade, métricas e humor atual em linguagem natural
+    std::string prompt = TamagotchiEngine::GetInstance().GetSystemPromptContext();
+    cJSON_AddStringToObject(root, "system_prompt", prompt.c_str());
+
+    char* json_str = cJSON_PrintUnformatted(root);
+    if (json_str != nullptr) {
+        SendText(std::string(json_str));
+        cJSON_free(json_str);
+    }
+    cJSON_Delete(root);
 }
 
 void Protocol::SendStopListening() {

@@ -71,6 +71,9 @@ public:
     uint64_t GetTempoFimReacaoOciosa() const { return tempo_fim_reacao_ociosa_; }
     
     std::string GetCurrentEmotion() const;
+    std::string GetPersonalidadeString() const;
+    std::string GetCurrentEmotionPtBr() const;
+    std::string GetSystemPromptContext() const;
 
 private:
     TamagotchiEngine();

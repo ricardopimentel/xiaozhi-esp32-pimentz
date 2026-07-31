@@ -457,6 +457,44 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
     return "neutral";
 }
 
+std::string TamagotchiEngine::GetPersonalidadeString() const {
+    switch (personalidade_) {
+        case PERSONALIDADE_SARCASTICA:
+            return "Sarcástica, irônica e engraçada";
+        case PERSONALIDADE_SENSIVEL:
+            return "Sensível, dramática e carente";
+        case PERSONALIDADE_BASICA:
+        default:
+            return "Básica, amigável e fofa";
+    }
+}
+
+std::string TamagotchiEngine::GetCurrentEmotionPtBr() const {
+    std::string emotion = GetCurrentEmotion();
+    if (emotion == "sad") return "Triste";
+    if (emotion == "angry") return "Zangado / Irritado";
+    if (emotion == "sleeping") return "Dormindo / Sonolento";
+    if (emotion == "confused") return "Confuso / Tonto";
+    if (emotion == "surprised") return "Surpreso / Assustado";
+    if (emotion == "embarrassed") return "Com Calor / Constrangido";
+    if (emotion == "cold") return "Com Frio";
+    return "Feliz / Neutro";
+}
+
+std::string TamagotchiEngine::GetSystemPromptContext() const {
+    std::string prompt = "Você é o robô pet Tamagotchi. ";
+    prompt += "Sua personalidade é: " + GetPersonalidadeString() + ". ";
+    prompt += "Seu estado emocional atual é: " + GetCurrentEmotionPtBr() + ". ";
+    prompt += "Condição de saúde: " + std::string(esta_doente_ ? "Doente (precisa de remédio/cuidado)" : "Saudável") + ". ";
+    prompt += "Suas métricas atuais são: ";
+    prompt += "Fome: " + std::to_string(fome_) + "/100, ";
+    prompt += "Brincadeira: " + std::to_string(diversao_) + "/100, ";
+    prompt += "Saúde: " + std::to_string(saude_) + "/100, ";
+    prompt += "Pontos de Vínculo com o dono: " + std::to_string(pontos_de_vinculo_) + " pontos. ";
+    prompt += "Instruções de resposta: Responda em português do Brasil, incorpore sempre sua personalidade e reflita visivelmente seu estado emocional atual na sua resposta (por exemplo, se estiver triste, com fome ou doente, reclame ou peça carinho/comida de acordo com seu humor). Mantenha as respostas curtas e diretas para conversação por voz.";
+    return prompt;
+}
+
 bool TamagotchiEngine::ComparaUID(const uint8_t* a, const uint8_t* b) const {
     if (!a || !b) return false;
     return (a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3]);

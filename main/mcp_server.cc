@@ -17,6 +17,7 @@
 #include "settings.h"
 #include "lvgl_theme.h"
 #include "lvgl_display.h"
+#include "tamagotchi_engine.h"
 
 #define TAG "MCP"
 
@@ -41,6 +42,30 @@ void McpServer::AddCommonTools() {
 
     // Do not add custom tools here.
     // Custom tools must be added in the board's InitializeTools function.
+
+    AddTool("self.get_tamagotchi_status",
+        "Provides real-time Tamagotchi pet metrics including personality, emotion state, hunger, playfulness, health, bond points and sickness condition.\n"
+        "Use this tool when answering questions about the robot's mood, physical condition or feelings.",
+        PropertyList(),
+        [](const PropertyList& properties) -> ReturnValue {
+            auto& engine = TamagotchiEngine::GetInstance();
+            cJSON* root = cJSON_CreateObject();
+            cJSON_AddStringToObject(root, "personality", engine.GetPersonalidadeString().c_str());
+            cJSON_AddStringToObject(root, "emotion", engine.GetCurrentEmotionPtBr().c_str());
+            cJSON_AddStringToObject(root, "emotion_code", engine.GetCurrentEmotion().c_str());
+            cJSON_AddNumberToObject(root, "hunger", engine.GetFome());
+            cJSON_AddNumberToObject(root, "playfulness", engine.GetDiversao());
+            cJSON_AddNumberToObject(root, "health", engine.GetSaude());
+            cJSON_AddNumberToObject(root, "bond_points", engine.GetPontosDeVinculo());
+            cJSON_AddBoolToObject(root, "is_sick", engine.EstaDoente());
+            cJSON_AddNumberToObject(root, "age_days", engine.GetIdadeDias());
+            
+            char* json_str = cJSON_PrintUnformatted(root);
+            std::string res(json_str);
+            cJSON_free(json_str);
+            cJSON_Delete(root);
+            return res;
+        });
 
     AddTool("self.get_device_status",
         "Provides the real-time information of the device, including the current status of the audio speaker, screen, battery, network, etc.\n"
