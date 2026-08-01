@@ -88,15 +88,15 @@ void LcdDisplay::InitializeLcdThemes() {
 
     // light theme
     auto light_theme = new LvglTheme("light");
-    light_theme->set_background_color(lv_color_hex(0xFFFFFF));
-    light_theme->set_text_color(lv_color_hex(0x000000));
-    light_theme->set_chat_background_color(lv_color_hex(0xE0E0E0));
+    light_theme->set_background_color(lv_color_hex(0x000000));
+    light_theme->set_text_color(lv_color_hex(0xFFFFFF));
+    light_theme->set_chat_background_color(lv_color_hex(0x000000));
     light_theme->set_user_bubble_color(lv_color_hex(0x00FF00));
-    light_theme->set_assistant_bubble_color(lv_color_hex(0xDDDDDD));
-    light_theme->set_system_bubble_color(lv_color_hex(0xFFFFFF));
-    light_theme->set_system_text_color(lv_color_hex(0x000000));
-    light_theme->set_border_color(lv_color_hex(0x000000));
-    light_theme->set_low_battery_color(lv_color_hex(0x000000));
+    light_theme->set_assistant_bubble_color(lv_color_hex(0xFFD700));
+    light_theme->set_system_bubble_color(lv_color_hex(0x222222));
+    light_theme->set_system_text_color(lv_color_hex(0xFFFFFF));
+    light_theme->set_border_color(lv_color_hex(0xFFFFFF));
+    light_theme->set_low_battery_color(lv_color_hex(0xFF0000));
     light_theme->set_text_font(text_font);
     light_theme->set_icon_font(icon_font);
     light_theme->set_large_icon_font(large_icon_font);
@@ -105,10 +105,10 @@ void LcdDisplay::InitializeLcdThemes() {
     auto dark_theme = new LvglTheme("dark");
     dark_theme->set_background_color(lv_color_hex(0x000000));
     dark_theme->set_text_color(lv_color_hex(0xFFFFFF));
-    dark_theme->set_chat_background_color(lv_color_hex(0x1F1F1F));
+    dark_theme->set_chat_background_color(lv_color_hex(0x000000));
     dark_theme->set_user_bubble_color(lv_color_hex(0x00FF00));
-    dark_theme->set_assistant_bubble_color(lv_color_hex(0x222222));
-    dark_theme->set_system_bubble_color(lv_color_hex(0x000000));
+    dark_theme->set_assistant_bubble_color(lv_color_hex(0xFFD700));
+    dark_theme->set_system_bubble_color(lv_color_hex(0x222222));
     dark_theme->set_system_text_color(lv_color_hex(0xFFFFFF));
     dark_theme->set_border_color(lv_color_hex(0xFFFFFF));
     dark_theme->set_low_battery_color(lv_color_hex(0xFF0000));
@@ -911,12 +911,12 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(preview_image_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
 
-    /* Layer 1: Top bar - for status icons */
+    /* Layer 1: Top bar - for status icons (Fundo transparente sem faixa branca) */
     top_bar_ = lv_obj_create(screen);
     lv_obj_set_size(top_bar_, LV_HOR_RES, LV_SIZE_CONTENT);
     lv_obj_set_style_radius(top_bar_, 0, 0);
-    lv_obj_set_style_bg_opa(top_bar_, LV_OPA_50, 0);  // 50% opacity background
-    lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
+    lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);  // Fundo totalmente transparente
+    lv_obj_set_style_bg_color(top_bar_, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(top_bar_, 0, 0);
     lv_obj_set_style_pad_all(top_bar_, 0, 0);
     lv_obj_set_style_pad_top(top_bar_, lvgl_theme->spacing(2), 0);
@@ -928,11 +928,11 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, 0);
 
-    // Left icon
+    // Left icon - Wi-Fi branco para destacar no fundo preto
     network_label_ = lv_label_create(top_bar_);
     lv_label_set_text(network_label_, "");
     lv_obj_set_style_text_font(network_label_, icon_font, 0);
-    lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(network_label_, lv_color_hex(0xFFFFFF), 0);
 
     // Right icons container
     lv_obj_t* right_icons = lv_obj_create(top_bar_);
@@ -946,15 +946,15 @@ void LcdDisplay::SetupUI() {
     mute_label_ = lv_label_create(right_icons);
     lv_label_set_text(mute_label_, "");
     lv_obj_set_style_text_font(mute_label_, icon_font, 0);
-    lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(mute_label_, lv_color_hex(0xFFFFFF), 0);
 
     battery_label_ = lv_label_create(right_icons);
     lv_label_set_text(battery_label_, "");
     lv_obj_set_style_text_font(battery_label_, icon_font, 0);
-    lv_obj_set_style_text_color(battery_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(battery_label_, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_margin_left(battery_label_, lvgl_theme->spacing(2), 0);
 
-    /* Layer 2: Status bar - for center text labels */
+    /* Layer 2: Status bar - relógio e textos centrais brancos */
     status_bar_ = lv_obj_create(screen);
     lv_obj_set_size(status_bar_, LV_HOR_RES, LV_SIZE_CONTENT);
     lv_obj_set_style_radius(status_bar_, 0, 0);
@@ -970,7 +970,7 @@ void LcdDisplay::SetupUI() {
     notification_label_ = lv_label_create(status_bar_);
     lv_obj_set_width(notification_label_, LV_HOR_RES * 0.75);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(notification_label_, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_text(notification_label_, "");
     lv_obj_align(notification_label_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
@@ -979,57 +979,60 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_width(status_label_, LV_HOR_RES * 0.75);
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(status_label_, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
-    /* Bottom bar - auto height, grows upward with wrapped text */
+    /* Bottom bar - Balão Amarelo de Fala com texto preto */
     bottom_bar_ = lv_obj_create(screen);
-    lv_obj_set_width(bottom_bar_, LV_HOR_RES);
+    lv_obj_set_width(bottom_bar_, LV_HOR_RES - lvgl_theme->spacing(8));
     lv_obj_set_height(bottom_bar_, LV_SIZE_CONTENT);
-    lv_obj_set_style_radius(bottom_bar_, 0, 0);
-    lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
-    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
-    lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_radius(bottom_bar_, 10, 0);
+    lv_obj_set_style_bg_color(bottom_bar_, lv_color_hex(0xFFD700), 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(bottom_bar_, lv_color_hex(0xE6C200), 0);
+    lv_obj_set_style_border_width(bottom_bar_, 2, 0);
+    lv_obj_set_style_text_color(bottom_bar_, lv_color_hex(0x000000), 0);
     lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(4), 0);
-    lv_obj_set_style_border_width(bottom_bar_, 0, 0);
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -lvgl_theme->spacing(2));
 
-    /* chat_message_label_ placed in bottom_bar_, multiline wrapped display */
+    /* chat_message_label_ em texto preto legível */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
-    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
+    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(16));
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(chat_message_label_, lv_color_hex(0x000000), 0);
     lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
 #else
-    /* Top layer: Bottom bar - fixed height at bottom */
+    /* Bottom bar - Balão Amarelo de Fala de linha única */
     bottom_bar_ = lv_obj_create(screen);
-    lv_obj_set_size(bottom_bar_, LV_HOR_RES, text_font->line_height + lvgl_theme->spacing(8));
-    lv_obj_set_style_radius(bottom_bar_, 0, 0);
-    lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
-    lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
+    lv_obj_set_size(bottom_bar_, LV_HOR_RES - lvgl_theme->spacing(8), text_font->line_height + lvgl_theme->spacing(8));
+    lv_obj_set_style_radius(bottom_bar_, 10, 0);
+    lv_obj_set_style_bg_color(bottom_bar_, lv_color_hex(0xFFD700), 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(bottom_bar_, lv_color_hex(0xE6C200), 0);
+    lv_obj_set_style_border_width(bottom_bar_, 2, 0);
+    lv_obj_set_style_text_color(bottom_bar_, lv_color_hex(0x000000), 0);
     lv_obj_set_style_pad_all(bottom_bar_, 0, 0);
     lv_obj_set_style_pad_left(bottom_bar_, lvgl_theme->spacing(4), 0);
     lv_obj_set_style_pad_right(bottom_bar_, lvgl_theme->spacing(4), 0);
-    lv_obj_set_style_border_width(bottom_bar_, 0, 0);
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -lvgl_theme->spacing(2));
 
-    /* chat_message_label_ placed in bottom_bar_, single-line horizontal scroll */
+    /* chat_message_label_ em texto preto */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
-    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
+    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(16));
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_color(chat_message_label_, lv_color_hex(0x000000), 0);
     lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
 
-    // Start scrolling after a delay (short text won't scroll)
+    // Start scrolling after a delay
     static lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_delay(&a, 1000);
@@ -1941,33 +1944,37 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
  
     if (numIcons > 0) {
-        int totalW = (numIcons * 14) + ((numIcons - 1) * 4);
+        int iconW = 18;
+        int iconGap = 6;
+        int totalW = (numIcons * iconW) + ((numIcons - 1) * iconGap);
         int startX = 64 - (totalW / 2); // Balão 100% fixo no centro da tela
-        int drawY = 4;                  // Balão 100% fixo no topo da tela
-        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY - 3)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 2*2, 2*2);
-        draw_canvas_line(layer, 64*2, (drawY+11)*2, 62*2, (drawY+14)*2, lv_color_hex(0xFFFFFF), 2);
+        int drawY = 1;                  // Elevado para o topo da tela
+        
+        // Balão expandido e elevado (18px altura, padding generoso nas bordas)
+        draw_canvas_rect_empty(layer, (startX - 6)*2, (drawY - 2)*2, (totalW + 12)*2, 18*2, lv_color_hex(0xFFFFFF), 3*2, 3*2);
+        draw_canvas_line(layer, 64*2, (drawY+16)*2, 62*2, (drawY+19)*2, lv_color_hex(0xFFFFFF), 2);
         
         int currentX = startX;
         if (precisaComida) {
             // Ícone 1: Tigela de Comida (Laranja/Amarelo)
-            draw_canvas_arc(layer, (currentX + 6)*2, (drawY + 7)*2, 5*2, 0, 180, lv_color_hex(0xFFA500), 2);
-            draw_canvas_line(layer, (currentX + 1)*2, (drawY + 7)*2, (currentX + 11)*2, (drawY + 7)*2, lv_color_hex(0xFFA500), 2);
-            draw_canvas_disc(layer, (currentX + 6)*2, (drawY + 4)*2, 3*2, lv_color_hex(0xFF8C00));
-            currentX += 18;
+            draw_canvas_arc(layer, (currentX + 9)*2, (drawY + 11)*2, 6*2, 0, 180, lv_color_hex(0xFFA500), 2);
+            draw_canvas_line(layer, (currentX + 3)*2, (drawY + 11)*2, (currentX + 15)*2, (drawY + 11)*2, lv_color_hex(0xFFA500), 2);
+            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 7)*2, 4*2, lv_color_hex(0xFF8C00));
+            currentX += (iconW + iconGap);
         }
         if (precisaBrincar) {
             // Ícone 2: Controle de Videogame / Gamepad (Verde)
-            draw_canvas_rect(layer, currentX*2, (drawY + 3)*2, 12*2, 7*2, lv_color_hex(0x00FF66), 2*2);
-            draw_canvas_disc(layer, (currentX + 3)*2, (drawY + 6)*2, 1*2, lv_color_hex(0x000000));
-            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 6)*2, 1*2, lv_color_hex(0x000000));
-            currentX += 18;
+            draw_canvas_rect(layer, (currentX + 2)*2, (drawY + 5)*2, 14*2, 9*2, lv_color_hex(0x00FF66), 2*2);
+            draw_canvas_disc(layer, (currentX + 5)*2, (drawY + 9)*2, 1*2, lv_color_hex(0x000000));
+            draw_canvas_disc(layer, (currentX + 13)*2, (drawY + 9)*2, 1*2, lv_color_hex(0x000000));
+            currentX += (iconW + iconGap);
         }
         if (precisaSaude) {
             // Ícone 3: Emblema Médico com Cruz Branca (Vermelho)
-            draw_canvas_disc(layer, (currentX + 6)*2, (drawY + 6)*2, 5*2, lv_color_hex(0xFF3333));
-            draw_canvas_line(layer, (currentX + 6)*2, (drawY + 3)*2, (currentX + 6)*2, (drawY + 9)*2, lv_color_hex(0xFFFFFF), 2);
-            draw_canvas_line(layer, (currentX + 3)*2, (drawY + 6)*2, (currentX + 9)*2, (drawY + 6)*2, lv_color_hex(0xFFFFFF), 2);
-            currentX += 18;
+            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 9)*2, 6*2, lv_color_hex(0xFF3333));
+            draw_canvas_line(layer, (currentX + 9)*2, (drawY + 5)*2, (currentX + 9)*2, (drawY + 13)*2, lv_color_hex(0xFFFFFF), 2);
+            draw_canvas_line(layer, (currentX + 5)*2, (drawY + 9)*2, (currentX + 13)*2, (drawY + 9)*2, lv_color_hex(0xFFFFFF), 2);
+            currentX += (iconW + iconGap);
         }
     }
     
@@ -1993,11 +2000,19 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if ((idleTipo == 7 || idleTipo == 14 || emotion == "loving") && (rand() % 100) < 15) {
         CriarParticula(64 + mouthShiftX + (rand()%20 - 10), 46 + mouthShiftY, (rand()%10 - 5)/10.0f, -0.5f, 'H', 35);
     }
+    
     float limiarCalor = engine.GetLimiarTempAlto();
-    if (temp > limiarCalor && temp > 0.0f) {
-        if ((rand() % 100) < 5) {
-            CriarParticula(eyeLx - 8 + current_look_x, eyeLy - 4 + current_look_y, -0.1f, 0.3f, 'S', 30);
-            CriarParticula(eyeRx + 8 + current_look_x, eyeRy - 4 + current_look_y, 0.1f, 0.3f, 'S', 30);
+    if ((temp > limiarCalor && temp > 0.0f) || emotion == "embarrassed") {
+        // Gota de suor estilo anime desenhada na lateral da têmpora/testa
+        int dropX = (eyeLx - 18 + (int)current_look_x) * 2;
+        int dropY = (eyeLy - 14 + (int)current_look_y) * 2;
+        draw_canvas_disc(layer, dropX, dropY + 2, 4 * 2, lv_color_hex(0x00BFFF));
+        draw_canvas_triangle(layer, dropX, dropY - 6, dropX - 4, dropY + 2, dropX + 4, dropY + 2, lv_color_hex(0x00BFFF));
+
+        if ((rand() % 100) < 15) {
+            // Partículas de suor na têmpora/lateral escorrendo fora dos olhos
+            CriarParticula(eyeLx - 20 + current_look_x, eyeLy - 14 + current_look_y, -0.15f, 0.35f, 'S', 35);
+            CriarParticula(eyeRx + 20 + current_look_x, eyeRy - 14 + current_look_y, 0.15f, 0.35f, 'S', 35);
         }
     }
     
