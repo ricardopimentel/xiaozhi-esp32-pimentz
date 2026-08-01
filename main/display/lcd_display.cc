@@ -1629,8 +1629,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
 #endif
     auto& engine = TamagotchiEngine::GetInstance();
     
-    float eyeLx = 44, eyeLy = 32, eyeLw = 12, eyeLh = 24, eyeRadius = 6;
-    float eyeRx = 84, eyeRy = 32, eyeRw = 12, eyeRh = 24;
+    float eyeLx = 44, eyeLy = 37, eyeLw = 12, eyeLh = 24, eyeRadius = 6;
+    float eyeRx = 84, eyeRy = 37, eyeRw = 12, eyeRh = 24;
     
     if (engine.GetPersonalidade() == PERSONALIDADE_SENSIVEL) {
         eyeLw = 14; eyeRw = 14;
@@ -1896,7 +1896,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
     
     int mouthShiftX = (int)(current_look_x * 0.85f);
-    int mouthShiftY = (int)((current_look_y + swayY + breathY) * 0.80f);
+    int mouthShiftY = (int)((current_look_y + swayY + breathY) * 0.80f) + 4;
     lv_color_t mc = lv_color_hex(0xFFFFFF);
     
     if (comendo) {
@@ -2034,8 +2034,27 @@ void LcdDisplay::DrawOledFace(int xOffset) {
             // Lado direito da tela (x entre 103 e 120, y = 0)
             CriarParticula(103 + (rand() % 17), 0, 0.0f, 0.8f + (rand() % 5) / 10.0f, 'S', 70);
         }
+    // Animação de Orelhas com Ondas Sonoras ao Ouvir a IA
+    bool estaOuvindo = (Application::GetInstance().GetDeviceState() == kDeviceStateListening);
+    if (estaOuvindo) {
+        int wavePhase = (ms / 150) % 3; // 0, 1, 2
+        lv_color_t earColor = lv_color_hex(0x00FFFF);
+        
+        // Orelha Esquerda (lado esquerdo da cabeça) + Ondas sonoras de escuta
+        draw_canvas_arc(layer, 18*2, 37*2, 6*2, 90, 270, earColor, 2*2);
+        draw_canvas_arc(layer, 18*2, 37*2, 3*2, 90, 270, earColor, 2);
+        for (int w = 0; w <= wavePhase; w++) {
+            draw_canvas_arc(layer, 18*2, 37*2, (9 + w * 4)*2, 110, 250, earColor, 2);
+        }
+
+        // Orelha Direita (lado direito da cabeça) + Ondas sonoras de escuta
+        draw_canvas_arc(layer, 110*2, 37*2, 6*2, 270, 90, earColor, 2*2);
+        draw_canvas_arc(layer, 110*2, 37*2, 3*2, 270, 90, earColor, 2);
+        for (int w = 0; w <= wavePhase; w++) {
+            draw_canvas_arc(layer, 110*2, 37*2, (9 + w * 4)*2, 290, 70, earColor, 2);
+        }
     }
-    
+
     AtualizarParticulas();
     DesenharParticulas(xOffset, layer);
 

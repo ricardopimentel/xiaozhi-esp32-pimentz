@@ -1,4 +1,5 @@
 #include "tamagotchi_engine.h"
+#include "application.h"
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <nvs_flash.h>
@@ -527,5 +528,14 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         memcpy(sensor_rfid_uid_, rfidUID, 4);
     } else {
         memset(sensor_rfid_uid_, 0, 4);
+    }
+
+    // Se o sensor de som detectar barulho/ruído acima do limiar, ativa a escuta para conversa com a IA
+    if (som >= limiar_susto_ && limiar_susto_ > 0) {
+        auto& app = Application::GetInstance();
+        if (app.GetDeviceState() == kDeviceStateIdle) {
+            ESP_LOGI(TAG, "Barulho detectado pelo sensor de som (%d >= %d). Ativando escuta da IA!", som, limiar_susto_);
+            app.StartListening();
+        }
     }
 }
