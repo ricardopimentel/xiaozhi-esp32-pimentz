@@ -1087,7 +1087,7 @@ void LcdDisplay::SetupUI() {
     lv_draw_buf_t* draw_buf = lv_draw_buf_create(256, 128, LV_COLOR_FORMAT_NATIVE, LV_STRIDE_AUTO);
     if (draw_buf) {
         lv_canvas_set_draw_buf(face_canvas_, draw_buf);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -10);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -22);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrao ate nascer
     } else {
         ESP_LOGE(TAG, "Falha CRITICA ao alocar draw_buf para o Canvas! Desativando rosto.");
@@ -1101,7 +1101,7 @@ void LcdDisplay::SetupUI() {
         // Alinhamento manual de segurança para 64-bytes
         void* aligned_buf = (void*)(((uintptr_t)face_canvas_buf_ + 63) & ~63);
         lv_canvas_set_buffer(face_canvas_, aligned_buf, 256, 128, LV_COLOR_FORMAT_NATIVE);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -10);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -22);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     } else {
         ESP_LOGE(TAG, "Falha ao alocar Canvas! Desativando rosto.");
@@ -1951,36 +1951,36 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
  
     if (numIcons > 0) {
-        int iconW = 18;
-        int iconGap = 6;
+        int iconW = 14;
+        int iconGap = 4;
         int totalW = (numIcons * iconW) + ((numIcons - 1) * iconGap);
-        int startX = 64 - (totalW / 2); // Balão 100% fixo no centro da tela
-        int drawY = 1;                  // Elevado para o topo da tela
+        int startX = 64 - (totalW / 2); // Balão fixo no centro da tela
+        int drawY = 0;                  // Fixado no topo do canvas, logo abaixo do relógio
         
-        // Balão expandido e elevado (18px altura, padding generoso nas bordas)
-        draw_canvas_rect_empty(layer, (startX - 6)*2, (drawY - 2)*2, (totalW + 12)*2, 18*2, lv_color_hex(0xFFFFFF), 3*2, 3*2);
-        draw_canvas_line(layer, 64*2, (drawY+16)*2, 62*2, (drawY+19)*2, lv_color_hex(0xFFFFFF), 2);
+        // Balão com bordas finas (1px virtual = 2px no canvas), sem cortes
+        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 1*2, 2*2);
+        draw_canvas_line(layer, 64*2, (drawY + 14)*2, 62*2, (drawY + 16)*2, lv_color_hex(0xFFFFFF), 2);
         
         int currentX = startX;
         if (precisaComida) {
             // Ícone 1: Tigela de Comida (Laranja/Amarelo)
-            draw_canvas_arc(layer, (currentX + 9)*2, (drawY + 11)*2, 6*2, 0, 180, lv_color_hex(0xFFA500), 2);
-            draw_canvas_line(layer, (currentX + 3)*2, (drawY + 11)*2, (currentX + 15)*2, (drawY + 11)*2, lv_color_hex(0xFFA500), 2);
-            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 7)*2, 4*2, lv_color_hex(0xFF8C00));
+            draw_canvas_arc(layer, (currentX + 7)*2, (drawY + 8)*2, 5*2, 0, 180, lv_color_hex(0xFFA500), 2);
+            draw_canvas_line(layer, (currentX + 2)*2, (drawY + 8)*2, (currentX + 12)*2, (drawY + 8)*2, lv_color_hex(0xFFA500), 2);
+            draw_canvas_disc(layer, (currentX + 7)*2, (drawY + 5)*2, 3*2, lv_color_hex(0xFF8C00));
             currentX += (iconW + iconGap);
         }
         if (precisaBrincar) {
             // Ícone 2: Controle de Videogame / Gamepad (Verde)
-            draw_canvas_rect(layer, (currentX + 2)*2, (drawY + 5)*2, 14*2, 9*2, lv_color_hex(0x00FF66), 2*2);
-            draw_canvas_disc(layer, (currentX + 5)*2, (drawY + 9)*2, 1*2, lv_color_hex(0x000000));
-            draw_canvas_disc(layer, (currentX + 13)*2, (drawY + 9)*2, 1*2, lv_color_hex(0x000000));
+            draw_canvas_rect(layer, (currentX + 1)*2, (drawY + 4)*2, 12*2, 7*2, lv_color_hex(0x00FF66), 2*2);
+            draw_canvas_disc(layer, (currentX + 4)*2, (drawY + 7)*2, 1*2, lv_color_hex(0x000000));
+            draw_canvas_disc(layer, (currentX + 10)*2, (drawY + 7)*2, 1*2, lv_color_hex(0x000000));
             currentX += (iconW + iconGap);
         }
         if (precisaSaude) {
             // Ícone 3: Emblema Médico com Cruz Branca (Vermelho)
-            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 9)*2, 6*2, lv_color_hex(0xFF3333));
-            draw_canvas_line(layer, (currentX + 9)*2, (drawY + 5)*2, (currentX + 9)*2, (drawY + 13)*2, lv_color_hex(0xFFFFFF), 2);
-            draw_canvas_line(layer, (currentX + 5)*2, (drawY + 9)*2, (currentX + 13)*2, (drawY + 9)*2, lv_color_hex(0xFFFFFF), 2);
+            draw_canvas_disc(layer, (currentX + 7)*2, (drawY + 7)*2, 5*2, lv_color_hex(0xFF3333));
+            draw_canvas_line(layer, (currentX + 7)*2, (drawY + 4)*2, (currentX + 7)*2, (drawY + 10)*2, lv_color_hex(0xFFFFFF), 2);
+            draw_canvas_line(layer, (currentX + 4)*2, (drawY + 7)*2, (currentX + 10)*2, (drawY + 7)*2, lv_color_hex(0xFFFFFF), 2);
             currentX += (iconW + iconGap);
         }
     }
@@ -2010,16 +2010,14 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     
     float limiarCalor = engine.GetLimiarTempAlto();
     if ((temp > limiarCalor && temp > 0.0f) || emotion == "embarrassed") {
-        // Gota de suor estilo anime desenhada na lateral da têmpora/testa
-        int dropX = (eyeLx - 18 + (int)current_look_x) * 2;
-        int dropY = (eyeLy - 14 + (int)current_look_y) * 2;
-        draw_canvas_disc(layer, dropX, dropY + 2, 4 * 2, lv_color_hex(0x00BFFF));
-        draw_canvas_triangle(layer, dropX, dropY - 6, dropX - 4, dropY + 2, dropX + 4, dropY + 2, lv_color_hex(0x00BFFF));
-
-        if ((rand() % 100) < 15) {
-            // Partículas de suor na têmpora/lateral escorrendo fora dos olhos
-            CriarParticula(eyeLx - 20 + current_look_x, eyeLy - 14 + current_look_y, -0.15f, 0.35f, 'S', 35);
-            CriarParticula(eyeRx + 20 + current_look_x, eyeRy - 14 + current_look_y, 0.15f, 0.35f, 'S', 35);
+        // Gotas de suor escorrendo pelas laterais da tela (igual ao código do corpo OLED Robo.ino)
+        if ((rand() % 100) < 6) {
+            // Lado esquerdo da tela (x entre 8 e 25, y = 0)
+            CriarParticula(8 + (rand() % 17), 0, 0.0f, 0.8f + (rand() % 5) / 10.0f, 'S', 70);
+        }
+        if ((rand() % 100) < 6) {
+            // Lado direito da tela (x entre 103 e 120, y = 0)
+            CriarParticula(103 + (rand() % 17), 0, 0.0f, 0.8f + (rand() % 5) / 10.0f, 'S', 70);
         }
     }
     
