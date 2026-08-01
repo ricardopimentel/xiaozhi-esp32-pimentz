@@ -2034,6 +2034,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
             // Lado direito da tela (x entre 103 e 120, y = 0)
             CriarParticula(103 + (rand() % 17), 0, 0.0f, 0.8f + (rand() % 5) / 10.0f, 'S', 70);
         }
+    }
+    
     // Animação de Orelhas com Ondas Sonoras ao Ouvir a IA
     bool estaOuvindo = (Application::GetInstance().GetDeviceState() == kDeviceStateListening);
     if (estaOuvindo) {
