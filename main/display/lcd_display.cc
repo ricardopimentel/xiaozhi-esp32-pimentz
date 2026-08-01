@@ -54,6 +54,13 @@ static void draw_canvas_arc(lv_layer_t * layer, int x, int y, int radius, int st
 static void draw_canvas_disc(lv_layer_t * layer, int cx, int cy, int radius, lv_color_t color) {
     draw_canvas_rect(layer, cx - radius, cy - radius, radius * 2, radius * 2, color, radius);
 }
+
+static void draw_canvas_triangle(lv_layer_t * layer, int x1, int y1, int x2, int y2, int x3, int y3, lv_color_t color) {
+    draw_canvas_line(layer, x1, y1, x2, y2, color, 3);
+    draw_canvas_line(layer, x2, y2, x3, y3, color, 3);
+    draw_canvas_line(layer, x3, y3, x1, y1, color, 3);
+    draw_canvas_disc(layer, (x1 + x2 + x3) / 3, (y1 + y2 + y3) / 3, 3, color);
+}
 #endif
 
 #include "gif/lvgl_gif.h"
