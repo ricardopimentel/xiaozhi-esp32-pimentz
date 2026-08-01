@@ -530,11 +530,26 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         memset(sensor_rfid_uid_, 0, 4);
     }
 
-    // Se o sensor de som detectar barulho/ruído acima do limiar, ativa a escuta para conversa com a IA
-    if (som >= limiar_susto_ && limiar_susto_ > 0) {
-        auto& app = Application::GetInstance();
-        if (app.GetDeviceState() == kDeviceStateIdle) {
-            ESP_LOGI(TAG, "Barulho detectado pelo sensor de som (%d >= %d). Ativando escuta da IA!", som, limiar_susto_);
+    // --- ATIVAÇÃO AUTOMÁTICA DA IA SEM PRESSIONAR BOTÃO ---
+    // Como o robô ficará em um corpo sem acesso ao botão físico, ativamos a IA por:
+    // 1. Som/Ruído (grito, palma, fala, barulho acima do limiar no sensor de som)
+    // 2. Gesto de mão (sensor infravermelho de obstáculo frontal)
+    // 3. Toque/Choque (chacoalhão ou toque no robô)
+    // 4. RFID ou botão remoto
+    auto& app = Application::GetInstance();
+    if (app.GetDeviceState() == kDeviceStateIdle) {
+        uint16_t limiarSom = (limiar_brincar_ > 0 && limiar_brincar_ < 500) ? limiar_brincar_ : 120;
+        if (som >= limiarSom || (limiar_susto_ > 0 && som >= limiar_susto_)) {
+            ESP_LOGI(TAG, "IA ativada por SOM/BARULHO no sensor de som! (%d >= %d)", som, limiarSom);
+            app.StartListening();
+        } else if (obstaculo) {
+            ESP_LOGI(TAG, "IA ativada por GESTO DE MÃO no sensor de obstáculo!");
+            app.StartListening();
+        } else if (choque) {
+            ESP_LOGI(TAG, "IA ativada por TOQUE no robô!");
+            app.StartListening();
+        } else if (botao || rfidLido) {
+            ESP_LOGI(TAG, "IA ativada por RFID/BOTÃO!");
             app.StartListening();
         }
     }

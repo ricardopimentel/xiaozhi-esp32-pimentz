@@ -151,7 +151,11 @@ void AfeWakeWord::AudioDetectionTask() {
 
         if (res->wakeup_state == WAKENET_DETECTED) {
             Stop();
-            last_detected_wake_word_ = wake_words_[res->wakenet_model_index - 1];
+#ifdef CONFIG_CUSTOM_WAKE_WORD
+            last_detected_wake_word_ = CONFIG_CUSTOM_WAKE_WORD;
+#else
+            last_detected_wake_word_ = "luquinhas";
+#endif
 
             if (wake_word_detected_callback_) {
                 wake_word_detected_callback_(last_detected_wake_word_);
