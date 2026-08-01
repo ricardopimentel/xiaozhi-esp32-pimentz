@@ -1951,7 +1951,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
  
     if (numIcons > 0) {
-        int iconW = 14;
+        int iconW = 12;
         int iconGap = 4;
         int totalW = (numIcons * iconW) + ((numIcons - 1) * iconGap);
         int startX = 64 - (totalW / 2); // Balão fixo no centro da tela
@@ -1963,24 +1963,39 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         
         int currentX = startX;
         if (precisaComida) {
-            // Ícone 1: Tigela de Comida (Laranja/Amarelo)
-            draw_canvas_arc(layer, (currentX + 7)*2, (drawY + 8)*2, 5*2, 0, 180, lv_color_hex(0xFFA500), 2);
-            draw_canvas_line(layer, (currentX + 2)*2, (drawY + 8)*2, (currentX + 12)*2, (drawY + 8)*2, lv_color_hex(0xFFA500), 2);
-            draw_canvas_disc(layer, (currentX + 7)*2, (drawY + 5)*2, 3*2, lv_color_hex(0xFF8C00));
+            // Ícone 1: Ossinho de Cachorro (Laranja/Amarelo #FFA500) - idêntico ao RoboESP32.ino
+            lv_color_t boneColor = lv_color_hex(0xFFA500);
+            draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 5)*2, 6*2, 2*2, boneColor, 0);
+            draw_canvas_disc(layer, (currentX + 2)*2, (drawY + 4)*2, 1*2 + 1, boneColor);
+            draw_canvas_disc(layer, (currentX + 2)*2, (drawY + 7)*2, 1*2 + 1, boneColor);
+            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 4)*2, 1*2 + 1, boneColor);
+            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 7)*2, 1*2 + 1, boneColor);
             currentX += (iconW + iconGap);
         }
         if (precisaBrincar) {
-            // Ícone 2: Controle de Videogame / Gamepad (Verde)
-            draw_canvas_rect(layer, (currentX + 1)*2, (drawY + 4)*2, 12*2, 7*2, lv_color_hex(0x00FF66), 2*2);
-            draw_canvas_disc(layer, (currentX + 4)*2, (drawY + 7)*2, 1*2, lv_color_hex(0x000000));
-            draw_canvas_disc(layer, (currentX + 10)*2, (drawY + 7)*2, 1*2, lv_color_hex(0x000000));
+            // Ícone 2: Controle de Videogame detalhado com D-Pad e Botões (Verde #00FF66) - idêntico ao RoboESP32.ino
+            lv_color_t ctrlColor = lv_color_hex(0x00FF66);
+            draw_canvas_rect_empty(layer, (currentX)*2, (drawY + 3)*2, 12*2, 7*2, ctrlColor, 1*2, 2*2);
+            // D-Pad +
+            draw_canvas_rect(layer, (currentX + 2)*2, (drawY + 6)*2, 3*2, 1*2, ctrlColor, 0);
+            draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 5)*2, 1*2, 3*2, ctrlColor, 0);
+            // Botões A / B / Select / Start
+            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 5)*2, 1*2, ctrlColor);
+            draw_canvas_disc(layer, (currentX + 8)*2, (drawY + 7)*2, 1*2, ctrlColor);
+            draw_canvas_rect(layer, (currentX + 5)*2, (drawY + 6)*2, 2*2, 1*2, ctrlColor, 0);
             currentX += (iconW + iconGap);
         }
         if (precisaSaude) {
-            // Ícone 3: Emblema Médico com Cruz Branca (Vermelho)
-            draw_canvas_disc(layer, (currentX + 7)*2, (drawY + 7)*2, 5*2, lv_color_hex(0xFF3333));
-            draw_canvas_line(layer, (currentX + 7)*2, (drawY + 4)*2, (currentX + 7)*2, (drawY + 10)*2, lv_color_hex(0xFFFFFF), 2);
-            draw_canvas_line(layer, (currentX + 4)*2, (drawY + 7)*2, (currentX + 10)*2, (drawY + 7)*2, lv_color_hex(0xFFFFFF), 2);
+            // Ícone 3: Frasco de Remédio com Tampa e Cruz (Vermelho #FF3333 e Tampa Branca #FFFFFF) - idêntico ao RoboESP32.ino
+            lv_color_t medColor = lv_color_hex(0xFF3333);
+            lv_color_t whiteColor = lv_color_hex(0xFFFFFF);
+            // Tampa do frasco
+            draw_canvas_rect(layer, (currentX + 4)*2, (drawY + 2)*2, 4*2, 2*2, whiteColor, 0);
+            // Corpo do frasco
+            draw_canvas_rect_empty(layer, (currentX + 2)*2, (drawY + 4)*2, 8*2, 7*2, medColor, 1*2, 1*2);
+            // Cruz no centro do frasco
+            draw_canvas_line(layer, (currentX + 5)*2, (drawY + 6)*2, (currentX + 5)*2, (drawY + 9)*2, whiteColor, 2);
+            draw_canvas_line(layer, (currentX + 4)*2, (drawY + 7)*2, (currentX + 6)*2, (drawY + 7)*2, whiteColor, 2);
             currentX += (iconW + iconGap);
         }
     }
