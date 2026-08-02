@@ -540,13 +540,13 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         uint16_t limiarSom = (limiar_brincar_ > 0 && limiar_brincar_ < 500) ? limiar_brincar_ : 120;
         if (som >= limiarSom || (limiar_susto_ > 0 && som >= limiar_susto_)) {
             ESP_LOGI(TAG, "IA ativada por SOM/BARULHO no sensor de som! (%d >= %d)", som, limiarSom);
-            app.StartListening();
+            app.ToggleChatState();
         } else if (obstaculo) {
             ESP_LOGI(TAG, "IA ativada por GESTO DE MÃO no sensor de obstáculo!");
-            app.StartListening();
+            app.ToggleChatState();
         } else if (botao) {
             ESP_LOGI(TAG, "IA ativada por BOTÃO!");
-            app.StartListening();
+            app.ToggleChatState();
         }
     }
 }
