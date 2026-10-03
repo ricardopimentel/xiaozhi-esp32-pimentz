@@ -58,11 +58,23 @@ protected:
     void AtualizarParticulas();
     void DesenharParticulas(int xOffset, lv_layer_t* layer);
 
-    void DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer);
-    void DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer);
-    void DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer);
-    void DrawLargeHeart(int x, int y, bool small, lv_layer_t* layer);
-    void DrawHeart(int x, int y, lv_layer_t* layer);
+    void DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer, 
+                 lv_color_t color = lv_color_hex(0xFFFFFF), 
+                 lv_color_t auraColor = lv_color_hex(0x000000), 
+                 bool withHighlights = true, 
+                 float lookDx = 0.0f, float lookDy = 0.0f);
+    void DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer, 
+                      lv_color_t color = lv_color_hex(0xFFD600), 
+                      lv_color_t auraColor = lv_color_hex(0xFF8F00));
+    void DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer, 
+                         lv_color_t color = lv_color_hex(0xFFFFFF));
+    void DrawLargeHeart(int x, int y, bool small, lv_layer_t* layer, 
+                        lv_color_t color = lv_color_hex(0xFF1493));
+    void DrawHeart(int x, int y, lv_layer_t* layer, 
+                   lv_color_t color = lv_color_hex(0xFF1493));
+    void DrawEyeDizzy(float x, float y, float radius, float angle, lv_color_t color, lv_layer_t* layer);
+    void DrawCheekBlush(float x, float y, float radiusX, float radiusY, lv_color_t color, lv_layer_t* layer);
+    void DrawStar(float x, float y, float radius, lv_color_t color, lv_layer_t* layer);
     void DrawOledFace(int xOffset);
 
     lv_timer_t* eye_timer_ = nullptr;

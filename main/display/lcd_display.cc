@@ -1528,93 +1528,219 @@ void LcdDisplay::AtualizarParticulas() {
 }
 
 void LcdDisplay::DesenharParticulas(int xOffset, lv_layer_t* layer) {
-    if (!face_canvas_) return;
-    lv_color_t color = lv_color_hex(0xFFFFFF);
+    if (!face_canvas_ || !layer) return;
     for (int i = 0; i < 15; i++) {
         if (particulasFisicas_[i].ativa) {
             int px = ((int)particulasFisicas_[i].x + xOffset) * 2;
             int py = ((int)particulasFisicas_[i].y) * 2;
             if (particulasFisicas_[i].tipo == 'H') {
-                DrawHeart(px/2, py/2, layer);
+                // Corações flutuantes em magenta/rosa vibrante
+                DrawHeart(px/2, py/2, layer, lv_color_hex(0xFF1493));
             } else if (particulasFisicas_[i].tipo == '+') {
-                draw_canvas_line(layer, px, py-2, px, py+2, lv_color_hex(0x00FF00), 2);
-                draw_canvas_line(layer, px-2, py, px+2, py, lv_color_hex(0x00FF00), 2);
+                // Cruz de cura verde esmeralda com núcleo brilhante
+                draw_canvas_line(layer, px, py-3, px, py+3, lv_color_hex(0x00E676), 3);
+                draw_canvas_line(layer, px-3, py, px+3, py, lv_color_hex(0x00E676), 3);
+                draw_canvas_disc(layer, px, py, 1, lv_color_hex(0xFFFFFF));
             } else if (particulasFisicas_[i].tipo == '*') {
-                draw_canvas_line(layer, px-2, py-2, px+2, py+2, lv_color_hex(0xFFA500), 2);
-                draw_canvas_line(layer, px-2, py+2, px+2, py-2, lv_color_hex(0xFFA500), 2);
+                // Farelos de comida / faíscas douradas brilhantes
+                draw_canvas_line(layer, px-3, py-3, px+3, py+3, lv_color_hex(0xFFD700), 2);
+                draw_canvas_line(layer, px-3, py+3, px+3, py-3, lv_color_hex(0xFFD700), 2);
+                draw_canvas_disc(layer, px, py, 1, lv_color_hex(0xFFFFFF));
             } else if (particulasFisicas_[i].tipo == 'Z') {
-                draw_canvas_line(layer, px-3, py-3, px+3, py-3, color, 2);
-                draw_canvas_line(layer, px+3, py-3, px-3, py+3, color, 2);
-                draw_canvas_line(layer, px-3, py+3, px+3, py+3, color, 2);
+                // 'Z' sonolento em lilás/violeta néon
+                lv_color_t zColor = lv_color_hex(0xB388FF);
+                draw_canvas_line(layer, px-4, py-4, px+4, py-4, zColor, 2);
+                draw_canvas_line(layer, px+4, py-4, px-4, py+4, zColor, 2);
+                draw_canvas_line(layer, px-4, py+4, px+4, py+4, zColor, 2);
             } else if (particulasFisicas_[i].tipo == 'S') {
-                draw_canvas_rect(layer, px, py, 4, 6, lv_color_hex(0x87CEFA), 0);
+                // Gota de suor em azul-celeste glacial com reflexo
+                draw_canvas_disc(layer, px, py, 3, lv_color_hex(0x80D8FF));
+                draw_canvas_triangle(layer, px-2, py, px+2, py, px, py-4, lv_color_hex(0x80D8FF));
+                draw_canvas_disc(layer, px-1, py-1, 1, lv_color_hex(0xFFFFFF));
             } else if (particulasFisicas_[i].tipo == 'L') {
-                draw_canvas_rect(layer, px, py, 4, 6, lv_color_hex(0x0080FF), 0);
-                draw_canvas_line(layer, px+2, py-4, px+2, py, lv_color_hex(0x0080FF), 2);
+                // Lágrima viva em azul oceânico brilhante com formato de gota
+                draw_canvas_disc(layer, px, py, 4, lv_color_hex(0x00B0FF));
+                draw_canvas_triangle(layer, px-3, py, px+3, py, px, py-6, lv_color_hex(0x00B0FF));
+                draw_canvas_disc(layer, px-1, py-1, 1, lv_color_hex(0xFFFFFF));
             } else if (particulasFisicas_[i].tipo == 'M') {
-                // Nota musical procedural
-                draw_canvas_disc(layer, px, py, 2*2, color);
-                draw_canvas_line(layer, px + 2, py - 8, px + 2, py, color, 2);
-                draw_canvas_line(layer, px + 2, py - 8, px + 6, py - 6, color, 2);
+                // Nota musical em amarelo ouro vivo
+                lv_color_t noteColor = lv_color_hex(0xFFD600);
+                draw_canvas_disc(layer, px, py, 4, noteColor);
+                draw_canvas_line(layer, px + 2, py - 9, px + 2, py, noteColor, 2);
+                draw_canvas_line(layer, px + 2, py - 9, px + 7, py - 6, noteColor, 2);
             }
         }
     }
 }
 
-void LcdDisplay::DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer) {
-    if (!face_canvas_) return;
-    int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
-    draw_canvas_rect(layer, px - pw/2, py - ph/2, pw, ph, lv_color_hex(0xFFFFFF), r*2);
+void LcdDisplay::DrawEye(float x, float y, float w, float h, float r, lv_layer_t* layer, 
+                         lv_color_t color, lv_color_t auraColor, bool withHighlights, 
+                         float lookDx, float lookDy) {
+    if (!face_canvas_ || !layer) return;
+    int px = (int)(x * 2.0f); 
+    int py = (int)(y * 2.0f); 
+    int pw = (int)(w * 2.0f); 
+    int ph = (int)(h * 2.0f);
+    int pr = (int)(r * 2.0f);
+    if (ph < 2) ph = 2;
+    if (pw < 2) pw = 2;
+    if (pr > ph / 2) pr = ph / 2;
+    if (pr > pw / 2) pr = pw / 2;
+
+    // 1. Camada de Aura Exterior Suave (Glow)
+    if (h > 6.0f) {
+        int auraPad = 2;
+        draw_canvas_rect_empty(layer, px - pw/2 - auraPad, py - ph/2 - auraPad, 
+                               pw + auraPad*2, ph + auraPad*2, auraColor, 2, pr + auraPad);
+    }
+    
+    // 2. Corpo Principal Colorido da Íris
+    draw_canvas_rect(layer, px - pw/2, py - ph/2, pw, ph, color, pr);
+    
+    // 3. Pupila sutil interna de profundidade acompanhando a direção do olhar
+    if (ph >= 16 && pw >= 12) {
+        int pupilW = pw * 55 / 100;
+        int pupilH = ph * 60 / 100;
+        int pupilR = pr * 55 / 100;
+        int pupShiftX = (int)(lookDx * 0.4f);
+        int pupShiftY = (int)(lookDy * 0.4f);
+        draw_canvas_rect(layer, px - pupilW/2 + pupShiftX, py - pupilH/2 + pupShiftY, pupilW, pupilH, lv_color_hex(0x000000), pupilR);
+    }
+
+    // 4. Brilho Especular Duplo (Catchlights / Reflexos de Luz Vivos)
+    if (withHighlights && ph >= 10 && pw >= 8) {
+        // Brilho primário (superior direito)
+        int h1Size = std::max(2, pw / 5);
+        int h1X = px + pw/5 + (int)(lookDx * 0.25f);
+        int h1Y = py - ph/4 + (int)(lookDy * 0.25f);
+        draw_canvas_disc(layer, h1X, h1Y, h1Size, lv_color_hex(0xFFFFFF));
+        
+        // Brilho secundário (inferior esquerdo, mais sutil)
+        if (ph >= 18) {
+            int h2Size = std::max(1, pw / 9);
+            int h2X = px - pw/4 + (int)(lookDx * 0.15f);
+            int h2Y = py + ph/5 + (int)(lookDy * 0.15f);
+            draw_canvas_disc(layer, h2X, h2Y, h2Size, lv_color_hex(0xFFFFFF));
+        }
+    }
 }
 
-void LcdDisplay::DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer) {
-    if (!face_canvas_) return;
+void LcdDisplay::DrawEyeHappy(float x, float y, float w, float h, float r, float progress, lv_layer_t* layer, 
+                              lv_color_t color, lv_color_t auraColor) {
+    if (!face_canvas_ || !layer) return;
     progress = std::max(0.0f, std::min(1.0f, progress));
-    int px = x * 2; int py = y * 2; int pw = w * 2; int ph = h * 2;
+    int px = (int)(x * 2.0f); 
+    int py = (int)(y * 2.0f); 
+    int pw = (int)(w * 2.0f); 
+    int ph = (int)(h * 2.0f);
     
     if (progress < 0.25f) {
-        // Transição suave de abertura do olho para o início da curvatura
         float factor = progress / 0.25f;
         float curH = h * (1.0f - factor * 0.4f);
-        DrawEye(x, y, w, curH, r, layer);
+        DrawEye(x, y, w, curH, r, layer, color, auraColor, false);
     } else {
-        // Transição contínua para a meia lua arredondada
         float arcProgress = (progress - 0.25f) / 0.75f;
         int arcRadius = (pw / 2);
-        int offsetY = (ph / 4) * arcProgress;
-        draw_canvas_arc(layer, px, py + offsetY, arcRadius, 180, 360, lv_color_hex(0xFFFFFF), 4);
+        int offsetY = (int)((ph / 4) * arcProgress);
+        // Aura sutil exterior
+        draw_canvas_arc(layer, px, py + offsetY, arcRadius + 2, 180, 360, auraColor, 7);
+        // Arco principal colorido com espessura de 5px
+        draw_canvas_arc(layer, px, py + offsetY, arcRadius, 180, 360, color, 5);
+        // Brilho especular nas pontas do arco
+        draw_canvas_disc(layer, px - arcRadius, py + offsetY, 2, lv_color_hex(0xFFFFFF));
+        draw_canvas_disc(layer, px + arcRadius, py + offsetY, 2, lv_color_hex(0xFFFFFF));
     }
 }
 
-void LcdDisplay::DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer) {
-    if (!face_canvas_) return;
-    int px = x * 2; int py = y * 2; int pw = w * 2;
+void LcdDisplay::DrawEyeSqueezed(float x, float y, float w, float h, float r, float progress, bool isLeft, lv_layer_t* layer, 
+                                 lv_color_t color) {
+    if (!face_canvas_ || !layer) return;
+    int px = (int)(x * 2.0f); 
+    int py = (int)(y * 2.0f); 
+    int pw = (int)(w * 2.0f);
     if (isLeft) {
-        draw_canvas_line(layer, px - pw/2, py - pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(layer, px - pw/2, py + pw/2, px + pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, px - pw/2, py - pw/2, px + pw/2, py, color, 4);
+        draw_canvas_line(layer, px - pw/2, py + pw/2, px + pw/2, py, color, 4);
     } else {
-        draw_canvas_line(layer, px + pw/2, py - pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(layer, px + pw/2, py + pw/2, px - pw/2, py, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, px + pw/2, py - pw/2, px - pw/2, py, color, 4);
+        draw_canvas_line(layer, px + pw/2, py + pw/2, px - pw/2, py, color, 4);
     }
 }
 
-void LcdDisplay::DrawHeart(int x, int y, lv_layer_t* layer) {
-    if (!face_canvas_) return;
-    int px = x * 2; int py = y * 2;
-    lv_color_t c = lv_color_hex(0xFF0000);
-    draw_canvas_line(layer, px-4, py-4, px, py, c, 3);
-    draw_canvas_line(layer, px+4, py-4, px, py, c, 3);
+void LcdDisplay::DrawHeart(int x, int y, lv_layer_t* layer, lv_color_t color) {
+    if (!face_canvas_ || !layer) return;
+    int px = x * 2; 
+    int py = y * 2;
+    draw_canvas_disc(layer, px - 2, py - 2, 2, color);
+    draw_canvas_disc(layer, px + 2, py - 2, 2, color);
+    draw_canvas_triangle(layer, px - 4, py - 1, px + 4, py - 1, px, py + 4, color);
 }
 
-void LcdDisplay::DrawLargeHeart(int x, int y, bool small, lv_layer_t* layer) {
-    if (!face_canvas_) return;
-    int px = x * 2; int py = y * 2;
-    lv_color_t c = lv_color_hex(0xFF0000);
-    int size = small ? 4 : 8;
-    draw_canvas_arc(layer, px - size, py - size, size, 135, 315, c, 4);
-    draw_canvas_arc(layer, px + size, py - size, size, 225, 45, c, 4);
-    draw_canvas_line(layer, px - size*2, py, px, py + size*2, c, 4);
-    draw_canvas_line(layer, px + size*2, py, px, py + size*2, c, 4);
+void LcdDisplay::DrawLargeHeart(int x, int y, bool small, lv_layer_t* layer, lv_color_t color) {
+    if (!face_canvas_ || !layer) return;
+    int px = x * 2; 
+    int py = y * 2;
+    int size = small ? 5 : 9;
+    lv_color_t aura = lv_color_hex(0x880E4F);
+    
+    // Aura externa
+    draw_canvas_arc(layer, px - size, py - size, size + 1, 135, 315, aura, 5);
+    draw_canvas_arc(layer, px + size, py - size, size + 1, 225, 45, aura, 5);
+    
+    // Formato principal do coração
+    draw_canvas_arc(layer, px - size, py - size, size, 135, 315, color, 4);
+    draw_canvas_arc(layer, px + size, py - size, size, 225, 45, color, 4);
+    draw_canvas_line(layer, px - size*2, py, px, py + size*2, color, 4);
+    draw_canvas_line(layer, px + size*2, py, px, py + size*2, color, 4);
+    
+    // Preenchimento central e reflexo
+    draw_canvas_disc(layer, px - size/2, py - size/2, size/2, color);
+    draw_canvas_disc(layer, px + size/2, py - size/2, size/2, color);
+    draw_canvas_triangle(layer, px - size, py, px + size, py, px, py + size*2 - 2, color);
+    draw_canvas_disc(layer, px - size/2 - 1, py - size/2 - 1, 2, lv_color_hex(0xFFFFFF));
+}
+
+void LcdDisplay::DrawEyeDizzy(float x, float y, float radius, float angle, lv_color_t color, lv_layer_t* layer) {
+    if (!face_canvas_ || !layer) return;
+    int px = (int)(x * 2.0f);
+    int py = (int)(y * 2.0f);
+    float r = radius * 2.0f;
+    
+    float dx1 = r * cos(angle);
+    float dy1 = r * sin(angle);
+    float dx2 = -r * sin(angle);
+    float dy2 = r * cos(angle);
+    
+    // Cruzes giratórias com pontas grossas e centro branco
+    draw_canvas_line(layer, px - (int)dx1, py - (int)dy1, px + (int)dx1, py + (int)dy1, color, 5);
+    draw_canvas_line(layer, px - (int)dx2, py - (int)dy2, px + (int)dx2, py + (int)dy2, color, 5);
+    draw_canvas_disc(layer, px, py, 3, lv_color_hex(0xFFFFFF));
+}
+
+void LcdDisplay::DrawCheekBlush(float x, float y, float radiusX, float radiusY, lv_color_t color, lv_layer_t* layer) {
+    if (!face_canvas_ || !layer) return;
+    int px = (int)(x * 2.0f);
+    int py = (int)(y * 2.0f);
+    int pw = (int)(radiusX * 2.0f * 2.0f);
+    int ph = (int)(radiusY * 2.0f);
+    if (ph < 2) ph = 2;
+    if (pw < 2) pw = 2;
+    draw_canvas_rect(layer, px - pw/2, py - ph/2, pw, ph, color, ph/2);
+}
+
+void LcdDisplay::DrawStar(float x, float y, float radius, lv_color_t color, lv_layer_t* layer) {
+    if (!face_canvas_ || !layer) return;
+    int px = (int)(x * 2.0f);
+    int py = (int)(y * 2.0f);
+    int r = (int)(radius * 2.0f);
+    if (r < 2) r = 2;
+    
+    draw_canvas_line(layer, px, py - r, px, py + r, color, 3);
+    draw_canvas_line(layer, px - r, py, px + r, py, color, 3);
+    int diag = r * 6 / 10;
+    draw_canvas_line(layer, px - diag, py - diag, px + diag, py + diag, color, 2);
+    draw_canvas_line(layer, px - diag, py + diag, px + diag, py - diag, color, 2);
+    draw_canvas_disc(layer, px, py, 2, lv_color_hex(0xFFFFFF));
 }
 
 void LcdDisplay::DrawOledFace(int xOffset) {
@@ -1651,21 +1777,22 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     if (precisaBrincar) numIcons++;
     if (precisaSaude) numIcons++;
 
-    uint32_t ms = esp_timer_get_time() / 1000;
+    uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
     std::string emotion = engine.GetCurrentEmotion();
     
     int tremorX = 0, tremorY = 0;
     
-    // Tremedeira forte se houver chacoalhão/choque detectado pelo sensor físico
+    // Tremedeira suave se houver chacoalhão/choque detectado pelo sensor físico
     if (engine.GetSensorChoque()) {
-        tremorX += (ms % 60 < 30) ? 4 : -4;
-        tremorY += (ms % 40 < 20) ? 3 : -3;
+        tremorX += (ms % 60 < 30) ? 3 : -3;
+        tremorY += (ms % 40 < 20) ? 2 : -2;
     }
     
     // Captura flags de animação ditadas pelo corpo ou engine
     bool comendo = engine.GetAnimacaoComendo();
     bool brincando = engine.GetAnimacaoBrincando() || engine.GetAnimacaoAcariciado();
     bool curando = engine.GetAnimacaoCurando();
+    bool isDizzy = (engine.GetSensorChoque() || emotion == "confused");
     
     // Interpolação suave para o deslocamento dos olhos (Lerp)
     static float target_look_x = 0.0f;
@@ -1674,7 +1801,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     static float current_look_y = 0.0f;
     static int look_timer = 0;
 
-    if (comendo || brincando || emotion == "sleeping") {
+    if (comendo || brincando || emotion == "sleeping" || isDizzy) {
         target_look_x = 0.0f;
         target_look_y = 0.0f;
     } else {
@@ -1702,215 +1829,425 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     current_look_x += (target_look_x - current_look_x) * 0.15f;
     current_look_y += (target_look_y - current_look_y) * 0.15f;
     
-    // Gingado senoidal corporal ao brincar/feliz e respiração suave
-    float swayX = (brincando || emotion == "happy") ? (sin(ms * 0.008f) * 1.5f) : 0.0f;
-    float swayY = (brincando || emotion == "happy") ? (cos(ms * 0.008f) * 1.0f) : 0.0f;
-    float breathY = (emotion == "sleeping" || emotion == "sad" || emotion == "crying") ? (sin(ms * 0.0025f) * 1.2f) : 0.0f;
     uint8_t idleTipo = engine.GetTipoReacaoOciosa();
     float reactionProgress = 1.0f;
     uint64_t tStart = engine.GetTempoInicioReacaoOciosa();
     uint64_t tFim = engine.GetTempoFimReacaoOciosa();
     if (idleTipo != 0 && tFim > tStart && ms >= tStart && ms <= tFim) {
-        float elapsed = (ms - tStart);
-        float remain = (tFim - ms);
+        float elapsed = (float)(ms - tStart);
+        float remain = (float)(tFim - ms);
         if (elapsed < 350.0f) {
-            reactionProgress = elapsed / 350.0f; // Transição suave de entrada (0.0 -> 1.0)
+            reactionProgress = elapsed / 350.0f;
         } else if (remain < 350.0f) {
-            reactionProgress = remain / 350.0f;  // Transição suave de saída (1.0 -> 0.0)
+            reactionProgress = remain / 350.0f;
         }
     }
 
-    if (comendo) {
-        // Olhos piscando de satisfação na mastigação
-        int chewY = (ms / 150) % 2 == 0 ? 2 : -2;
-        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, eyeLy + tremorY + chewY + current_look_y + swayY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, eyeRy + tremorY + chewY + current_look_y + swayY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+    // =========================================================================
+    // 1. PALETA DE CORES RICA (RGB565) POR PERSONALIDADE E EMOÇÃO
+    // =========================================================================
+    struct EyePalette {
+        lv_color_t primary;
+        lv_color_t aura;
+        lv_color_t pupil;
+        lv_color_t highlight;
+        lv_color_t cheek;
+        lv_color_t mouth;
+        bool hasCheeks;
+        bool hasAura;
+    };
+
+    EyePalette pal;
+    pal.highlight = lv_color_hex(0xFFFFFF);
+    pal.hasAura = true;
+    pal.hasCheeks = false;
+    
+    auto pers = engine.GetPersonalidade();
+    if (pers == PERSONALIDADE_SARCASTICA) {
+        pal.primary = lv_color_hex(0xB388FF);   // Roxo ametista néon
+        pal.aura = lv_color_hex(0x651FFF);      // Violeta profundo
+        pal.pupil = lv_color_hex(0x311B92);     // Pupila roxa escura
+        pal.cheek = lv_color_hex(0xEA80FC);     // Blush lilás
+        pal.mouth = lv_color_hex(0xEDE7F6);
+    } else if (pers == PERSONALIDADE_SENSIVEL) {
+        pal.primary = lv_color_hex(0x00E5FF);   // Ciano celeste suave
+        pal.aura = lv_color_hex(0x0091EA);      // Azul vibrante
+        pal.pupil = lv_color_hex(0x01579B);     // Azul profundo
+        pal.cheek = lv_color_hex(0xFF6B8B);     // Bochechas rosadas fofas
+        pal.mouth = lv_color_hex(0xFFFFFF);
+        pal.hasCheeks = true;
+    } else { // PERSONALIDADE_BASICA
+        pal.primary = lv_color_hex(0x00E5FF);   // Cyber Cyan brilhante
+        pal.aura = lv_color_hex(0x0077B6);      // Azul royal sutil
+        pal.pupil = lv_color_hex(0x023E8A);     // Pupila azul escuro
+        pal.cheek = lv_color_hex(0xFF8DA1);     // Bochechas rosadas
+        pal.mouth = lv_color_hex(0xFFFFFF);
+    }
+
+    // Modificações de paleta para eventos e emoções ativas
+    if (isDizzy) {
+        pal.primary = lv_color_hex(0xFFEA00);   // Amarelo néon de tontura
+        pal.aura = lv_color_hex(0x00E5FF);      // Ciano psicodélico
+        pal.pupil = lv_color_hex(0xFF6D00);
+        pal.mouth = lv_color_hex(0xFFEA00);
+    } else if (comendo) {
+        pal.primary = lv_color_hex(0xFFD600);   // Dourado satisfeito
+        pal.aura = lv_color_hex(0xFF6D00);
+        pal.pupil = lv_color_hex(0xE65100);
+        pal.cheek = lv_color_hex(0xFF4081);
+        pal.hasCheeks = true;
+        pal.mouth = lv_color_hex(0xFFD600);
+    } else if (brincando || emotion == "happy" || idleTipo == 11) {
+        pal.primary = lv_color_hex(0xFFD600);   // Amarelo sol / Dourado alegre
+        pal.aura = lv_color_hex(0xFF8F00);
+        pal.pupil = lv_color_hex(0xE65100);
+        pal.cheek = lv_color_hex(0xFF4081);     // Bochechas vibrantes
+        pal.hasCheeks = true;
+        pal.mouth = lv_color_hex(0xFFFFFF);
+    } else if (emotion == "angry") {
+        pal.primary = lv_color_hex(0xFF1744);   // Vermelho flamejante
+        pal.aura = lv_color_hex(0xD50000);
+        pal.pupil = lv_color_hex(0xBF360C);
+        pal.mouth = lv_color_hex(0xFF1744);
+    } else if (emotion == "sad" || emotion == "crying") {
+        pal.primary = lv_color_hex(0x00B0FF);   // Azul oceânico lacrimoso
+        pal.aura = lv_color_hex(0x01579B);
+        pal.pupil = lv_color_hex(0x002171);
+        pal.mouth = lv_color_hex(0x80D8FF);
+    } else if (emotion == "sleeping") {
+        pal.primary = lv_color_hex(0x7C4DFF);   // Lavanda sonolento suave
+        pal.aura = lv_color_hex(0x311B92);
+        pal.mouth = lv_color_hex(0xB388FF);
+    } else if (emotion == "surprised") {
+        pal.primary = lv_color_hex(0xFFFF00);   // Amarelo choque
+        pal.aura = lv_color_hex(0xFFD600);
+        pal.pupil = lv_color_hex(0x000000);
+        pal.mouth = lv_color_hex(0xFFFF00);
+    } else if (emotion == "cold") {
+        pal.primary = lv_color_hex(0x80D8FF);   // Azul gélido
+        pal.aura = lv_color_hex(0x00B0FF);
+        pal.mouth = lv_color_hex(0x00FFFF);
+    } else if (emotion == "embarrassed") {
+        pal.primary = lv_color_hex(0xFF5252);   // Coral ruborizado
+        pal.aura = lv_color_hex(0xD50000);
+        pal.cheek = lv_color_hex(0xFF1744);
+        pal.hasCheeks = true;
+        pal.mouth = lv_color_hex(0xFF5252);
+    } else if (idleTipo == 12 || idleTipo == 7 || idleTipo == 14 || emotion == "loving") {
+        pal.primary = lv_color_hex(0xFF1493);   // Magenta amor
+        pal.aura = lv_color_hex(0xC2185B);
+        pal.pupil = lv_color_hex(0x880E4F);
+        pal.cheek = lv_color_hex(0xFF69B4);
+        pal.hasCheeks = true;
+        pal.mouth = lv_color_hex(0xFF69B4);
+    }
+
+    // =========================================================================
+    // 2. MOTOR DE RESPIRAÇÃO SUAVE E ORGÂNICA DOS OLHOS
+    // =========================================================================
+    float breathPeriod = (emotion == "sleeping") ? 4500.0f : 3800.0f;
+    float breathAngle = (float)(ms % (int)breathPeriod) / breathPeriod * (2.0f * 3.14159265f);
+    float breathFactor = sin(breathAngle); // oscila suavemente entre -1.0 e +1.0
+    
+    float breathY = 0.0f;
+    float breathScaleH = 0.0f;
+    float breathScaleW = 0.0f;
+
+    if (emotion == "sleeping") {
+        // No sono: respiração profunda com flutuação vertical serena
+        breathY = -breathFactor * 1.8f;
+    } else if (!comendo && !isDizzy && emotion != "angry" && emotion != "surprised") {
+        // Respiração normal viva:
+        // Na inspiração: peito/olhos sobem levemente (-1.2px) e expandem (+1.5px altura, +0.6px largura)
+        // Na expiração: relaxam e descem suavemente
+        breathY = -breathFactor * 1.2f;
+        breathScaleH = breathFactor * 1.5f;
+        breathScaleW = breathFactor * 0.6f;
+    }
+
+    // =========================================================================
+    // 3. MÁQUINA DE PISCAR NÃO-LINEAR E ORGÂNICA (COM PISCADA DUPLA)
+    // =========================================================================
+    struct BlinkEngine {
+        uint32_t nextBlinkTime = 0;
+        uint32_t blinkStartTime = 0;
+        bool active = false;
+        bool isDouble = false;
+        float blinkFactor = 0.0f; // 0.0 = aberto, 1.0 = fechado
+    };
+    static BlinkEngine blinker;
+    
+    if (!blinker.active) {
+        if (ms >= blinker.nextBlinkTime) {
+            if (emotion != "sleeping" && !isDizzy) {
+                blinker.active = true;
+                blinker.blinkStartTime = ms;
+                blinker.isDouble = ((rand() % 100) < 22); // 22% de chance de piscada dupla
+                blinker.blinkFactor = 0.0f;
+            }
+            blinker.nextBlinkTime = ms + 2800 + (rand() % 2600);
+        }
+    }
+
+    if (blinker.active) {
+        uint32_t elapsed = ms - blinker.blinkStartTime;
+        if (!blinker.isDouble) {
+            if (elapsed < 70) {
+                // Fechamento rápido (ease-in)
+                float t = (float)elapsed / 70.0f;
+                blinker.blinkFactor = t * t;
+            } else if (elapsed < 90) {
+                blinker.blinkFactor = 1.0f;
+            } else if (elapsed < 180) {
+                // Reabertura suave (ease-out)
+                float t = (float)(elapsed - 90) / 90.0f;
+                float inv = 1.0f - t;
+                blinker.blinkFactor = inv * inv * inv;
+            } else {
+                blinker.active = false;
+                blinker.blinkFactor = 0.0f;
+            }
+        } else {
+            // Piscada dupla realista
+            if (elapsed < 50) {
+                float t = (float)elapsed / 50.0f;
+                blinker.blinkFactor = t * t;
+            } else if (elapsed < 100) {
+                float t = (float)(elapsed - 50) / 50.0f;
+                blinker.blinkFactor = 1.0f - t * 0.6f;
+            } else if (elapsed < 150) {
+                float t = (float)(elapsed - 100) / 50.0f;
+                blinker.blinkFactor = 0.4f + t * 0.6f;
+            } else if (elapsed < 180) {
+                blinker.blinkFactor = 1.0f;
+            } else if (elapsed < 320) {
+                float t = (float)(elapsed - 180) / 140.0f;
+                float inv = 1.0f - t;
+                blinker.blinkFactor = inv * inv;
+            } else {
+                blinker.active = false;
+                blinker.blinkFactor = 0.0f;
+            }
+        }
+    }
+
+    // Gingado senoidal corporal ao brincar/feliz (bounce)
+    float swayX = (brincando || emotion == "happy") ? (sin(ms * 0.008f) * 1.5f) : 0.0f;
+    float swayY = (brincando || emotion == "happy") ? (-fabs(sin(ms * 0.010f)) * 3.0f) : 0.0f;
+
+    // =========================================================================
+    // 4. RENDERIZAÇÃO DOS OLHOS POR ESTADO E EMOÇÃO
+    // =========================================================================
+    if (isDizzy) {
+        // TONTURA / CHOQUE / CONFUSO: Olhos com cruzes giratórias + 3 estrelas orbitando em 3D
+        float rotAngle = ms * 0.012f;
+        DrawEyeDizzy(eyeLx + xOffset + tremorX, eyeLy + tremorY, 9.0f, rotAngle, pal.primary, layer);
+        DrawEyeDizzy(eyeRx + xOffset + tremorX, eyeRy + tremorY, 9.0f, -rotAngle, pal.primary, layer);
+        
+        // 3 Estrelas orbitando a cabeça em elipse 3D (x=64, y=10)
+        float starAngle = ms * 0.006f;
+        for (int s = 0; s < 3; s++) {
+            float a = starAngle + s * (2.0f * 3.14159f / 3.0f);
+            float sx = 64.0f + cos(a) * 20.0f + xOffset;
+            float sy = 10.0f + sin(a) * 5.0f;
+            float sRadius = 2.5f + sin(a) * 0.8f;
+            lv_color_t sColor = (sin(a) > 0) ? lv_color_hex(0xFFD700) : lv_color_hex(0xFFA000);
+            DrawStar(sx, sy, sRadius, sColor, layer);
+        }
+    } else if (comendo) {
+        // COMENDO: Mastigação elástica (Squash & Stretch)
+        bool bite = ((ms / 180) % 2 == 0);
+        float chewW = bite ? (eyeLw * 1.25f) : (eyeLw * 0.95f);
+        float chewH = bite ? (eyeLh * 0.65f) : (eyeLh * 1.05f);
+        float chewY = bite ? 2.5f : -1.0f;
+        
+        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + chewY + current_look_y, 
+                     chewW, chewH, eyeRadius, 1.0f, layer, pal.primary, pal.aura);
+        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + chewY + current_look_y, 
+                     chewW, chewH, eyeRadius, 1.0f, layer, pal.primary, pal.aura);
     } else if (brincando || idleTipo == 11) {
-        // Olhos felizes piscando alegremente com transição de meia-lua
-        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, eyeLy + tremorY + current_look_y + swayY, eyeLw, eyeLh, eyeRadius, reactionProgress, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, eyeRy + tremorY + current_look_y + swayY, eyeRw, eyeRh, eyeRadius, reactionProgress, layer);
+        // FELIZ / BRINCANDO: Arcos dourados cheios de alegria + pulinho
+        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, 
+                     eyeLy + tremorY + current_look_y + swayY, 
+                     eyeLw, eyeLh, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
+        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, 
+                     eyeRy + tremorY + current_look_y + swayY, 
+                     eyeRw, eyeRh, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
     } else if (idleTipo == 2) {
-        // Revirar pupilas em órbita circular senoidal dentro dos olhos (Sarcástico)
-        float rotAngulo = ms * 0.01f;
+        // SARCÁSTICO: Revirar de olhos em órbita suave
+        float rotAngulo = ms * 0.008f;
         float pupilX = cos(rotAngulo) * 4.5f;
         float pupilY = sin(rotAngulo) * 4.5f;
         
-        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eyeLh, eyeRadius, layer);
-        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eyeRh, eyeRadius, layer);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, 
+                eyeLw, eyeLh, eyeRadius, layer, pal.primary, pal.aura, false);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, 
+                eyeRw, eyeRh, eyeRadius, layer, pal.primary, pal.aura, false);
         
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy - 10 + current_look_y)*2, (eyeLx + 6 + xOffset + current_look_x)*2, (eyeLy - 6 + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);
-        draw_canvas_line(layer, (eyeRx - 6 + xOffset + current_look_x)*2, (eyeRy - 6 + current_look_y)*2, (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy - 10 + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);
+        // Sobrancelhas desdenhosas
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy - 11 + current_look_y)*2, 
+                         (eyeLx + 6 + xOffset + current_look_x)*2, (eyeLy - 7 + current_look_y)*2, pal.primary, 3);
+        draw_canvas_line(layer, (eyeRx - 6 + xOffset + current_look_x)*2, (eyeRy - 7 + current_look_y)*2, 
+                         (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy - 11 + current_look_y)*2, pal.primary, 3);
 
-        int pLx = (eyeLx + xOffset + tremorX + current_look_x + pupilX) * 2;
-        int pLy = (eyeLy + tremorY + current_look_y + pupilY) * 2;
-        int pRx = (eyeRx + xOffset + tremorX + current_look_x + pupilX) * 2;
-        int pRy = (eyeRy + tremorY + current_look_y + pupilY) * 2;
+        int pLx = (int)((eyeLx + xOffset + tremorX + current_look_x + pupilX) * 2);
+        int pLy = (int)((eyeLy + tremorY + current_look_y + pupilY) * 2);
+        int pRx = (int)((eyeRx + xOffset + tremorX + current_look_x + pupilX) * 2);
+        int pRy = (int)((eyeRy + tremorY + current_look_y + pupilY) * 2);
         draw_canvas_disc(layer, pLx, pLy, 3*2, lv_color_hex(0x000000));
         draw_canvas_disc(layer, pRx, pRy, 3*2, lv_color_hex(0x000000));
+        draw_canvas_disc(layer, pLx + 2, pLy - 2, 2, lv_color_hex(0xFFFFFF));
+        draw_canvas_disc(layer, pRx + 2, pRy - 2, 2, lv_color_hex(0xFFFFFF));
     } else if (idleTipo == 8) {
-        // Deboche rabugento com transição de meia-lua
-        DrawEyeHappy(eyeLx + xOffset + current_look_x, eyeLy + current_look_y, eyeLw, eyeLh, eyeRadius, reactionProgress, layer);
-        DrawEyeHappy(eyeRx + xOffset + current_look_x, eyeLy + current_look_y, eyeRw, eyeRh, eyeRadius, reactionProgress, layer);
+        // Deboche rabugento
+        DrawEyeHappy(eyeLx + xOffset + current_look_x, eyeLy + current_look_y, eyeLw, eyeLh, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
+        DrawEyeHappy(eyeRx + xOffset + current_look_x, eyeRy + current_look_y, eyeRw, eyeRh, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
     } else if (idleTipo == 9) {
         // Desdém irritado: olhos em traço - -
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + current_look_x)*2, (eyeRy + current_look_y)*2, (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, 
+                         (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, pal.primary, 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + current_look_x)*2, (eyeRy + current_look_y)*2, 
+                         (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy + current_look_y)*2, pal.primary, 4);
     } else if (idleTipo == 10) {
-        // Piscadela de um olho (olho esquerdo fechado em traço reto, olho direito aberto)
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, lv_color_hex(0xFFFFFF), 4);
-        DrawEye(eyeRx + xOffset + current_look_x, eyeRy + current_look_y, eyeRw, eyeRh, eyeRadius, layer);
-    } else if (idleTipo == 12 || idleTipo == 7 || idleTipo == 14) {
-        // Olhos de coração para personalidade sensível
-        DrawLargeHeart(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, (ms/400)%2, layer);
-        DrawLargeHeart(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, (ms/400)%2, layer);
+        // Piscadela de um olho (Wink maroto)
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, 
+                         (eyeLx + 8 + xOffset + current_look_x)*2, (eyeLy + current_look_y)*2, pal.primary, 4);
+        DrawEye(eyeRx + xOffset + current_look_x, eyeRy + current_look_y, eyeRw, eyeRh, eyeRadius, layer, pal.primary, pal.aura, true);
+    } else if (idleTipo == 12 || idleTipo == 7 || idleTipo == 14 || emotion == "loving") {
+        // APAIXONADO / CARINHO: Corações com batimento cardíaco Lub-Dub orgânico
+        float pulseTime = (float)(ms % 1000) / 1000.0f;
+        bool lubDub = (pulseTime < 0.18f || (pulseTime > 0.28f && pulseTime < 0.44f));
+        DrawLargeHeart((int)(eyeLx + xOffset + tremorX + current_look_x), (int)(eyeLy + tremorY + current_look_y), lubDub, layer, pal.primary);
+        DrawLargeHeart((int)(eyeRx + xOffset + tremorX + current_look_x), (int)(eyeRy + tremorY + current_look_y), lubDub, layer, pal.primary);
     } else if (emotion == "cold") {
-        // Olhos encolhidos de frio tremendo
-        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, 14, 20, 4, layer);
-        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, 14, 20, 4, layer);
+        // FRIO: Olhos encolhidos em azul gélido com tremor rápido
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, 14, 20, 4, layer, pal.primary, pal.aura, true);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, 14, 20, 4, layer, pal.primary, pal.aura, true);
     } else if (emotion == "sleeping") {
-        // Olhos fechados com respiração lenta
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y + breathY)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy + tremorY + current_look_y + breathY)*2, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy + tremorY + current_look_y + breathY)*2, (eyeRx + 8 + xOffset + current_look_x)*2, (eyeRy + tremorY + current_look_y + breathY)*2, lv_color_hex(0xFFFFFF), 4);
+        // SONO: Pálpebras fechadas em arcos serenos para baixo com respiração lenta
+        int lx = (int)((eyeLx + xOffset + tremorX + current_look_x) * 2);
+        int rx = (int)((eyeRx + xOffset + tremorX + current_look_x) * 2);
+        int ySleep = (int)((eyeLy + tremorY + current_look_y + breathY) * 2);
+        int sleepRadius = 8 * 2;
+        draw_canvas_arc(layer, lx, ySleep - 2, sleepRadius, 0, 180, pal.primary, 4);
+        draw_canvas_arc(layer, rx, ySleep - 2, sleepRadius, 0, 180, pal.primary, 4);
     } else if (emotion == "surprised") {
-        // Olhos grandes e arregalados de surpresa/atenção ao som
-        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y - 2, 16, 32, 10, layer);
-        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y - 2, 16, 32, 10, layer);
-    } else if (emotion == "happy") {
-        DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, eyeLy + tremorY + current_look_y + swayY, eyeLw, eyeLh, eyeRadius, 1.0, layer);
-        DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, eyeRy + tremorY + current_look_y + swayY, eyeRw, eyeRh, eyeRadius, 1.0, layer);
+        // SURPRESA / SUSTO: Olhos dilatados em amarelo choque com pupila de choque minúscula
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y - 2, 16, 32, 10, layer, pal.primary, pal.aura, true);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y - 2, 16, 32, 10, layer, pal.primary, pal.aura, true);
     } else if (emotion == "angry") {
-        static int blink_counter_angry = 0, blink_state_angry = 0;
-        static float eye_h_angry = 16.0f;
-        blink_counter_angry++;
-        if (blink_state_angry == 0 && blink_counter_angry > 100) {
-            if ((rand() % 100) < 20) blink_state_angry = 1;
-            blink_counter_angry = 0;
-        }
-        if (blink_state_angry == 1) {
-            eye_h_angry -= 3; if (eye_h_angry <= 2) blink_state_angry = 2;
-        } else if (blink_state_angry == 2) {
-            eye_h_angry += 3; if (eye_h_angry >= 16) { eye_h_angry = 16; blink_state_angry = 0; }
-        }
+        // ZANGADO: Olhos em chamas carmesim/laranja com sobrancelhas grossas inclinadas
         float sary = eyeLy + tremorY + current_look_y + 3.0f;
         float sarry = eyeRy + tremorY + current_look_y + 3.0f;
 
-        DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, eyeLw, eye_h_angry, 3, layer);
-        DrawEye(eyeRx + xOffset + tremorX + current_look_x, sarry, eyeRw, eye_h_angry, 3, layer);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, eyeLw, 16.0f, 3, layer, pal.primary, pal.aura, false);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, sarry, eyeRw, 16.0f, 3, layer, pal.primary, pal.aura, false);
 
-        int lx = (eyeLx + xOffset + tremorX + current_look_x) * 2;
-        int rx = (eyeRx + xOffset + tremorX + current_look_x) * 2;
-        int topY = (sary - eye_h_angry / 2.0f) * 2;
-        int lw = (eyeLw + 3) * 2;
-        int rw = (eyeRw + 3) * 2;
+        int lx = (int)((eyeLx + xOffset + tremorX + current_look_x) * 2);
+        int rx = (int)((eyeRx + xOffset + tremorX + current_look_x) * 2);
+        int topY = (int)((sary - 8.0f) * 2);
+        int lw = (int)((eyeLw + 3) * 2);
+        int rw = (int)((eyeRw + 3) * 2);
 
-        // Pálpebras inclinadas no formato \ / (Zangado - conforme imagem enviada)
-        draw_canvas_line(layer, lx - lw/2, topY - 3, lx + lw/2, topY + 3, lv_color_hex(0xFF3300), 5);
-        draw_canvas_line(layer, rx - rw/2, topY + 3, rx + rw/2, topY - 3, lv_color_hex(0xFF3300), 5);
+        // Pálpebras inclinadas no formato \ /
+        draw_canvas_line(layer, lx - lw/2, topY - 3, lx + lw/2, topY + 3, lv_color_hex(0xFF5722), 5);
+        draw_canvas_line(layer, rx - rw/2, topY + 3, rx + rw/2, topY - 3, lv_color_hex(0xFF5722), 5);
 
-        // Sobrancelhas zangadas/bravas vermelhas (\ /)
-        draw_canvas_line(layer, (eyeLx - 10 + xOffset + tremorX + current_look_x)*2, (eyeLy - 14 + tremorY + current_look_y)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y)*2, lv_color_hex(0xFF0000), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y)*2, (eyeRx + 10 + xOffset + tremorX + current_look_x)*2, (eyeRy - 14 + tremorY + current_look_y)*2, lv_color_hex(0xFF0000), 4);
+        // Sobrancelhas zangadas grossas vermelhas (\ /)
+        draw_canvas_line(layer, (eyeLx - 10 + xOffset + tremorX + current_look_x)*2, (eyeLy - 14 + tremorY + current_look_y)*2, 
+                         (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y)*2, lv_color_hex(0xFF0000), 5);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y)*2, 
+                         (eyeRx + 10 + xOffset + tremorX + current_look_x)*2, (eyeRy - 14 + tremorY + current_look_y)*2, lv_color_hex(0xFF0000), 5);
     } else if (emotion == "sad" || emotion == "crying") {
-        static int blink_counter_sad = 0, blink_state_sad = 0;
-        static float eye_h_sad = 15.0f;
-        blink_counter_sad++;
-        if (blink_state_sad == 0 && blink_counter_sad > 100) {
-            if ((rand() % 100) < 20) blink_state_sad = 1;
-            blink_counter_sad = 0;
-        }
-        if (blink_state_sad == 1) {
-            eye_h_sad -= 3; if (eye_h_sad <= 2) blink_state_sad = 2;
-        } else if (blink_state_sad == 2) {
-            eye_h_sad += 3; if (eye_h_sad >= 15) { eye_h_sad = 15; blink_state_sad = 0; }
-        }
+        // TRISTE / CHORANDO: Olhos caídos em azul oceânico com sobrancelhas tristes
         float sary = eyeLy + tremorY + current_look_y + breathY + 3.0f;
         float sarry = eyeRy + tremorY + current_look_y + breathY + 3.0f;
 
-        // Cápsula arredondada inferior (altura 15px)
-        DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, eyeLw, eye_h_sad, 3, layer);
-        DrawEye(eyeRx + xOffset + tremorX + current_look_x, sarry, eyeRw, eye_h_sad, 3, layer);
+        DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, eyeLw, 15.0f, 3, layer, pal.primary, pal.aura, true);
+        DrawEye(eyeRx + xOffset + tremorX + current_look_x, sarry, eyeRw, 15.0f, 3, layer, pal.primary, pal.aura, true);
 
-        // Pálpebra superior reta de corte horizontal branca (espessura 4px)
-        int lx = (eyeLx + xOffset + tremorX + current_look_x) * 2;
-        int rx = (eyeRx + xOffset + tremorX + current_look_x) * 2;
-        int topY = (sary - eye_h_sad / 2.0f) * 2;
-        int lw = (eyeLw + 3) * 2;
-        int rw = (eyeRw + 3) * 2;
+        int lx = (int)((eyeLx + xOffset + tremorX + current_look_x) * 2);
+        int rx = (int)((eyeRx + xOffset + tremorX + current_look_x) * 2);
+        int topY = (int)((sary - 7.5f) * 2);
+        int lw = (int)((eyeLw + 3) * 2);
+        int rw = (int)((eyeRw + 3) * 2);
 
-        draw_canvas_line(layer, lx - lw/2, topY, lx + lw/2, topY, lv_color_hex(0xFFFFFF), 4);
-        draw_canvas_line(layer, rx - rw/2, topY, rx + rw/2, topY, lv_color_hex(0xFFFFFF), 4);
+        // Pálpebra superior reta de corte horizontal
+        draw_canvas_line(layer, lx - lw/2, topY, lx + lw/2, topY, pal.aura, 4);
+        draw_canvas_line(layer, rx - rw/2, topY, rx + rw/2, topY, pal.aura, 4);
 
         // Sobrancelhas tristes azuis (/ \)
-        draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y + breathY)*2, (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 14 + tremorY + current_look_y + breathY)*2, lv_color_hex(0x0080FF), 4);
-        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 14 + tremorY + current_look_y + breathY)*2, (eyeRx + 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y + breathY)*2, lv_color_hex(0x0080FF), 4);
-    } else if (emotion == "loving") {
-        DrawLargeHeart(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, (ms/400)%2, layer);
-        DrawLargeHeart(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, (ms/400)%2, layer);
+        draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y + breathY)*2, 
+                         (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 14 + tremorY + current_look_y + breathY)*2, lv_color_hex(0x0080FF), 4);
+        draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 14 + tremorY + current_look_y + breathY)*2, 
+                         (eyeRx + 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y + breathY)*2, lv_color_hex(0x0080FF), 4);
     } else {
-        static int blink_counter = 0, blink_state = 0;
-        static float eye_h = 24;
-        blink_counter++;
-        if (blink_state == 0 && blink_counter > 100) {
-            if ((rand() % 100) < 20) blink_state = 1;
-            blink_counter = 0;
-        }
-        if (blink_state == 1) {
-            eye_h -= 4; if (eye_h <= 2) blink_state = 2;
-        } else if (blink_state == 2) {
-            eye_h += 4; if (eye_h >= 24) { eye_h = 24; blink_state = 0; }
-        }
-        bool isSarcastic = (engine.GetPersonalidade() == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
-        bool isSensivel = (engine.GetPersonalidade() == PERSONALIDADE_SENSIVEL);
+        // ESTADO NORMAL / IDLE: Olhos vivos com Respiração Suave, Piscar Orgânico e Paleta Colorida
+        float curEyeH = (eyeLh + breathScaleH) * (1.0f - blinker.blinkFactor);
+        float curEyeW = (eyeLw + breathScaleW) + (blinker.blinkFactor > 0.85f ? 1.5f : 0.0f);
+        float curEyeY = eyeLy + tremorY + current_look_y + breathY;
+        
+        bool isSarcastic = (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
         if (isSarcastic) {
-            // RENDERIZAÇÃO DIRETA DOS OLHOS SEMICERRADOS SARCÁSTICOS (100% idêntico ao OLED)
-            float sarh = 13.0f;
-            float sary = eyeLy + tremorY + current_look_y + 4.0f;
-            float sarry = eyeRy + tremorY + current_look_y + 4.0f;
+            float sarh = 13.0f * (1.0f - blinker.blinkFactor);
+            float sary = curEyeY + 4.0f;
+            DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, curEyeW, sarh, 3, layer, pal.primary, pal.aura, true, current_look_x, current_look_y);
+            DrawEye(eyeRx + xOffset + tremorX + current_look_x, sary, curEyeW, sarh, 3, layer, pal.primary, pal.aura, true, current_look_x, current_look_y);
 
-            // Cápsula arredondada inferior (altura 13px)
-            DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, eyeLw, sarh, 3, layer);
-            DrawEye(eyeRx + xOffset + tremorX + current_look_x, sarry, eyeRw, sarh, 3, layer);
+            int lx = (int)((eyeLx + xOffset + tremorX + current_look_x) * 2);
+            int rx = (int)((eyeRx + xOffset + tremorX + current_look_x) * 2);
+            int topY = (int)((sary - sarh / 2.0f) * 2);
+            int lw = (int)((curEyeW + 3) * 2);
+            int rw = (int)((curEyeW + 3) * 2);
 
-            // Pálpebra superior reta de corte horizontal (espessura 4px)
-            int lx = (eyeLx + xOffset + tremorX + current_look_x) * 2;
-            int rx = (eyeRx + xOffset + tremorX + current_look_x) * 2;
-            int topY = (sary - sarh / 2.0f) * 2;
-            int lw = (eyeLw + 3) * 2;
-            int rw = (eyeRw + 3) * 2;
-
-            draw_canvas_line(layer, lx - lw/2, topY, lx + lw/2, topY, lv_color_hex(0xFFFFFF), 4);
-            draw_canvas_line(layer, rx - rw/2, topY, rx + rw/2, topY, lv_color_hex(0xFFFFFF), 4);
+            draw_canvas_line(layer, lx - lw/2, topY, lx + lw/2, topY, pal.aura, 4);
+            draw_canvas_line(layer, rx - rw/2, topY, rx + rw/2, topY, pal.aura, 4);
 
             // Sobrancelhas irônicas inclinadas (/ \)
-            draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 12 + tremorY + current_look_y)*2, (eyeLx + 6 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);
-            draw_canvas_line(layer, (eyeRx - 6 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y)*2, (eyeRx + 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 12 + tremorY + current_look_y)*2, lv_color_hex(0xFFFFFF), 3);
-        } else if (isSensivel) {
-            // Olhos da Personalidade Sensível: Maiores (14x26px) e arredondados (radius = 10) com olhar fofo/brilhante
-            DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, 14, 26, 10, layer);
-            DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, 14, 26, 10, layer);
+            draw_canvas_line(layer, (eyeLx - 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 12 + tremorY + current_look_y)*2, 
+                             (eyeLx + 6 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y)*2, pal.primary, 3);
+            draw_canvas_line(layer, (eyeRx - 6 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y)*2, 
+                             (eyeRx + 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 12 + tremorY + current_look_y)*2, pal.primary, 3);
         } else {
-            // Olhos normais cheios da Personalidade Básica (12x24px, radius = 6)
-            DrawEye(eyeLx + xOffset + tremorX + current_look_x, eyeLy + tremorY + current_look_y, eyeLw, eye_h, eyeRadius, layer);
-            DrawEye(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + current_look_y, eyeRw, eye_h, eyeRadius, layer);
+            // Olhos normais ou sensíveis cheios de vida e brilho
+            DrawEye(eyeLx + xOffset + tremorX + current_look_x, curEyeY, curEyeW, curEyeH, eyeRadius, layer, pal.primary, pal.aura, (curEyeH > 8.0f), current_look_x, current_look_y);
+            DrawEye(eyeRx + xOffset + tremorX + current_look_x, curEyeY, curEyeW, curEyeH, eyeRadius, layer, pal.primary, pal.aura, (curEyeH > 8.0f), current_look_x, current_look_y);
         }
     }
     
+    // =========================================================================
+    // 5. BOCHECHAS CORADAS (BLUSH) FOFAS SOB OS OLHOS
+    // =========================================================================
+    if (pal.hasCheeks && !isDizzy && emotion != "angry" && emotion != "sleeping") {
+        float cheekY = eyeLy + 13.0f + tremorY + current_look_y + breathY * 0.75f;
+        DrawCheekBlush(eyeLx - 3.0f + xOffset + current_look_x, cheekY, 5.0f, 2.5f, pal.cheek, layer);
+        DrawCheekBlush(eyeRx + 3.0f + xOffset + current_look_x, cheekY, 5.0f, 2.5f, pal.cheek, layer);
+    }
+    
+    // =========================================================================
+    // 6. RENDERIZAÇÃO DA BOCA ARTICULADA E SINCRONIZADA COM A RESPIRAÇÃO
+    // =========================================================================
     int mouthShiftX = (int)(current_look_x * 0.85f);
     int mouthShiftY = (int)((current_look_y + swayY + breathY) * 0.80f) + 4;
-    lv_color_t mc = lv_color_hex(0xFFFFFF);
+    lv_color_t mc = pal.mouth;
     
-    if (comendo) {
-        // Boca abrindo/fechando senoidalmente para simular mastigação
-        if ((ms / 150) % 2 == 0) {
+    if (isDizzy) {
+        // Boca em zigue-zague ondulado de tontura
+        int my = 49 + mouthShiftY;
+        draw_canvas_line(layer, (58 + mouthShiftX)*2, (my)*2, (62 + mouthShiftX)*2, (my + 4)*2, mc, 4);
+        draw_canvas_line(layer, (62 + mouthShiftX)*2, (my + 4)*2, (66 + mouthShiftX)*2, (my - 3)*2, mc, 4);
+        draw_canvas_line(layer, (66 + mouthShiftX)*2, (my - 3)*2, (70 + mouthShiftX)*2, (my)*2, mc, 4);
+    } else if (comendo) {
+        // Boca abrindo e fechando com mastigação rítmica
+        if ((ms / 180) % 2 == 0) {
             draw_canvas_line(layer, (58 + mouthShiftX)*2, (49 + mouthShiftY)*2, (70 + mouthShiftX)*2, (49 + mouthShiftY)*2, mc, 4);
         } else {
-            draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 4*2, mc, 2);
+            draw_canvas_rect(layer, (61 + mouthShiftX)*2, (47 + mouthShiftY)*2, 6*2, 5*2, mc, 2);
         }
     } else if (emotion == "sleeping") {
-        // Boca redonda pequena bocejando/dormindo
         draw_canvas_rect(layer, (62 + mouthShiftX)*2, (48 + mouthShiftY)*2, 4*2, 4*2, mc, 2);
     } else if (brincando || idleTipo == 11) {
-        // Sorriso grande aberto
+        // Sorriso grande aberto de felicidade
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (48 + mouthShiftY)*2, (64 + mouthShiftX)*2, (53 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (53 + mouthShiftY)*2, (70 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
     } else if (idleTipo == 1) {
@@ -1923,7 +2260,6 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         // Beijo: biquinho
         draw_canvas_rect(layer, (62 + mouthShiftX)*2, (48 + mouthShiftY)*2, 3*2, 3*2, mc, 2);
     } else if (emotion == "surprised") {
-        // Boca em 'o' de surpresa/atenção
         draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 6*2, mc, 2);
     } else if (emotion == "happy") {
         // Boca fofa w de gatinho
@@ -1950,20 +2286,24 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         draw_canvas_line(layer, (66 + mouthShiftX)*2, (48 + mouthShiftY + tremorMouth)*2, (72 + mouthShiftX)*2, (48 + mouthShiftY - tremorMouth)*2, lv_color_hex(0x00FFFF), 3);
     }
  
+    // =========================================================================
+    // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE)
+    // =========================================================================
     if (numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;
         int totalW = (numIcons * iconW) + ((numIcons - 1) * iconGap);
-        int startX = 64 - (totalW / 2); // Balão fixo no centro da tela
-        int drawY = 0;                  // Fixado no topo do canvas, logo abaixo do relógio
+        int startX = 64 - (totalW / 2);
+        int drawY = 0;
         
-        // Balão com bordas finas (1px virtual = 2px no canvas), sem cortes
-        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY)*2, (totalW + 8)*2, 14*2, lv_color_hex(0xFFFFFF), 1*2, 2*2);
-        draw_canvas_line(layer, 64*2, (drawY + 14)*2, 62*2, (drawY + 16)*2, lv_color_hex(0xFFFFFF), 2);
+        // Fundo escuro semitranslúcido com borda estilizada
+        draw_canvas_rect(layer, (startX - 4)*2, (drawY)*2, (totalW + 8)*2, 14*2, lv_color_hex(0x161622), 3*2);
+        draw_canvas_rect_empty(layer, (startX - 4)*2, (drawY)*2, (totalW + 8)*2, 14*2, lv_color_hex(0x3E4466), 1*2, 3*2);
+        draw_canvas_line(layer, 64*2, (drawY + 14)*2, 62*2, (drawY + 16)*2, lv_color_hex(0x3E4466), 2);
         
         int currentX = startX;
         if (precisaComida) {
-            // Ícone 1: Ossinho de Cachorro (Laranja/Amarelo #FFA500) - idêntico ao RoboESP32.ino
+            // Ossinho Dourado / Laranja
             lv_color_t boneColor = lv_color_hex(0xFFA500);
             draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 5)*2, 6*2, 2*2, boneColor, 0);
             draw_canvas_disc(layer, (currentX + 2)*2, (drawY + 4)*2, 1*2 + 1, boneColor);
@@ -1973,48 +2313,44 @@ void LcdDisplay::DrawOledFace(int xOffset) {
             currentX += (iconW + iconGap);
         }
         if (precisaBrincar) {
-            // Ícone 2: Controle de Videogame detalhado com D-Pad e Botões (Verde #00FF66) - idêntico ao RoboESP32.ino
+            // Controle de videogame verde néon
             lv_color_t ctrlColor = lv_color_hex(0x00FF66);
             draw_canvas_rect_empty(layer, (currentX)*2, (drawY + 3)*2, 12*2, 7*2, ctrlColor, 1*2, 2*2);
-            // D-Pad +
             draw_canvas_rect(layer, (currentX + 2)*2, (drawY + 6)*2, 3*2, 1*2, ctrlColor, 0);
             draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 5)*2, 1*2, 3*2, ctrlColor, 0);
-            // Botões A / B / Select / Start
             draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 5)*2, 1*2, ctrlColor);
             draw_canvas_disc(layer, (currentX + 8)*2, (drawY + 7)*2, 1*2, ctrlColor);
             draw_canvas_rect(layer, (currentX + 5)*2, (drawY + 6)*2, 2*2, 1*2, ctrlColor, 0);
             currentX += (iconW + iconGap);
         }
         if (precisaSaude) {
-            // Ícone 3: Frasco de Remédio com Tampa e Cruz (Vermelho #FF3333 e Tampa Branca #FFFFFF) - idêntico ao RoboESP32.ino
+            // Frasco de remédio vermelho com cruz branca
             lv_color_t medColor = lv_color_hex(0xFF3333);
             lv_color_t whiteColor = lv_color_hex(0xFFFFFF);
-            // Tampa do frasco
             draw_canvas_rect(layer, (currentX + 4)*2, (drawY + 2)*2, 4*2, 2*2, whiteColor, 0);
-            // Corpo do frasco
             draw_canvas_rect_empty(layer, (currentX + 2)*2, (drawY + 4)*2, 8*2, 7*2, medColor, 1*2, 1*2);
-            // Cruz no centro do frasco
             draw_canvas_line(layer, (currentX + 5)*2, (drawY + 6)*2, (currentX + 5)*2, (drawY + 9)*2, whiteColor, 2);
             draw_canvas_line(layer, (currentX + 4)*2, (drawY + 7)*2, (currentX + 6)*2, (drawY + 7)*2, whiteColor, 2);
             currentX += (iconW + iconGap);
         }
     }
     
+    // Geração de partículas dinâmicas
     if (emotion == "crying") {
-        if ((rand() % 100) < 6) CriarParticula(eyeLx - 8 + current_look_x, eyeLy + 6 + current_look_y, -0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
-        if ((rand() % 100) < 6) CriarParticula(eyeRx + 8 + current_look_x, eyeRy + 6 + current_look_y,  0.15, 0.4 + (rand()%4)/10.0, 'L', 35);
+        if ((rand() % 100) < 6) CriarParticula(eyeLx - 8 + current_look_x, eyeLy + 6 + current_look_y, -0.15f, 0.4f + (rand()%4)/10.0f, 'L', 35);
+        if ((rand() % 100) < 6) CriarParticula(eyeRx + 8 + current_look_x, eyeRy + 6 + current_look_y,  0.15f, 0.4f + (rand()%4)/10.0f, 'L', 35);
     }
     if (emotion == "sleeping") {
-        if ((rand() % 100) < 3) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, 0.2 + (rand()%4)/10.0, -0.3 - (rand()%4)/10.0, 'Z', 50);
+        if ((rand() % 100) < 3) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, 0.2f + (rand()%4)/10.0f, -0.3f - (rand()%4)/10.0f, 'Z', 50);
     }
     if (comendo) {
-        if ((rand() % 100) < 15) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, ((rand()%10)-5)/10.0, 0.5 + (rand()%5)/10.0, '*', 30);
+        if ((rand() % 100) < 18) CriarParticula(64 + mouthShiftX, 48 + mouthShiftY, ((rand()%10)-5)/10.0f, 0.5f + (rand()%5)/10.0f, '*', 30);
     }
     if (curando) {
-        if ((rand() % 100) < 15) CriarParticula(64 + mouthShiftX + (rand()%30-15), 48 + mouthShiftY + (rand()%20-10), 0, -0.6 - (rand()%4)/10.0, '+', 40);
+        if ((rand() % 100) < 15) CriarParticula(64 + mouthShiftX + (rand()%30-15), 48 + mouthShiftY + (rand()%20-10), 0, -0.6f - (rand()%4)/10.0f, '+', 40);
     }
     if (brincando && (rand() % 100) < 15) {
-        CriarParticula(64 + mouthShiftX + (rand()%30 - 15), 32, (rand()%10 - 5)/10.0, -0.5, 'H', 35);
+        CriarParticula(64 + mouthShiftX + (rand()%30 - 15), 32, (rand()%10 - 5)/10.0f, -0.5f, 'H', 35);
     }
     if (idleTipo == 1 && (rand() % 100) < 15) {
         CriarParticula(64 + mouthShiftX, 46 + mouthShiftY, (rand()%10 - 5)/10.0f, -0.4f, 'M', 40);
@@ -2025,31 +2361,26 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     
     float limiarCalor = engine.GetLimiarTempAlto();
     if ((temp > limiarCalor && temp > 0.0f) || emotion == "embarrassed") {
-        // Gotas de suor escorrendo pelas laterais da tela (igual ao código do corpo OLED Robo.ino)
         if ((rand() % 100) < 6) {
-            // Lado esquerdo da tela (x entre 8 e 25, y = 0)
             CriarParticula(8 + (rand() % 17), 0, 0.0f, 0.8f + (rand() % 5) / 10.0f, 'S', 70);
         }
         if ((rand() % 100) < 6) {
-            // Lado direito da tela (x entre 103 e 120, y = 0)
             CriarParticula(103 + (rand() % 17), 0, 0.0f, 0.8f + (rand() % 5) / 10.0f, 'S', 70);
         }
     }
     
-    // Animação de Orelhas com Ondas Sonoras ao Ouvir a IA
+    // Orelhas de escuta IA (ondas dinâmicas em ciano néon)
     bool estaOuvindo = (Application::GetInstance().GetDeviceState() == kDeviceStateListening);
     if (estaOuvindo) {
-        int wavePhase = (ms / 150) % 3; // 0, 1, 2
+        int wavePhase = (ms / 150) % 3;
         lv_color_t earColor = lv_color_hex(0x00FFFF);
         
-        // Orelha Esquerda (lado esquerdo da cabeça) + Ondas sonoras de escuta
         draw_canvas_arc(layer, 18*2, 37*2, 6*2, 90, 270, earColor, 2*2);
         draw_canvas_arc(layer, 18*2, 37*2, 3*2, 90, 270, earColor, 2);
         for (int w = 0; w <= wavePhase; w++) {
             draw_canvas_arc(layer, 18*2, 37*2, (9 + w * 4)*2, 110, 250, earColor, 2);
         }
 
-        // Orelha Direita (lado direito da cabeça) + Ondas sonoras de escuta
         draw_canvas_arc(layer, 110*2, 37*2, 6*2, 270, 90, earColor, 2*2);
         draw_canvas_arc(layer, 110*2, 37*2, 3*2, 270, 90, earColor, 2);
         for (int w = 0; w <= wavePhase; w++) {
