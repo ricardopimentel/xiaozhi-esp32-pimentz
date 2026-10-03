@@ -44,7 +44,7 @@ void McpServer::AddCommonTools() {
     // Custom tools must be added in the board's InitializeTools function.
 
     AddTool("self.get_tamagotchi_status",
-        "Provides real-time Tamagotchi pet metrics including personality, emotion state, hunger, playfulness, health, bond points and sickness condition.\n"
+        "Provides real-time Tamagotchi pet metrics including personality, emotion state, hunger, playfulness, health, bond points, physical sensors and sickness condition.\n"
         "Use this tool when answering questions about the robot's mood, physical condition or feelings.",
         PropertyList(),
         [](const PropertyList& properties) -> ReturnValue {
@@ -59,6 +59,33 @@ void McpServer::AddCommonTools() {
             cJSON_AddNumberToObject(root, "bond_points", engine.GetPontosDeVinculo());
             cJSON_AddBoolToObject(root, "is_sick", engine.EstaDoente());
             cJSON_AddNumberToObject(root, "age_days", engine.GetIdadeDias());
+            cJSON_AddNumberToObject(root, "temperature_celsius", engine.GetSensorTemperatura());
+            cJSON_AddNumberToObject(root, "humidity_percent", engine.GetSensorUmidade());
+            cJSON_AddNumberToObject(root, "light_percent", engine.GetSensorLuz());
+            cJSON_AddBoolToObject(root, "shock_detected", engine.GetSensorChoque());
+            cJSON_AddNumberToObject(root, "sound_level", engine.GetSensorSom());
+            cJSON_AddBoolToObject(root, "obstacle_detected", engine.GetSensorObstaculo());
+            
+            char* json_str = cJSON_PrintUnformatted(root);
+            std::string res(json_str);
+            cJSON_free(json_str);
+            cJSON_Delete(root);
+            return res;
+        });
+
+    AddTool("self.get_environment_sensors",
+        "Provides real-time physical sensor readings from the robot's hardware on the desk, including temperature in Celsius, relative humidity percentage, ambient light level, noise level, and vibration/shock detection.\n"
+        "Use this tool when the user asks about the room climate, temperature, humidity, noise, or physical environment.",
+        PropertyList(),
+        [](const PropertyList& properties) -> ReturnValue {
+            auto& engine = TamagotchiEngine::GetInstance();
+            cJSON* root = cJSON_CreateObject();
+            cJSON_AddNumberToObject(root, "temperature_celsius", engine.GetSensorTemperatura());
+            cJSON_AddNumberToObject(root, "humidity_percent", engine.GetSensorUmidade());
+            cJSON_AddNumberToObject(root, "light_percent", engine.GetSensorLuz());
+            cJSON_AddNumberToObject(root, "sound_level", engine.GetSensorSom());
+            cJSON_AddBoolToObject(root, "shock_detected", engine.GetSensorChoque());
+            cJSON_AddBoolToObject(root, "hand_obstacle_detected", engine.GetSensorObstaculo());
             
             char* json_str = cJSON_PrintUnformatted(root);
             std::string res(json_str);
