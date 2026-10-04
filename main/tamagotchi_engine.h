@@ -70,6 +70,13 @@ public:
     uint64_t GetTempoInicioReacaoOciosa() const { return tempo_inicio_reacao_ociosa_; }
     uint64_t GetTempoFimReacaoOciosa() const { return tempo_fim_reacao_ociosa_; }
     
+    // Timer properties
+    void StartTimer(uint32_t duration_ms, const std::string& label);
+    void StopTimer();
+    bool IsTimerActive() const { return timer_active_; }
+    uint32_t GetTimerRemainingMs() const;
+    std::string GetTimerLabel() const { return timer_label_; }
+    
     std::string GetCurrentEmotion() const;
     std::string GetPersonalidadeString() const;
     std::string GetCurrentEmotionPtBr() const;
@@ -148,6 +155,12 @@ private:
     uint64_t last_save_time_ = 0;
     uint64_t tempo_no_frio_ = 0;
     uint64_t last_vinculo_check_ = 0;
+
+    // Timer
+    uint64_t timer_start_time_ = 0;
+    uint32_t timer_duration_ms_ = 0;
+    bool timer_active_ = false;
+    std::string timer_label_ = "";
 };
 
 #endif // TAMAGOTCHI_ENGINE_H

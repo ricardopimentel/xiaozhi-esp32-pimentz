@@ -1,5 +1,6 @@
 #include "tamagotchi_engine.h"
 #include "application.h"
+#include "assets/lang_config.h"
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <nvs_flash.h>
@@ -84,6 +85,20 @@ void TamagotchiEngine::SaveState() {
 
 void TamagotchiEngine::SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado) {
     uint64_t now = esp_timer_get_time() / 1000;
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
+    }
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound("custom_alarm");
+    }
     
     if (comendo && !sensor_animacao_comendo_) tempo_inicio_animacao_comendo_ = now;
     if (brincando && !sensor_animacao_brincando_) tempo_inicio_animacao_brincando_ = now;
@@ -120,6 +135,20 @@ void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t s
 
 void TamagotchiEngine::Update() {
     uint64_t now = esp_timer_get_time() / 1000;
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
+    }
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound("custom_alarm");
+    }
     
     // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
     if (now - tempo_ultimo_pacote_espnow_ > 3000) {
@@ -300,6 +329,20 @@ void TamagotchiEngine::Update() {
 
 void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfidUID) {
     uint64_t now = esp_timer_get_time() / 1000;
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
+    }
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound("custom_alarm");
+    }
     
     if (estado_nascimento_ == ESTADO_CHOCANDO) {
         static uint64_t last_chocando_tick = 0;
@@ -557,6 +600,11 @@ std::string TamagotchiEngine::GetSystemPromptContext() const {
     // 4. Instruções de Resposta e Voz
     prompt += "DIRETRIZES DE FALA: Responda SEMPRE em Português do Brasil com linguagem natural, oral e espontânea. Suas falas serão ditas em voz alta pelo seu alto-falante, portanto seja conciso (máximo 2 a 4 frases). NUNCA leia números frios como um relatório (jamais diga 'minha fome é 18 e temperatura é 29'); incorpore tudo de forma natural e viva como sentimentos e impressões reais do robô!";
 
+        if (timer_active_) {
+        uint32_t rem = GetTimerRemainingMs() / 1000;
+        prompt += " [TIMER ATIVO]: Voc� est� contando um timer chamado '" + timer_label_ + "' e faltam " + std::to_string(rem / 60) + " minutos e " + std::to_string(rem % 60) + " segundos para acabar. Se o usu�rio perguntar quanto tempo falta, informe baseado nesses dados. ";
+    }
+
     return prompt;
 }
 
@@ -614,3 +662,42 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         }
     }
 }
+
+
+void TamagotchiEngine::StartTimer(uint32_t duration_ms, const std::string& label) {
+    timer_duration_ms_ = duration_ms;
+    timer_start_time_ = esp_timer_get_time() / 1000;
+    timer_label_ = label;
+    timer_active_ = true;
+    ESP_LOGI("TamagotchiEngine", "Timer started: %s for %d ms", label.c_str(), duration_ms);
+}
+
+void TamagotchiEngine::StopTimer() {
+    timer_active_ = false;
+    ESP_LOGI("TamagotchiEngine", "Timer stopped");
+}
+
+uint32_t TamagotchiEngine::GetTimerRemainingMs() const {
+    if (!timer_active_) return 0;
+    uint64_t now = esp_timer_get_time() / 1000;
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
+    }
+    if (timer_active_ && GetTimerRemainingMs() == 0) {
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        timer_active_ = false;
+        tipo_reacao_ociosa_ = 10;
+        tempo_fim_reacao_ociosa_ = now + 5000;
+        Application::GetInstance().PlaySound("custom_alarm");
+    }
+    uint64_t elapsed = now - timer_start_time_;
+    if (elapsed >= timer_duration_ms_) {
+        return 0;
+    }
+    return timer_duration_ms_ - elapsed;
+}
+
