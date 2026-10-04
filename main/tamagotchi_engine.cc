@@ -135,19 +135,13 @@ void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t s
 
 void TamagotchiEngine::Update() {
     uint64_t now = esp_timer_get_time() / 1000;
+    
     if (timer_active_ && GetTimerRemainingMs() == 0) {
         ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
         timer_active_ = false;
         tipo_reacao_ociosa_ = 10;
         tempo_fim_reacao_ociosa_ = now + 5000;
         Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
-    }
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound("custom_alarm");
     }
     
     // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
@@ -680,20 +674,6 @@ void TamagotchiEngine::StopTimer() {
 uint32_t TamagotchiEngine::GetTimerRemainingMs() const {
     if (!timer_active_) return 0;
     uint64_t now = esp_timer_get_time() / 1000;
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
-    }
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound("custom_alarm");
-    }
     uint64_t elapsed = now - timer_start_time_;
     if (elapsed >= timer_duration_ms_) {
         return 0;
