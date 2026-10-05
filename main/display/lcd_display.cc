@@ -1111,7 +1111,7 @@ void LcdDisplay::SetupUI() {
     InicializarParticulas();
 
     timer_label_ = lv_label_create(screen);
-    lv_obj_set_style_text_font(timer_label_, large_icon_font, 0);
+    lv_obj_set_style_text_font(timer_label_, text_font, 0);
     lv_obj_set_style_text_color(timer_label_, lv_color_hex(0xFF3333), 0);
     lv_obj_align(timer_label_, LV_ALIGN_TOP_MID, 0, 10);
     lv_label_set_text(timer_label_, "");
