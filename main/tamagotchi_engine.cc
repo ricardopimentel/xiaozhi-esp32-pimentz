@@ -85,20 +85,6 @@ void TamagotchiEngine::SaveState() {
 
 void TamagotchiEngine::SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado) {
     uint64_t now = esp_timer_get_time() / 1000;
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
-    }
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound("custom_alarm");
-    }
     
     if (comendo && !sensor_animacao_comendo_) tempo_inicio_animacao_comendo_ = now;
     if (brincando && !sensor_animacao_brincando_) tempo_inicio_animacao_brincando_ = now;
@@ -141,7 +127,10 @@ void TamagotchiEngine::Update() {
         timer_active_ = false;
         tipo_reacao_ociosa_ = 10;
         tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
+        auto& app = Application::GetInstance();
+        std::string alert_msg = "Timer " + timer_label_ + " finalizado!";
+        app.Alert("TIMER", alert_msg.c_str(), "happy", Lang::Sounds::OGG_EXCLAMATION);
+        app.WakeWordInvoke("[device_call] Atenção! O timer terminou agora!");
     }
     
     // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
@@ -323,20 +312,6 @@ void TamagotchiEngine::Update() {
 
 void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfidUID) {
     uint64_t now = esp_timer_get_time() / 1000;
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound(Lang::Sounds::OGG_SUCCESS);
-    }
-    if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
-        timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
-        Application::GetInstance().PlaySound("custom_alarm");
-    }
     
     if (estado_nascimento_ == ESTADO_CHOCANDO) {
         static uint64_t last_chocando_tick = 0;
@@ -635,25 +610,6 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         memset(sensor_rfid_uid_, 0, 4);
     }
 
-    // --- ATIVAÇÃO AUTOMÁTICA DA IA SEM PRESSIONAR BOTÃO ---
-    // Ativamos a IA por:
-    // 1. Som/Ruído (grito, palma, fala, barulho acima do limiar no sensor de som)
-    // 2. Gesto de mão (sensor infravermelho de obstáculo frontal)
-    // 3. Botão remoto/físico
-    auto& app = Application::GetInstance();
-    if (app.GetDeviceState() == kDeviceStateIdle) {
-        uint16_t limiarSom = (limiar_brincar_ > 0 && limiar_brincar_ < 500) ? limiar_brincar_ : 120;
-        if (som >= limiarSom || (limiar_susto_ > 0 && som >= limiar_susto_)) {
-            ESP_LOGI(TAG, "IA ativada por SOM/BARULHO no sensor de som! (%d >= %d)", som, limiarSom);
-            app.ToggleChatState();
-        } else if (obstaculo) {
-            ESP_LOGI(TAG, "IA ativada por GESTO DE MÃO no sensor de obstáculo!");
-            app.ToggleChatState();
-        } else if (botao) {
-            ESP_LOGI(TAG, "IA ativada por BOTÃO!");
-            app.ToggleChatState();
-        }
-    }
 }
 
 

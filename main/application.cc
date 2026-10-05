@@ -907,7 +907,11 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 #else
     // Set flag to play popup sound after state changes to listening
     // (PlaySound here would be cleared by ResetDecoder in EnableVoiceProcessing)
-    play_popup_on_listening_ = true;
+    if (!wake_word.empty() && wake_word.rfind("[device_call]", 0) == 0) {
+        protocol_->SendWakeWordDetected(wake_word);
+    } else {
+        play_popup_on_listening_ = true;
+    }
     SetListeningMode(GetDefaultListeningMode());
 #endif
 }
