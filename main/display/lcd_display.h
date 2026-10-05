@@ -32,7 +32,8 @@ protected:
     std::unique_ptr<LvglGif> gif_controller_ = nullptr;
     lv_obj_t* emoji_box_ = nullptr;
     lv_obj_t* chat_message_label_ = nullptr;
-    lv_obj_t* timer_label_ = nullptr; // For the Pomodoro/Timer
+    lv_obj_t* timer_label_ = nullptr;
+    lv_obj_t* timer_bar_ = nullptr; // For the Pomodoro/Timer
     esp_timer_handle_t preview_timer_ = nullptr;
     std::unique_ptr<LvglImage> preview_image_cached_ = nullptr;
     bool hide_subtitle_ = false;  // Control whether to hide chat messages/subtitles

@@ -75,6 +75,7 @@ public:
     void StopTimer();
     bool IsTimerActive() const { return timer_active_; }
     uint32_t GetTimerRemainingMs() const;
+    uint32_t GetTimerDurationMs() const { return timer_duration_ms_; }
     std::string GetTimerLabel() const { return timer_label_; }
     
     std::string GetCurrentEmotion() const;
