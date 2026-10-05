@@ -97,15 +97,25 @@ void McpServer::AddCommonTools() {
     AddTool("self.start_timer",
         "Set a countdown timer on the robot. Used when the user asks to set a timer or a pomodoro.",
         PropertyList({
-            Property("duration_minutes", kPropertyTypeInteger, 1, 120),
-            Property("label", kPropertyTypeString)
+            Property("duration_seconds", kPropertyTypeInteger, 0, 0, 7200),
+            Property("duration_minutes", kPropertyTypeInteger, 0, 0, 120),
+            Property("label", kPropertyTypeString, std::string("Timer"))
         }),
         [](const PropertyList& properties) -> ReturnValue {
             auto& engine = TamagotchiEngine::GetInstance();
-            uint32_t duration_ms = properties["duration_minutes"].value<int>() * 60 * 1000;
+            int sec = properties["duration_seconds"].value<int>();
+            int min = properties["duration_minutes"].value<int>();
+            uint32_t duration_ms = 0;
+            if (sec > 0) {
+                duration_ms = sec * 1000;
+            } else if (min > 0) {
+                duration_ms = min * 60 * 1000;
+            } else {
+                duration_ms = 60 * 1000;
+            }
             std::string label = properties["label"].value<std::string>();
             engine.StartTimer(duration_ms, label);
-            return "Timer started for " + std::to_string(properties["duration_minutes"].value<int>()) + " minutes.";
+            return "Timer started for " + std::to_string(duration_ms / 1000) + " seconds.";
         });
 
     AddTool("self.get_device_status",
