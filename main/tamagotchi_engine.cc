@@ -595,8 +595,7 @@ std::string TamagotchiEngine::GetSystemPromptContext() const {
     prompt += "DIRETRIZES DE FALA: Responda SEMPRE em Português do Brasil com linguagem natural, oral e espontânea. Suas falas serão ditas em voz alta pelo seu alto-falante, portanto seja conciso (máximo 2 a 4 frases). NUNCA leia números frios como um relatório (jamais diga 'minha fome é 18 e temperatura é 29'); incorpore tudo de forma natural e viva como sentimentos e impressões reais do robô!";
 
         if (timer_active_) {
-        uint32_t rem = GetTimerRemainingMs() / 1000;
-        prompt += " [TIMER ATIVO]: Voc� est� contando um timer chamado '" + timer_label_ + "' e faltam " + std::to_string(rem / 60) + " minutos e " + std::to_string(rem % 60) + " segundos para acabar. Se o usu�rio perguntar quanto tempo falta, informe baseado nesses dados. ";
+        uint32_t rem = GetTimerRemainingMs() / 1000;        prompt += " [TIMER ATIVO]: Voce esta contando um timer chamado '" + timer_label_ + "' e faltam " + std::to_string(rem / 60) + " minutos e " + std::to_string(rem % 60) + " segundos para acabar. Se o usuario perguntar quanto tempo falta, informe baseado nesses dados. ";
     }
 
     return prompt;
