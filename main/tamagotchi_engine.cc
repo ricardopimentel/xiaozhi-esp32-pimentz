@@ -610,6 +610,13 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         memset(sensor_rfid_uid_, 0, 4);
     }
 
+    // --- ATIVAÇÃO/DESATIVAÇÃO DA IA POR BOTÃO EXTERNO ---
+    static bool last_botao_state = false;
+    if (botao && !last_botao_state) {
+        ESP_LOGI(TAG, "Botao externo pressionado (Toggle Chat)");
+        Application::GetInstance().ToggleChatState();
+    }
+    last_botao_state = botao;
 }
 
 
