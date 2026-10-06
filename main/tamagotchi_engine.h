@@ -81,6 +81,7 @@ public:
     bool IsAlarmeAtivo() const { return alarme_ativo_; }
     void AtivarAlarme(const std::string& label);
     void DesativarAlarme();
+    uint64_t GetUltimoDesarmeAlarme() const { return ultimo_desarme_alarme_; }
     
     std::string GetCurrentEmotion() const;
     std::string GetPersonalidadeString() const;
@@ -170,6 +171,7 @@ private:
     bool alarme_ativo_ = false;
     uint64_t tempo_inicio_alarme_ = 0;
     uint64_t tempo_ultimo_toque_alarme_ = 0;
+    uint64_t ultimo_desarme_alarme_ = 0;
     int volume_anterior_ = 0;
 };
 

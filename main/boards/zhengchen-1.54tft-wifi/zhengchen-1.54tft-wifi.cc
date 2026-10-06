@@ -78,10 +78,21 @@ private:
 
     void InitializeButtons() {
         
+        boot_button_.OnPressDown([this]() {
+            if (TamagotchiEngine::GetInstance().IsAlarmeAtivo()) {
+                ESP_LOGI(TAG, "BOOT OnPressDown -> Desativando Alarme!");
+                TamagotchiEngine::GetInstance().DesativarAlarme();
+            }
+        });
+
         boot_button_.OnClick([this]() {
             power_save_timer_->WakeUp();
             if (TamagotchiEngine::GetInstance().IsAlarmeAtivo()) {
                 TamagotchiEngine::GetInstance().DesativarAlarme();
+                return;
+            }
+            if (esp_timer_get_time() / 1000 - TamagotchiEngine::GetInstance().GetUltimoDesarmeAlarme() < 1000) {
+                // Alarme acabou de ser desligado pelo clique; não aciona o chat
                 return;
             }
             auto& app = Application::GetInstance();

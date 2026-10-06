@@ -724,6 +724,11 @@ void Application::StopListening() {
 }
 
 void Application::HandleToggleChatEvent() {
+    if (TamagotchiEngine::GetInstance().IsAlarmeAtivo()) {
+        TamagotchiEngine::GetInstance().DesativarAlarme();
+        return;
+    }
+
     if (TamagotchiEngine::GetInstance().GetEstadoNascimento() != ESTADO_NASCIDO) {
         audio_service_.PlaySound(Lang::Sounds::OGG_EXCLAMATION);
         return;

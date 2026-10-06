@@ -674,6 +674,7 @@ void TamagotchiEngine::DesativarAlarme() {
     if (!alarme_ativo_) return;
     ESP_LOGI("TamagotchiEngine", "Alarme despertador desativado pelo usuario!");
     alarme_ativo_ = false;
+    ultimo_desarme_alarme_ = esp_timer_get_time() / 1000;
     
     // Restaura o volume original se foi alterado
     auto codec = Board::GetInstance().GetAudioCodec();
@@ -683,6 +684,7 @@ void TamagotchiEngine::DesativarAlarme() {
     }
     
     auto& app = Application::GetInstance();
+    app.GetAudioService().ResetDecoder(); // Interrompe o áudio na fila do decoder imediatamente
     app.DismissAlert();
     app.PlaySound(Lang::Sounds::OGG_SUCCESS);
 }
