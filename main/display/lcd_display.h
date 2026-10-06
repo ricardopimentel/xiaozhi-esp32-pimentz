@@ -77,6 +77,7 @@ protected:
     void DrawEyeDizzy(float x, float y, float radius, float angle, lv_color_t color, lv_layer_t* layer);
     void DrawCheekBlush(float x, float y, float radiusX, float radiusY, lv_color_t color, lv_layer_t* layer);
     void DrawStar(float x, float y, float radius, lv_color_t color, lv_layer_t* layer);
+    void DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, lv_color_t fgColor, lv_color_t outlineColor);
     void DrawAlarmClock(lv_layer_t* layer);
     void DrawOledFace(int xOffset);
 

@@ -1501,28 +1501,8 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
     }
 
     if (timer_label_ != nullptr && timer_bar_ != nullptr) {
-        if (engine.IsTimerActive()) {
-            uint32_t rem = engine.GetTimerRemainingMs() / 1000;
-            uint32_t total = engine.GetTimerDurationMs() / 1000;
-            uint32_t m = rem / 60;
-            uint32_t s = rem % 60;
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%02lu:%02lu", (unsigned long)m, (unsigned long)s);
-            
-            lv_label_set_text(timer_label_, buf);
-            
-            // Atualiza a barra de progresso (0 a 100)
-            if (total > 0) {
-                int percent = (rem * 100) / total;
-                lv_bar_set_value(timer_bar_, percent, LV_ANIM_OFF);
-            }
-            
-            lv_obj_remove_flag(timer_label_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(timer_bar_, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_add_flag(timer_label_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(timer_bar_, LV_OBJ_FLAG_HIDDEN);
-        }
+        lv_obj_add_flag(timer_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(timer_bar_, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -1790,6 +1770,61 @@ void LcdDisplay::DrawStar(float x, float y, float radius, lv_color_t color, lv_l
     draw_canvas_disc(layer, px, py, 2, lv_color_hex(0xFFFFFF));
 }
 
+void LcdDisplay::DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, lv_color_t fgColor, lv_color_t outlineColor) {
+    if (!face_canvas_ || !layer) return;
+
+    if (c == ':') {
+        int dotX = x + 2;
+        // Outline (preto)
+        draw_canvas_disc(layer, dotX, y + 3, 3, outlineColor);
+        draw_canvas_disc(layer, dotX, y + 9, 3, outlineColor);
+        // Core (branco)
+        draw_canvas_disc(layer, dotX, y + 3, 2, fgColor);
+        draw_canvas_disc(layer, dotX, y + 9, 2, fgColor);
+        return;
+    }
+
+    uint8_t mask = 0;
+    switch (c) {
+        case '0': mask = 0b00111111; break; // a,b,c,d,e,f
+        case '1': mask = 0b00000110; break; // b,c
+        case '2': mask = 0b01011011; break; // a,b,g,e,d
+        case '3': mask = 0b01001111; break; // a,b,g,c,d
+        case '4': mask = 0b01100110; break; // f,g,b,c
+        case '5': mask = 0b01101101; break; // a,f,g,c,d
+        case '6': mask = 0b01111101; break; // a,f,g,e,c,d
+        case '7': mask = 0b00000111; break; // a,b,c
+        case '8': mask = 0b01111111; break; // a,b,c,d,e,f,g
+        case '9': mask = 0b01101111; break; // a,b,c,d,f,g
+        default: return;
+    }
+
+    // Coordenadas dos 7 segmentos (w=7, h=12)
+    struct SegCoord { int x1, y1, x2, y2; };
+    SegCoord segs[7] = {
+        { x + 1, y,      x + 6, y      }, // 0: a (topo)
+        { x + 6, y,      x + 6, y + 6  }, // 1: b (sup dir)
+        { x + 6, y + 6,  x + 6, y + 12 }, // 2: c (inf dir)
+        { x + 1, y + 12, x + 6, y + 12 }, // 3: d (base)
+        { x,     y + 6,  x,     y + 12 }, // 4: e (inf esq)
+        { x,     y,      x,     y + 6  }, // 5: f (sup esq)
+        { x + 1, y + 6,  x + 6, y + 6  }  // 6: g (meio)
+    };
+
+    // 1º passo: contorno grosso de 4px para alto contraste
+    for (int i = 0; i < 7; i++) {
+        if (mask & (1 << i)) {
+            draw_canvas_line(layer, segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2, outlineColor, 4);
+        }
+    }
+    // 2º passo: núcleo nítido de 2px
+    for (int i = 0; i < 7; i++) {
+        if (mask & (1 << i)) {
+            draw_canvas_line(layer, segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2, fgColor, 2);
+        }
+    }
+}
+
 void LcdDisplay::DrawAlarmClock(lv_layer_t* layer) {
     if (!face_canvas_ || !layer) return;
     uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
@@ -1892,9 +1927,10 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     int saude = engine.GetSaude();
     bool estaDoente = engine.EstaDoente();
     
-    bool precisaComida = (fome <= 30);
-    bool precisaBrincar = (diversao <= 30);
-    bool precisaSaude = (saude <= 30 || estaDoente);
+    bool timerAtivo = engine.IsTimerActive();
+    bool precisaComida = !timerAtivo && (fome <= 30);
+    bool precisaBrincar = !timerAtivo && (diversao <= 30);
+    bool precisaSaude = !timerAtivo && (saude <= 30 || estaDoente);
     int numIcons = 0;
     if (precisaComida) numIcons++;
     if (precisaBrincar) numIcons++;
@@ -2410,9 +2446,47 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
  
     // =========================================================================
-    // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE)
+    // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE) OU TIMER
     // =========================================================================
-    if (numIcons > 0) {
+    if (timerAtivo) {
+        uint32_t rem = engine.GetTimerRemainingMs() / 1000;
+        uint32_t total = engine.GetTimerDurationMs() / 1000;
+        if (total == 0) total = 1;
+        uint32_t m = rem / 60;
+        uint32_t s = rem % 60;
+        char timeStr[8];
+        snprintf(timeStr, sizeof(timeStr), "%02lu:%02lu", (unsigned long)m, (unsigned long)s);
+        
+        int percent = (int)((rem * 100) / total);
+        if (percent > 100) percent = 100;
+        if (percent < 0) percent = 0;
+
+        int bw = 84;
+        int bh = 20;
+        int bx = 128 - (bw / 2);
+        int by = 2;
+        
+        // Fundo escuro do balão
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x161622), 5);
+        
+        // Preenchimento de progresso amarelo (diminui proporcionalmente com o tempo)
+        int maxFillW = bw - 4;
+        int curFillW = (maxFillW * percent) / 100;
+        if (curFillW > 0) {
+            draw_canvas_rect(layer, bx + 2, by + 2, curFillW, bh - 4, lv_color_hex(0xFFD700), 3);
+        }
+        
+        // Borda do balão e ponta inferior estilizada
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x3E4466), 2, 5);
+        draw_canvas_line(layer, 128, by + bh, 126, by + bh + 4, lv_color_hex(0x3E4466), 2);
+        
+        // Dígitos digitais no centro com alto contraste (branco com contorno preto)
+        int textX = bx + (bw - 47) / 2;
+        int textY = by + (bh - 13) / 2 + 1;
+        for (int i = 0; i < 5; i++) {
+            DrawTimerSegmentChar(layer, textX + i * 10, textY, timeStr[i], lv_color_hex(0xFFFFFF), lv_color_hex(0x000000));
+        }
+    } else if (numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;
         int totalW = (numIcons * iconW) + ((numIcons - 1) * iconGap);
