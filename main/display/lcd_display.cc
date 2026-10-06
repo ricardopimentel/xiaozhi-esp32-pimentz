@@ -2524,14 +2524,20 @@ void LcdDisplay::DrawOledFace(int xOffset) {
             currentX += (iconW + iconGap);
         }
         if (precisaBrincar) {
-            // Controle de videogame verde néon
+            // Controle de videogame verde néon estilizado
             lv_color_t ctrlColor = lv_color_hex(0x00FF66);
-            draw_canvas_rect_empty(layer, (currentX)*2, (drawY + 3)*2, 12*2, 7*2, ctrlColor, 1*2, 2*2);
-            draw_canvas_rect(layer, (currentX + 2)*2, (drawY + 6)*2, 3*2, 1*2, ctrlColor, 0);
-            draw_canvas_rect(layer, (currentX + 3)*2, (drawY + 5)*2, 1*2, 3*2, ctrlColor, 0);
-            draw_canvas_disc(layer, (currentX + 9)*2, (drawY + 5)*2, 1*2, ctrlColor);
-            draw_canvas_disc(layer, (currentX + 8)*2, (drawY + 7)*2, 1*2, ctrlColor);
-            draw_canvas_rect(layer, (currentX + 5)*2, (drawY + 6)*2, 2*2, 1*2, ctrlColor, 0);
+            int gx = currentX * 2;
+            int gy = (drawY + 3) * 2;
+            // Carcaça externa do controle (24x14 pixels com cantos arredondados)
+            draw_canvas_rect_empty(layer, gx, gy, 12 * 2, 7 * 2, ctrlColor, 1 * 2, 2 * 2);
+            // Direcional D-Pad (+) fininho com linhas de 2 pixels no lado esquerdo
+            draw_canvas_rect(layer, gx + 4, gy + 6, 6, 2, ctrlColor, 0); // Barra horizontal
+            draw_canvas_rect(layer, gx + 6, gy + 4, 2, 6, ctrlColor, 0); // Barra vertical
+            // 4 Botões redondos no lado direito (bolinhas de 2x2 pixels :: que não se tocam)
+            draw_canvas_rect(layer, gx + 14, gy + 4, 2, 2, ctrlColor, 0); // Superior esquerdo
+            draw_canvas_rect(layer, gx + 18, gy + 4, 2, 2, ctrlColor, 0); // Superior direito
+            draw_canvas_rect(layer, gx + 14, gy + 8, 2, 2, ctrlColor, 0); // Inferior esquerdo
+            draw_canvas_rect(layer, gx + 18, gy + 8, 2, 2, ctrlColor, 0); // Inferior direito
             currentX += (iconW + iconGap);
         }
         if (precisaSaude) {
