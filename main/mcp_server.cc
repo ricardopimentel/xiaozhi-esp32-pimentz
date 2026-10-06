@@ -118,6 +118,15 @@ void McpServer::AddCommonTools() {
             return "Timer started for " + std::to_string(duration_ms / 1000) + " seconds.";
         });
 
+    AddTool("self.stop_timer",
+        "Stop or dismiss the timer or alarm on the robot. Used when the user asks to stop, cancel or turn off the timer or alarm.",
+        PropertyList(),
+        [](const PropertyList& properties) -> ReturnValue {
+            auto& engine = TamagotchiEngine::GetInstance();
+            engine.StopTimer();
+            return "Timer/Alarm stopped.";
+        });
+
     AddTool("self.get_device_status",
         "Provides the real-time information of the device, including the current status of the audio speaker, screen, battery, network, etc.\n"
         "Use this tool for: \n"

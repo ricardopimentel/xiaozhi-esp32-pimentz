@@ -9,6 +9,7 @@
 #include "led/single_led.h"
 #include "assets/lang_config.h"
 #include "power_manager.h"
+#include "tamagotchi_engine.h"
 
 #include <esp_log.h>
 #include <esp_lcd_panel_vendor.h>
@@ -79,6 +80,10 @@ private:
         
         boot_button_.OnClick([this]() {
             power_save_timer_->WakeUp();
+            if (TamagotchiEngine::GetInstance().IsAlarmeAtivo()) {
+                TamagotchiEngine::GetInstance().DesativarAlarme();
+                return;
+            }
             auto& app = Application::GetInstance();
             if (app.GetDeviceState() == kDeviceStateStarting) {
                 EnterWifiConfigMode();

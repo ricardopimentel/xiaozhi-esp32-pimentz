@@ -787,6 +787,9 @@ void Application::ContinueOpenAudioChannel(ListeningMode mode) {
 }
 
 void Application::HandleStartListeningEvent() {
+    if (TamagotchiEngine::GetInstance().IsAlarmeAtivo()) {
+        TamagotchiEngine::GetInstance().DesativarAlarme();
+    }
     auto state = GetDeviceState();
     
     if (state == kDeviceStateActivating) {
@@ -836,6 +839,9 @@ void Application::HandleStopListeningEvent() {
 }
 
 void Application::HandleWakeWordDetectedEvent() {
+    if (TamagotchiEngine::GetInstance().IsAlarmeAtivo()) {
+        TamagotchiEngine::GetInstance().DesativarAlarme();
+    }
     if (!protocol_) {
         return;
     }

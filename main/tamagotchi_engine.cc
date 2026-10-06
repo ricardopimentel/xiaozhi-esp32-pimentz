@@ -1,5 +1,7 @@
 #include "tamagotchi_engine.h"
 #include "application.h"
+#include "board.h"
+#include "audio_codec.h"
 #include "assets/lang_config.h"
 #include <esp_log.h>
 #include <esp_timer.h>
@@ -123,15 +125,20 @@ void TamagotchiEngine::Update() {
     uint64_t now = esp_timer_get_time() / 1000;
     
     if (timer_active_ && GetTimerRemainingMs() == 0) {
-        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
+        ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s -> ATIVANDO DESPERTADOR", timer_label_.c_str());
         timer_active_ = false;
         std::string label = timer_label_.empty() ? "Timer" : timer_label_;
         timer_label_ = "";
         
-        auto& app = Application::GetInstance();
-        std::string alert_msg = "Timer finalizado!";
-        app.Alert("TIMER", alert_msg.c_str(), "happy", Lang::Sounds::OGG_SUCCESS);
-        app.NotifyMessage("Atenção! O timer '" + label + "' acabou de finalizar!");
+        AtivarAlarme(label);
+    }
+    
+    // Alarme contínuo: toca repetidamente a cada 1200ms até ser desligado pelo botão BOOT
+    if (alarme_ativo_) {
+        if (tempo_ultimo_toque_alarme_ == 0 || (now - tempo_ultimo_toque_alarme_ >= 1200)) {
+            tempo_ultimo_toque_alarme_ = now;
+            Application::GetInstance().PlaySound(Lang::Sounds::OGG_EXCLAMATION);
+        }
     }
     
     // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
@@ -611,11 +618,16 @@ void TamagotchiEngine::SetSensorData(float temperatura, float umidade, uint8_t l
         memset(sensor_rfid_uid_, 0, 4);
     }
 
-    // --- ATIVAÇÃO/DESATIVAÇÃO DA IA POR BOTÃO EXTERNO ---
+    // --- ATIVAÇÃO/DESATIVAÇÃO DA IA OU DESLIGAR ALARME POR BOTÃO EXTERNO ---
     static bool last_botao_state = false;
     if (botao && !last_botao_state) {
-        ESP_LOGI(TAG, "Botao externo pressionado (Toggle Chat)");
-        Application::GetInstance().ToggleChatState();
+        if (alarme_ativo_) {
+            ESP_LOGI(TAG, "Botao externo pressionado -> Desligando Alarme");
+            DesativarAlarme();
+        } else {
+            ESP_LOGI(TAG, "Botao externo pressionado (Toggle Chat)");
+            Application::GetInstance().ToggleChatState();
+        }
     }
     last_botao_state = botao;
 }
@@ -626,12 +638,53 @@ void TamagotchiEngine::StartTimer(uint32_t duration_ms, const std::string& label
     timer_start_time_ = esp_timer_get_time() / 1000;
     timer_label_ = label;
     timer_active_ = true;
+    alarme_ativo_ = false;
     ESP_LOGI("TamagotchiEngine", "Timer started: %s for %d ms", label.c_str(), duration_ms);
 }
 
 void TamagotchiEngine::StopTimer() {
     timer_active_ = false;
+    if (alarme_ativo_) {
+        DesativarAlarme();
+    }
     ESP_LOGI("TamagotchiEngine", "Timer stopped");
+}
+
+void TamagotchiEngine::AtivarAlarme(const std::string& label) {
+    alarme_ativo_ = true;
+    uint64_t now = esp_timer_get_time() / 1000;
+    tempo_inicio_alarme_ = now;
+    tempo_ultimo_toque_alarme_ = 0; // Toca imediatamente
+    
+    // Aumenta o volume do speaker para garantir que o despertador seja bem audível
+    auto codec = Board::GetInstance().GetAudioCodec();
+    if (codec) {
+        volume_anterior_ = codec->output_volume();
+        if (volume_anterior_ < 90) {
+            codec->SetOutputVolume(95);
+        }
+    }
+    
+    auto& app = Application::GetInstance();
+    app.Alert("ALARME", "Pressione BOOT para parar", "alarm", Lang::Sounds::OGG_EXCLAMATION);
+    app.NotifyMessage("Atenção! O despertador do timer '" + label + "' está tocando!");
+}
+
+void TamagotchiEngine::DesativarAlarme() {
+    if (!alarme_ativo_) return;
+    ESP_LOGI("TamagotchiEngine", "Alarme despertador desativado pelo usuario!");
+    alarme_ativo_ = false;
+    
+    // Restaura o volume original se foi alterado
+    auto codec = Board::GetInstance().GetAudioCodec();
+    if (codec && volume_anterior_ > 0) {
+        codec->SetOutputVolume(volume_anterior_);
+        volume_anterior_ = 0;
+    }
+    
+    auto& app = Application::GetInstance();
+    app.DismissAlert();
+    app.PlaySound(Lang::Sounds::OGG_SUCCESS);
 }
 
 uint32_t TamagotchiEngine::GetTimerRemainingMs() const {

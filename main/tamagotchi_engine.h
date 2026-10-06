@@ -70,13 +70,17 @@ public:
     uint64_t GetTempoInicioReacaoOciosa() const { return tempo_inicio_reacao_ociosa_; }
     uint64_t GetTempoFimReacaoOciosa() const { return tempo_fim_reacao_ociosa_; }
     
-    // Timer properties
+    // Timer and Alarm properties
     void StartTimer(uint32_t duration_ms, const std::string& label);
     void StopTimer();
     bool IsTimerActive() const { return timer_active_; }
     uint32_t GetTimerRemainingMs() const;
     uint32_t GetTimerDurationMs() const { return timer_duration_ms_; }
     std::string GetTimerLabel() const { return timer_label_; }
+    
+    bool IsAlarmeAtivo() const { return alarme_ativo_; }
+    void AtivarAlarme(const std::string& label);
+    void DesativarAlarme();
     
     std::string GetCurrentEmotion() const;
     std::string GetPersonalidadeString() const;
@@ -157,11 +161,16 @@ private:
     uint64_t tempo_no_frio_ = 0;
     uint64_t last_vinculo_check_ = 0;
 
-    // Timer
+    // Timer & Alarm
     uint64_t timer_start_time_ = 0;
     uint32_t timer_duration_ms_ = 0;
     bool timer_active_ = false;
     std::string timer_label_ = "";
+    
+    bool alarme_ativo_ = false;
+    uint64_t tempo_inicio_alarme_ = 0;
+    uint64_t tempo_ultimo_toque_alarme_ = 0;
+    int volume_anterior_ = 0;
 };
 
 #endif // TAMAGOTCHI_ENGINE_H

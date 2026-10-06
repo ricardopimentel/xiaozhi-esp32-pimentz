@@ -1463,7 +1463,13 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
     
     auto state = Application::GetInstance().GetDeviceState();
     bool connected = (state != kDeviceStateWifiConfiguring && state != kDeviceStateStarting);
-    if (estado != ESTADO_NASCIDO && connected) {
+    if (engine.IsAlarmeAtivo()) {
+        // Se o alarme estiver disparado, esconde ovo e emoji_box e exibe o canvas (despertador)
+        if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        if (egg_obj_ != nullptr) lv_obj_add_flag(egg_obj_, LV_OBJ_FLAG_HIDDEN);
+        if (egg_bar_ != nullptr) lv_obj_add_flag(egg_bar_, LV_OBJ_FLAG_HIDDEN);
+        if (face_canvas_ != nullptr) lv_obj_remove_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
+    } else if (estado != ESTADO_NASCIDO && connected) {
         // Se ainda não nasceu, esconde o emoji_box_ e o rosto dinâmico
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         if (face_canvas_ != nullptr) lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
@@ -1784,6 +1790,73 @@ void LcdDisplay::DrawStar(float x, float y, float radius, lv_color_t color, lv_l
     draw_canvas_disc(layer, px, py, 2, lv_color_hex(0xFFFFFF));
 }
 
+void LcdDisplay::DrawAlarmClock(lv_layer_t* layer) {
+    if (!face_canvas_ || !layer) return;
+    uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
+    int cx = 128;
+    int cy = 60;
+    
+    // Animação de tremor rápido (tocando)
+    int vibX = (ms % 80 < 40) ? -3 : 3;
+    int vibY = (ms % 60 < 30) ? -2 : 2;
+    int hammerX = (ms % 60 < 30) ? -6 : 6;
+    
+    // 1. Pezinhos do despertador
+    draw_canvas_line(layer, cx - 26 + vibX, cy + 32 + vibY, cx - 40 + vibX, cy + 50 + vibY, lv_color_hex(0x9E9E9E), 6);
+    draw_canvas_disc(layer, cx - 40 + vibX, cy + 50 + vibY, 4, lv_color_hex(0x757575));
+    draw_canvas_line(layer, cx + 26 + vibX, cy + 32 + vibY, cx + 40 + vibX, cy + 50 + vibY, lv_color_hex(0x9E9E9E), 6);
+    draw_canvas_disc(layer, cx + 40 + vibX, cy + 50 + vibY, 4, lv_color_hex(0x757575));
+    
+    // 2. Martelo entre os sinos
+    draw_canvas_line(layer, cx + vibX, cy - 36 + vibY, cx + hammerX + vibX, cy - 48 + vibY, lv_color_hex(0x757575), 4);
+    draw_canvas_disc(layer, cx + hammerX + vibX, cy - 48 + vibY, 4, lv_color_hex(0xD32F2F));
+    
+    // 3. Sinos superiores (dourados com reflexo)
+    // Sino esquerdo
+    draw_canvas_disc(layer, cx - 34 + vibX, cy - 32 + vibY, 15, lv_color_hex(0xFBC02D));
+    draw_canvas_disc(layer, cx - 36 + vibX, cy - 35 + vibY, 4, lv_color_hex(0xFFF9C4));
+    draw_canvas_arc(layer, cx - 34 + vibX, cy - 32 + vibY, 15, 120, 310, lv_color_hex(0xF57F17), 2);
+    // Sino direito
+    draw_canvas_disc(layer, cx + 34 + vibX, cy - 32 + vibY, 15, lv_color_hex(0xFBC02D));
+    draw_canvas_disc(layer, cx + 32 + vibX, cy - 35 + vibY, 4, lv_color_hex(0xFFF9C4));
+    draw_canvas_arc(layer, cx + 34 + vibX, cy - 32 + vibY, 15, 230, 60, lv_color_hex(0xF57F17), 2);
+    
+    // 4. Ondas sonoras / vibração ao redor dos sinos
+    draw_canvas_arc(layer, cx - 44 + vibX, cy - 34 + vibY, 16, 110, 250, lv_color_hex(0xFFEB3B), 3);
+    draw_canvas_arc(layer, cx - 44 + vibX, cy - 34 + vibY, 23, 110, 250, lv_color_hex(0xFF9800), 2);
+    draw_canvas_arc(layer, cx + 44 + vibX, cy - 34 + vibY, 16, 290, 70, lv_color_hex(0xFFEB3B), 3);
+    draw_canvas_arc(layer, cx + 44 + vibX, cy - 34 + vibY, 23, 290, 70, lv_color_hex(0xFF9800), 2);
+    
+    // 5. Corpo do relógio (vermelho vivo e brilhante)
+    draw_canvas_disc(layer, cx + vibX, cy + vibY, 39, lv_color_hex(0xE53935));
+    draw_canvas_disc(layer, cx + vibX, cy + vibY, 36, lv_color_hex(0xC62828));
+    draw_canvas_arc(layer, cx + vibX, cy + vibY, 36, 0, 360, lv_color_hex(0xFFD54F), 2);
+    
+    // 6. Mostrador interno (branco limpo)
+    draw_canvas_disc(layer, cx + vibX, cy + vibY, 33, lv_color_hex(0xFFFFFF));
+    
+    // Pontos das horas (12, 3, 6, 9)
+    draw_canvas_disc(layer, cx + vibX, cy - 24 + vibY, 2, lv_color_hex(0x212121));
+    draw_canvas_disc(layer, cx + 24 + vibX, cy + vibY, 2, lv_color_hex(0x212121));
+    draw_canvas_disc(layer, cx + vibX, cy + 24 + vibY, 2, lv_color_hex(0x212121));
+    draw_canvas_disc(layer, cx - 24 + vibX, cy + vibY, 2, lv_color_hex(0x212121));
+    
+    // 7. Ponteiros
+    // Ponteiro das horas (~10h)
+    draw_canvas_line(layer, cx + vibX, cy + vibY, cx - 11 + vibX, cy - 13 + vibY, lv_color_hex(0x212121), 4);
+    // Ponteiro dos minutos (~2h)
+    draw_canvas_line(layer, cx + vibX, cy + vibY, cx + 15 + vibX, cy - 15 + vibY, lv_color_hex(0x212121), 3);
+    // Ponteiro de segundos girando rápido
+    float sAngle = ((ms % 2000) / 2000.0f) * 6.28318f;
+    int sX = (cx + vibX) + (int)(22.0f * sin(sAngle));
+    int sY = (cy + vibY) - (int)(22.0f * cos(sAngle));
+    draw_canvas_line(layer, cx + vibX, cy + vibY, sX, sY, lv_color_hex(0xE53935), 2);
+    
+    // Centro dos ponteiros
+    draw_canvas_disc(layer, cx + vibX, cy + vibY, 4, lv_color_hex(0xD32F2F));
+    draw_canvas_disc(layer, cx + vibX - 1, cy + vibY - 1, 1, lv_color_hex(0xFFFFFF));
+}
+
 void LcdDisplay::DrawOledFace(int xOffset) {
     if (!face_canvas_) return;
     lv_canvas_fill_bg(face_canvas_, lv_color_black(), LV_OPA_COVER);
@@ -1795,6 +1868,15 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     lv_layer_t* layer = nullptr;
 #endif
     auto& engine = TamagotchiEngine::GetInstance();
+    
+    // Se o alarme do despertador estiver ativo, desenha o despertador animado e encerra
+    if (engine.IsAlarmeAtivo()) {
+        DrawAlarmClock(layer);
+#if LVGL_VERSION_MAJOR >= 9
+        lv_canvas_finish_layer(face_canvas_, &layer_obj);
+#endif
+        return;
+    }
     
     float eyeLx = 44, eyeLy = 37, eyeLw = 12, eyeLh = 24, eyeRadius = 6;
     float eyeRx = 84, eyeRy = 37, eyeRw = 12, eyeRh = 24;
@@ -2439,6 +2521,10 @@ void LcdDisplay::DrawOledFace(int xOffset) {
 
 void LcdDisplay::UpdateEyeAnimations() {
     auto& engine = TamagotchiEngine::GetInstance();
+    if (engine.IsAlarmeAtivo()) {
+        DrawOledFace(0);
+        return;
+    }
     if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) return;
     DrawOledFace(0);
 }
