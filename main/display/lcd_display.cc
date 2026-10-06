@@ -2468,8 +2468,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         if (total == 0) total = 1;
         uint32_t m = rem / 60;
         uint32_t s = rem % 60;
-        char timeStr[8];
-        snprintf(timeStr, sizeof(timeStr), "%02lu:%02lu", (unsigned long)m, (unsigned long)s);
+        char timeStr[16];
+        snprintf(timeStr, sizeof(timeStr), "%02u:%02u", (unsigned int)(m % 100), (unsigned int)(s % 60));
         
         int percent = (int)((rem * 100) / total);
         if (percent > 100) percent = 100;
