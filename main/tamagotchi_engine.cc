@@ -125,12 +125,13 @@ void TamagotchiEngine::Update() {
     if (timer_active_ && GetTimerRemainingMs() == 0) {
         ESP_LOGI("TamagotchiEngine", "Timer finalizado: %s", timer_label_.c_str());
         timer_active_ = false;
-        tipo_reacao_ociosa_ = 10;
-        tempo_fim_reacao_ociosa_ = now + 5000;
+        std::string label = timer_label_.empty() ? "Timer" : timer_label_;
+        timer_label_ = "";
+        
         auto& app = Application::GetInstance();
-        std::string alert_msg = "Timer " + timer_label_ + " finalizado!";
-        app.Alert("TIMER", alert_msg.c_str(), "happy", Lang::Sounds::OGG_EXCLAMATION);
-        app.WakeWordInvoke("[device_call] Atenção! O timer terminou agora!");
+        std::string alert_msg = "Timer finalizado!";
+        app.Alert("TIMER", alert_msg.c_str(), "happy", Lang::Sounds::OGG_SUCCESS);
+        app.NotifyMessage("Atenção! O timer '" + label + "' acabou de finalizar!");
     }
     
     // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
@@ -441,8 +442,8 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
         return "surprised";
     }
     
-    // 4. Som alto / Susto / Chamado (usa limiar_brincar_ configurado na web)
-    if (sensor_som_nivel_ >= limiar_brincar_) {
+    // 4. Som muito alto / Susto real (usa limiar_susto_ configurado na web)
+    if (limiar_susto_ > 0 && sensor_som_nivel_ >= limiar_susto_) {
         return "surprised";
     }
     

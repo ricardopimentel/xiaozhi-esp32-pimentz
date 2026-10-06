@@ -905,13 +905,7 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
     protocol_->SendWakeWordDetected(wake_word);
     SetListeningMode(GetDefaultListeningMode());
 #else
-    // Set flag to play popup sound after state changes to listening
-    // (PlaySound here would be cleared by ResetDecoder in EnableVoiceProcessing)
-    if (!wake_word.empty() && wake_word.rfind("[device_call]", 0) == 0) {
-        protocol_->SendWakeWordDetected(wake_word);
-    } else {
-        play_popup_on_listening_ = true;
-    }
+    play_popup_on_listening_ = true;
     SetListeningMode(GetDefaultListeningMode());
 #endif
 }
@@ -1112,6 +1106,41 @@ void Application::WakeWordInvoke(const std::string& wake_word) {
             }
         });
     }
+}
+
+void Application::NotifyMessage(const std::string& message) {
+    if (!protocol_) {
+        return;
+    }
+
+    Schedule([this, message]() {
+        auto state = GetDeviceState();
+        if (state != kDeviceStateIdle) {
+            return;
+        }
+
+        listening_mode_ = kListeningModeManualStop;
+        SetDeviceState(kDeviceStateConnecting);
+
+        Schedule([this, message]() {
+            if (GetDeviceState() != kDeviceStateConnecting) {
+                return;
+            }
+
+            auto& board = Board::GetInstance();
+            board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
+
+            if (!protocol_->IsAudioChannelOpened()) {
+                if (!protocol_->OpenAudioChannel()) {
+                    SetDeviceState(kDeviceStateIdle);
+                    return;
+                }
+            }
+
+            ESP_LOGI(TAG, "Sending device notification: %s", message.c_str());
+            protocol_->SendWakeWordDetected("[device_call] " + message);
+        });
+    });
 }
 
 bool Application::CanEnterSleepMode() {

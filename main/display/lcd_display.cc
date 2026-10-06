@@ -1986,7 +1986,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     // =========================================================================
     // 2. MOTOR DE RESPIRAÇÃO SUAVE E ORGÂNICA DOS OLHOS
     // =========================================================================
-    float breathPeriod = (emotion == "sleeping") ? 4500.0f : 3800.0f;
+    float breathPeriod = (emotion == "sleeping") ? 4200.0f : 3000.0f;
     float breathAngle = (float)(ms % (int)breathPeriod) / breathPeriod * (2.0f * 3.14159265f);
     float breathFactor = sin(breathAngle); // oscila suavemente entre -1.0 e +1.0
     
@@ -1996,14 +1996,14 @@ void LcdDisplay::DrawOledFace(int xOffset) {
 
     if (emotion == "sleeping") {
         // No sono: respiração profunda com flutuação vertical serena
-        breathY = -breathFactor * 1.8f;
-    } else if (!comendo && !isDizzy && emotion != "angry" && emotion != "surprised") {
+        breathY = -breathFactor * 2.2f;
+    } else if (!comendo && !isDizzy && emotion != "angry") {
         // Respiração normal viva:
-        // Na inspiração: peito/olhos sobem levemente (-1.2px) e expandem (+1.5px altura, +0.6px largura)
+        // Na inspiração: peito/olhos sobem (-2.2px) e expandem (+3.0px altura, +1.2px largura)
         // Na expiração: relaxam e descem suavemente
-        breathY = -breathFactor * 1.2f;
-        breathScaleH = breathFactor * 1.5f;
-        breathScaleW = breathFactor * 0.6f;
+        breathY = -breathFactor * 2.2f;
+        breathScaleH = breathFactor * 3.0f;
+        breathScaleW = breathFactor * 1.2f;
     }
 
     // =========================================================================
@@ -2107,13 +2107,13 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x, eyeRy + tremorY + chewY + current_look_y, 
                      chewW, chewH, eyeRadius, 1.0f, layer, pal.primary, pal.aura);
     } else if (brincando || idleTipo == 11) {
-        // FELIZ / BRINCANDO: Arcos dourados cheios de alegria + pulinho
+        // FELIZ / BRINCANDO: Arcos dourados cheios de alegria + pulinho + respiracao
         DrawEyeHappy(eyeLx + xOffset + tremorX + current_look_x + swayX, 
-                     eyeLy + tremorY + current_look_y + swayY, 
-                     eyeLw, eyeLh, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
+                     eyeLy + tremorY + current_look_y + swayY + breathY, 
+                     eyeLw, eyeLh + breathScaleH, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
         DrawEyeHappy(eyeRx + xOffset + tremorX + current_look_x + swayX, 
-                     eyeRy + tremorY + current_look_y + swayY, 
-                     eyeRw, eyeRh, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
+                     eyeRy + tremorY + current_look_y + swayY + breathY, 
+                     eyeRw, eyeRh + breathScaleH, eyeRadius, reactionProgress, layer, pal.primary, pal.aura);
     } else if (idleTipo == 2) {
         // SARCÁSTICO: Revirar de olhos em órbita suave
         float rotAngulo = ms * 0.008f;
@@ -2230,7 +2230,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         
         bool isSarcastic = (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
         if (isSarcastic) {
-            float sarh = 13.0f * (1.0f - blinker.blinkFactor);
+            float sarh = (13.0f + breathScaleH * 0.6f) * (1.0f - blinker.blinkFactor);
             float sary = curEyeY + 4.0f;
             DrawEye(eyeLx + xOffset + tremorX + current_look_x, sary, curEyeW, sarh, 3, layer, pal.primary, pal.aura, true, current_look_x, current_look_y);
             DrawEye(eyeRx + xOffset + tremorX + current_look_x, sary, curEyeW, sarh, 3, layer, pal.primary, pal.aura, true, current_look_x, current_look_y);
