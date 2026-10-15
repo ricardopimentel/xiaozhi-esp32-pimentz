@@ -667,7 +667,6 @@ void TamagotchiEngine::AtivarAlarme(const std::string& label) {
     
     auto& app = Application::GetInstance();
     app.Alert("ALARME", "Pressione BOOT para parar", "alarm", Lang::Sounds::OGG_EXCLAMATION);
-    app.NotifyMessage("Atenção! O despertador do timer '" + label + "' está tocando!");
 }
 
 void TamagotchiEngine::DesativarAlarme() {
