@@ -2573,11 +2573,12 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 2) {
         // SARCÁSTICO: Revirar os olhos ocultando as pupilas atrás da pálpebra superior (deixando o olho vazio no topo)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2600);
+        float animElapsed = fmodf(elapsed, 2600.0f);
         float pupilX = 0.0f;
         float pupilY = 0.0f;
         float browLift = 0.0f;
-        if (elapsed < 2000.0f) {
-            float p = elapsed / 2000.0f;
+        if (animElapsed < 2000.0f) {
+            float p = animElapsed / 2000.0f;
             float angle = 3.14159265f * 0.5f + p * 3.14159265f * 2.0f;
             pupilX = cosf(angle) * 11.0f;
             if (sinf(angle) < 0.0f) {
@@ -2600,7 +2601,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 8) {
         // SARCÁSTICO: Tédio / Bocejo animado (olhos fecham aos poucos, cabeça sobe, gotinha no canto)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         float yawnP = 0.0f;
         float shakeX = 0.0f;
         if (cycle < 0.35f) {
@@ -2634,20 +2636,17 @@ void LcdDisplay::DrawOledFace(int xOffset) {
             draw_canvas_disc(layer, rx + 19, cy + 3, 3, lv_color_hex(0x00E5FF));
         }
     } else if (idleTipo == 9) {
-        // SARCÁSTICO: Olhos fechados (- -) + Gota grande estilo anime escorrendo no alto da cabeça
+        // SARCÁSTICO: Olhos semicerrados desdenhosos com PUPILA + Gota grande estilo anime escorrendo no alto da cabeça
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2800.0f));
-        float closeP = 0.0f;
+        float animElapsed = fmodf(elapsed, 2800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2800.0f));
         float sinkY = 0.0f;
-        if (cycle < 0.20f) {
-            closeP = cycle / 0.20f;
-            sinkY = closeP * 5.0f;
-        } else if (cycle < 0.85f) {
-            closeP = 1.0f;
-            sinkY = 5.0f + sinf((cycle - 0.20f) * 6.28318f) * 1.0f;
+        if (cycle < 0.25f) {
+            sinkY = (cycle / 0.25f) * 4.0f;
+        } else if (cycle < 0.75f) {
+            sinkY = 4.0f + sinf((cycle - 0.25f) * 12.56637f) * 0.8f;
         } else {
-            closeP = 1.0f - (cycle - 0.85f) / 0.15f;
-            sinkY = closeP * 5.0f;
+            sinkY = (1.0f - (cycle - 0.75f) / 0.25f) * 4.0f;
         }
 
         int lx = (int)((eyeLx + xOffset + tremorX) * 2);
@@ -2655,20 +2654,29 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         int cy = (int)roundf((eyeLy + tremorY + 2.0f) * 2.0f + sinkY);
         int browBaseY = (int)roundf((eyeLy + tremorY) * 2.0f + sinkY);
         int sarW = (int)((eyeLw + 4.0f) * 2);
+        int sarH = (int)((13.0f + breathScaleH * 0.6f) * 2);
 
         draw_sarcastic_eyebrows(layer, lx, browBaseY, rx, browBaseY, pal.primary, 2.0f, 2.0f);
 
-        if (closeP < 0.5f) {
-            int curH = std::max(4, (int)(26.0f * (1.0f - closeP * 1.8f)));
-            draw_sarcastic_half_closed_eye(layer, lx, cy, sarW, curH, 8, pal.primary, pal.aura, 0.0f, 0.0f, false);
-            draw_sarcastic_half_closed_eye(layer, rx, cy, sarW, curH, 8, pal.primary, pal.aura, 0.0f, 0.0f, false);
+        // Piscar rápido e orgânico no meio da animação
+        float blinkP = 0.0f;
+        if (cycle >= 0.44f && cycle <= 0.56f) {
+            float bp = (cycle - 0.44f) / 0.12f;
+            blinkP = sinf(bp * 3.14159265f);
+        }
+        int curH = std::max(4, (int)(sarH * (1.0f - blinkP)));
+        float pupilX = -3.0f; // Olhar desdenhoso de lado
+
+        if (blinkP < 0.85f) {
+            draw_sarcastic_half_closed_eye(layer, lx, cy, sarW, curH, 8, pal.primary, pal.aura, pupilX, 0.0f, (curH >= 10));
+            draw_sarcastic_half_closed_eye(layer, rx, cy, sarW, curH, 8, pal.primary, pal.aura, pupilX, 0.0f, (curH >= 10));
         } else {
             draw_canvas_line(layer, lx - 17, cy, lx + 17, cy, pal.primary, 4);
             draw_canvas_line(layer, rx - 17, cy, rx + 17, cy, pal.primary, 4);
         }
 
-        if (cycle > 0.12f && cycle < 0.90f) {
-            float dp = (cycle - 0.12f) / 0.78f;
+        if (cycle > 0.10f && cycle < 0.90f) {
+            float dp = (cycle - 0.10f) / 0.80f;
             float scale = (dp < 0.20f) ? (dp / 0.20f) : ((dp > 0.85f) ? ((1.0f - dp) / 0.15f) : 1.0f);
             float slideOffset = std::min(1.0f, dp * 1.5f) * 16.0f;
             draw_anime_sweat_drop(layer, 206 + xOffset * 2, (int)roundf(14.0f + slideOffset), 10.0f * scale);
@@ -2676,7 +2684,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 21) {
         // SARCÁSTICO 4 (VÍVIDO): Julgamento Silencioso (Side-eye desdenhoso lento + 3 balanços 'tsk, tsk' + reticências)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3400);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3400.0f));
+        float animElapsed = fmodf(elapsed, 3400.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3400.0f));
 
         float lookSideP = 0.0f;
         float headTilt = 0.0f;
@@ -2742,7 +2751,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 22) {
         // SARCÁSTICO 5 (VÍVIDO): Risada Maliciosa / Deboche 😈 (crescendo cômico + chifrinhos néon + faíscas)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2800.0f));
+        float animElapsed = fmodf(elapsed, 2800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2800.0f));
 
         float bounceY = 0.0f;
         float laughClimax = 0.0f;
@@ -2808,7 +2818,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 23) {
         // SARCÁSTICO 6 (VÍVIDO): ZZz Sarcástico / Dormindo 🥱 (tédio, espionada desdenhosa e sono)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3800.0f));
+        float animElapsed = fmodf(elapsed, 3800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3800.0f));
 
         float headDrop = 0.0f;
         float eyeRightOpenP = 0.0f;
@@ -2878,7 +2889,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 10) {
         // BÁSICA 2: Piscadela Charmosa (Olho esq. em '>' + sobrancelha dir. arqueada + estrela dourada)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2600);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2600.0f));
+        float animElapsed = fmodf(elapsed, 2600.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2600.0f));
         bool isWinking = (cycle > 0.15f && cycle < 0.82f);
         float tiltY = isWinking ? -1.5f : 0.0f;
         int lx = (int)((eyeLx + xOffset) * 2);
@@ -2912,7 +2924,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 18) {
         // BÁSICA 4: Curioso / Lupa Investigativa (Olho esq. semicerrado + olho dir. gigante em zoom)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         float lookX = 0.0f;
         if (cycle < 0.45f) {
             lookX = sinf((cycle / 0.45f) * 3.14159265f) * -10.0f;
@@ -2931,7 +2944,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 19) {
         // BÁSICA 5: Descolado / Óculos Escuros ("Deal With It" 😎 com moldura dourada completa e reflexo nas lentes)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3200);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3200.0f));
+        float animElapsed = fmodf(elapsed, 3200.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3200.0f));
         float nodY = 0.0f;
         if (cycle >= 0.22f && cycle < 0.34f) {
             nodY = sinf(((cycle - 0.22f) / 0.12f) * 3.14159265f) * 4.5f;
@@ -3005,7 +3019,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 20) {
         // BÁSICA 6: Pensativo -> Ideia Brilhante ("Eureka!" 💡)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         bool isEureka = (cycle >= 0.48f);
 
         if (!isEureka) {
@@ -3091,7 +3106,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 14) {
         // SENSÍVEL 3: Piscadela + Beijo Voador (Olho esq. aberto brilhante + olho dir. piscando em arco ^)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2800.0f));
+        float animElapsed = fmodf(elapsed, 2800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2800.0f));
         bool isWinking = (cycle > 0.12f && cycle < 0.85f);
         float headTiltY = isWinking ? -1.5f : 0.0f;
 
@@ -3106,7 +3122,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     } else if (idleTipo == 16) {
         // SENSÍVEL 4: Carente / Dengoso (Olhos marejados com água balançando na base + fungadinha)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         float sniffY = 0.0f;
         if (cycle > 0.45f && cycle < 0.55f) sniffY = -4.0f;
         else if (cycle > 0.60f && cycle < 0.70f) sniffY = -5.0f;
@@ -3416,7 +3433,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 10) {
         // BÁSICA 2: Piscadela Charmosa (sorriso de canto confiante smirk)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2600);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2600.0f));
+        float animElapsed = fmodf(elapsed, 2600.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2600.0f));
         bool isWinking = (cycle > 0.15f && cycle < 0.82f);
         float my = 104.0f + (isWinking ? -1.8f : 0.0f);
         if (isWinking) {
@@ -3446,7 +3464,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 18) {
         // BÁSICA 4: Curioso / Lupa Investigativa (boquinha em 'o' pequeno acompanhando o olhar)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         float lookX = 0.0f;
         if (cycle < 0.45f) lookX = sinf((cycle / 0.45f) * 3.14159265f) * -10.0f;
         else if (cycle < 0.90f) lookX = sinf(((cycle - 0.45f) / 0.45f) * 3.14159265f) * 10.0f;
@@ -3457,7 +3476,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 19) {
         // BÁSICA 5: Descolado / Óculos Escuros (sorrisinho de lado confiante)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3200);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3200.0f));
+        float animElapsed = fmodf(elapsed, 3200.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3200.0f));
         float nodY = (cycle >= 0.22f && cycle < 0.34f) ? (sinf(((cycle - 0.22f) / 0.12f) * 3.14159265f) * 4.5f) : 0.0f;
         float my = 105.0f + nodY * 0.6f;
         if (cycle >= 0.22f && cycle <= 0.86f) {
@@ -3468,7 +3488,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 20) {
         // BÁSICA 6: Ideia ("Eureka!") (boca pensativa torta na fase 1 -> sorriso aberto na fase 2)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         if (cycle < 0.48f) {
             draw_canvas_line(layer, 120, 104, 134, 101, lv_color_hex(0xFFFFFF), 4);
         } else {
@@ -3479,7 +3500,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 8) {
         // Bocejo de tédio: boca abre progressivamente em grande oval 'O' + sopro de suspiro
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         float yawnP = 0.0f;
         float shakeX = 0.0f;
         if (cycle < 0.35f) {
@@ -3517,20 +3539,22 @@ skip_default_cheeks: ;
             draw_canvas_quad_bezier(layer, wx, wy, wx + 3.0f, wy + 4.0f, wx + 6.0f, wy, pal.primary, 2, 4);
         }
     } else if (idleTipo == 9) {
-        // Olhos fechados + gota grande: boca curvada acompanhando a descida do suspiro
+        // Olhos semicerrados + gota grande: boca curvada acompanhando a descida do suspiro
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2800.0f));
+        float animElapsed = fmodf(elapsed, 2800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2800.0f));
         float sinkY = 0.0f;
-        if (cycle < 0.20f) sinkY = (cycle / 0.20f) * 5.0f;
-        else if (cycle < 0.85f) sinkY = 5.0f + sinf((cycle - 0.20f) * 6.28318f) * 1.0f;
-        else sinkY = (1.0f - (cycle - 0.85f) / 0.15f) * 5.0f;
+        if (cycle < 0.25f) sinkY = (cycle / 0.25f) * 4.0f;
+        else if (cycle < 0.75f) sinkY = 4.0f + sinf((cycle - 0.25f) * 12.56637f) * 0.8f;
+        else sinkY = (1.0f - (cycle - 0.75f) / 0.25f) * 4.0f;
         draw_sarcastic_mouth(layer, 128, (int)roundf(105.0f + sinkY), mc);
     } else if (idleTipo == 2) {
         // Revirar os olhos: boca curvada acompanhando levemente as pupilas
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2600);
+        float animElapsed = fmodf(elapsed, 2600.0f);
         float pupilX = 0.0f;
-        if (elapsed < 2000.0f) {
-            float p = elapsed / 2000.0f;
+        if (animElapsed < 2000.0f) {
+            float p = animElapsed / 2000.0f;
             float angle = 3.14159265f * 0.5f + p * 3.14159265f * 2.0f;
             pupilX = cosf(angle) * 11.0f;
         }
@@ -3538,7 +3562,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 21) {
         // SARCASTICA 4 (VÍVIDO): Julgamento Silencioso (smirk contraindo + balanço de cabeça)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3400);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3400.0f));
+        float animElapsed = fmodf(elapsed, 3400.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3400.0f));
         float lookSideP = 0.0f;
         float headShake = 0.0f;
         if (cycle >= 0.20f && cycle < 0.40f) {
@@ -3562,7 +3587,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 22) {
         // SARCASTICA 5 (VÍVIDO): Risada Maliciosa / Deboche 😈 (smirk largo com dentinho de deboche afiado)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2800.0f));
+        float animElapsed = fmodf(elapsed, 2800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2800.0f));
         float bounceY = 0.0f;
         float laughClimax = 0.0f;
         if (cycle < 0.25f) {
@@ -3587,7 +3613,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 23) {
         // SARCASTICA 6 (VÍVIDO): ZZz Sarcástico / Dormindo 🥱 (bolha de sono infla e estoura)
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3800.0f));
+        float animElapsed = fmodf(elapsed, 3800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3800.0f));
         float headDrop = 0.0f;
         float bubbleSize = 0.0f;
         bool popTrigger = false;
@@ -3642,7 +3669,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 14) {
         // Boca Piscadela + Beijo Voador: biquinho '3' + coração grande voando em onda
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 2800);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 2800.0f));
+        float animElapsed = fmodf(elapsed, 2800.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 2800.0f));
         bool isWinking = (cycle > 0.12f && cycle < 0.85f);
         float headTiltY = isWinking ? -3.0f : 0.0f;
         float mx = 128.0f;
@@ -3668,7 +3696,8 @@ skip_default_cheeks: ;
     } else if (idleTipo == 16) {
         // Boca Carente / Dengoso: boquinha trêmula acompanhando a fungadinha
         float elapsed = (tFim > tStart && ms >= tStart) ? (float)(ms - tStart) : (float)(ms % 3000);
-        float cycle = std::max(0.0f, std::min(1.0f, elapsed / 3000.0f));
+        float animElapsed = fmodf(elapsed, 3000.0f);
+        float cycle = std::max(0.0f, std::min(1.0f, animElapsed / 3000.0f));
         float sniffY = 0.0f;
         if (cycle > 0.45f && cycle < 0.55f) sniffY = -4.0f;
         else if (cycle > 0.60f && cycle < 0.70f) sniffY = -5.0f;

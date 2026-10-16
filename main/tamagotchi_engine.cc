@@ -170,70 +170,70 @@ void TamagotchiEngine::Update() {
             if (pers == PERSONALIDADE_SARCASTICA) {
                 int s = rand() % 6;
                 if (s == 0) {
-                    tipo_reacao_ociosa_ = 2;  // 1. Revirar olhos ocultando na pálpebra (2.6s)
-                    tempo_fim_reacao_ociosa_ = now + 2600;
+                    tipo_reacao_ociosa_ = 2;  // 1. Revirar olhos (2.6s x 2 = 5.2s)
+                    tempo_fim_reacao_ociosa_ = now + 5200;
                 } else if (s == 1) {
-                    tipo_reacao_ociosa_ = 8;  // 2. Tédio / Bocejo animado (3.0s)
-                    tempo_fim_reacao_ociosa_ = now + 3000;
+                    tipo_reacao_ociosa_ = 8;  // 2. Tédio / Bocejo animado (3.0s x 2 = 6.0s)
+                    tempo_fim_reacao_ociosa_ = now + 6000;
                 } else if (s == 2) {
-                    tipo_reacao_ociosa_ = 9;  // 3. Olhos fechados + Gota grande na cabeça (2.8s)
-                    tempo_fim_reacao_ociosa_ = now + 2800;
+                    tipo_reacao_ociosa_ = 9;  // 3. Olhos semicerrados + Gota grande (2.8s x 2 = 5.6s)
+                    tempo_fim_reacao_ociosa_ = now + 5600;
                 } else if (s == 3) {
-                    tipo_reacao_ociosa_ = 21; // 4. Julgamento Silencioso / Side-eye (3.0s)
-                    tempo_fim_reacao_ociosa_ = now + 3000;
+                    tipo_reacao_ociosa_ = 21; // 4. Julgamento Silencioso / Side-eye (3.4s x 2 = 6.8s)
+                    tempo_fim_reacao_ociosa_ = now + 6800;
                 } else if (s == 4) {
-                    tipo_reacao_ociosa_ = 22; // 5. Risada Maliciosa / Deboche 😈 (2.6s)
-                    tempo_fim_reacao_ociosa_ = now + 2600;
+                    tipo_reacao_ociosa_ = 22; // 5. Risada Maliciosa / Deboche 😈 (2.8s x 2 = 5.6s)
+                    tempo_fim_reacao_ociosa_ = now + 5600;
                 } else {
-                    tipo_reacao_ociosa_ = 23; // 6. ZZz Sarcástico / Dormindo 🥱 (3.0s)
-                    tempo_fim_reacao_ociosa_ = now + 3000;
+                    tipo_reacao_ociosa_ = 23; // 6. ZZz Sarcástico / Dormindo 🥱 (3.8s x 2 = 7.6s)
+                    tempo_fim_reacao_ociosa_ = now + 7600;
                 }
             } else if (pers == PERSONALIDADE_SENSIVEL) {
                 if (sensor_temperatura_ < 18.0f && sensor_temperatura_ > 0.0f) {
-                    tipo_reacao_ociosa_ = 4; // Tremedeira frio (2.5s)
-                    tempo_fim_reacao_ociosa_ = now + 2500;
+                    tipo_reacao_ociosa_ = 4; // Tremedeira frio (2.5s x 2 = 5.0s)
+                    tempo_fim_reacao_ociosa_ = now + 5000;
                 } else {
                     int s = rand() % 6;
                     if (s == 0) {
-                        tipo_reacao_ociosa_ = 12; // 1. Olhinhos Pidão / Gato de Botas (2.8s)
-                        tempo_fim_reacao_ociosa_ = now + 2800;
+                        tipo_reacao_ociosa_ = 12; // 1. Olhinhos Pidão / Gato de Botas (2.8s x 2 = 5.6s)
+                        tempo_fim_reacao_ociosa_ = now + 5600;
                     } else if (s == 1) {
-                        tipo_reacao_ociosa_ = 15; // 2. Tímido / Vergonha Fofa > < (2.8s)
-                        tempo_fim_reacao_ociosa_ = now + 2800;
+                        tipo_reacao_ociosa_ = 15; // 2. Tímido / Vergonha Fofa > < (2.8s x 2 = 5.6s)
+                        tempo_fim_reacao_ociosa_ = now + 5600;
                     } else if (s == 2) {
-                        tipo_reacao_ociosa_ = 14; // 3. Piscadela + Beijo Voador (2.8s)
-                        tempo_fim_reacao_ociosa_ = now + 2800;
+                        tipo_reacao_ociosa_ = 14; // 3. Piscadela + Beijo Voador (2.8s x 2 = 5.6s)
+                        tempo_fim_reacao_ociosa_ = now + 5600;
                     } else if (s == 3) {
-                        tipo_reacao_ociosa_ = 16; // 4. Carente / Dengoso Marejado + Fungadinha (3.0s)
-                        tempo_fim_reacao_ociosa_ = now + 3000;
+                        tipo_reacao_ociosa_ = 16; // 4. Carente / Dengoso Marejado + Fungadinha (3.0s x 2 = 6.0s)
+                        tempo_fim_reacao_ociosa_ = now + 6000;
                     } else if (s == 4) {
-                        tipo_reacao_ociosa_ = 7;  // 5. Apaixonado nas Nuvens (Olhos de Coração) (2.8s)
-                        tempo_fim_reacao_ociosa_ = now + 2800;
+                        tipo_reacao_ociosa_ = 7;  // 5. Apaixonado nas Nuvens (Olhos de Coração) (2.8s x 2 = 5.6s)
+                        tempo_fim_reacao_ociosa_ = now + 5600;
                     } else {
-                        tipo_reacao_ociosa_ = 17; // 6. Maravilhado / Olhos Estrelados (2.8s)
-                        tempo_fim_reacao_ociosa_ = now + 2800;
+                        tipo_reacao_ociosa_ = 17; // 6. Maravilhado / Olhos Estrelados (2.8s x 2 = 5.6s)
+                        tempo_fim_reacao_ociosa_ = now + 5600;
                     }
                 }
             } else { // PERSONALIDADE_BASICA
                 int b = rand() % 6;
                 if (b == 0) {
-                    tipo_reacao_ociosa_ = 1;  // 1. Assobiando no Ritmo (2.8s)
-                    tempo_fim_reacao_ociosa_ = now + 2800;
+                    tipo_reacao_ociosa_ = 1;  // 1. Assobiando no Ritmo (2.8s x 2 = 5.6s)
+                    tempo_fim_reacao_ociosa_ = now + 5600;
                 } else if (b == 1) {
-                    tipo_reacao_ociosa_ = 10; // 2. Piscadela Charmosa + Estrela (2.6s)
-                    tempo_fim_reacao_ociosa_ = now + 2600;
+                    tipo_reacao_ociosa_ = 10; // 2. Piscadela Charmosa + Estrela (2.6s x 2 = 5.2s)
+                    tempo_fim_reacao_ociosa_ = now + 5200;
                 } else if (b == 2) {
-                    tipo_reacao_ociosa_ = 11; // 3. Risadinha ("Hehehe") (2.8s)
-                    tempo_fim_reacao_ociosa_ = now + 2800;
+                    tipo_reacao_ociosa_ = 11; // 3. Risadinha ("Hehehe") (2.8s x 2 = 5.6s)
+                    tempo_fim_reacao_ociosa_ = now + 5600;
                 } else if (b == 3) {
-                    tipo_reacao_ociosa_ = 18; // 4. Curioso / Lupa Investigativa (3.0s)
-                    tempo_fim_reacao_ociosa_ = now + 3000;
+                    tipo_reacao_ociosa_ = 18; // 4. Curioso / Lupa Investigativa (3.0s x 2 = 6.0s)
+                    tempo_fim_reacao_ociosa_ = now + 6000;
                 } else if (b == 4) {
-                    tipo_reacao_ociosa_ = 19; // 5. Descolado / Óculos Escuros (3.2s)
-                    tempo_fim_reacao_ociosa_ = now + 3200;
+                    tipo_reacao_ociosa_ = 19; // 5. Descolado / Óculos Escuros (3.2s x 2 = 6.4s)
+                    tempo_fim_reacao_ociosa_ = now + 6400;
                 } else {
-                    tipo_reacao_ociosa_ = 20; // 6. Ideia ("Eureka!") (3.0s)
-                    tempo_fim_reacao_ociosa_ = now + 3000;
+                    tipo_reacao_ociosa_ = 20; // 6. Ideia ("Eureka!") (3.0s x 2 = 6.0s)
+                    tempo_fim_reacao_ociosa_ = now + 6000;
                 }
             }
         }
