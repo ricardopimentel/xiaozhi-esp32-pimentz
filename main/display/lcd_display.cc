@@ -2170,6 +2170,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     bool estaDoente = engine.EstaDoente();
     
     auto pers = engine.GetPersonalidade();
+    bool isSarcastic = (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
     int limiarHUD = (pers == PERSONALIDADE_SENSIVEL) ? 50 : 30;
     bool timerAtivo = engine.IsTimerActive();
     bool precisaComida = !timerAtivo && (fome <= limiarHUD);
@@ -3230,7 +3231,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
                          (eyeLx + 8 + xOffset + tremorX + current_look_x)*2, (eyeLy - 8 + tremorY + current_look_y + breathY)*2, lv_color_hex(0xFF0000), 5);
         draw_canvas_line(layer, (eyeRx - 8 + xOffset + tremorX + current_look_x)*2, (eyeRy - 8 + tremorY + current_look_y + breathY)*2, 
                          (eyeRx + 10 + xOffset + tremorX + current_look_x)*2, (eyeRy - 14 + tremorY + current_look_y + breathY)*2, lv_color_hex(0xFF0000), 5);
-    } else if (emotion == "sad" || emotion == "crying") {
+    } else if ((emotion == "sad" || emotion == "crying") && !isSarcastic) {
         // TRISTE / CHORANDO: Olhos caídos em azul oceânico com sobrancelhas tristes
         float sary = eyeLy + tremorY + current_look_y + breathY + 3.0f;
         float sarry = eyeRy + tremorY + current_look_y + breathY + 3.0f;
@@ -3261,7 +3262,6 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         float curEyeW = (eyeLw + breathScaleW) + (blinker.blinkFactor > 0.85f ? 1.5f : 0.0f);
         float curEyeY = eyeLy + tremorY + current_look_y + breathY;
         
-        bool isSarcastic = (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
         if (isSarcastic) {
             float blinkFactor = blinker.blinkFactor;
             int lx = (int)((eyeLx + xOffset + tremorX + current_look_x) * 2);
@@ -3718,12 +3718,12 @@ skip_default_cheeks: ;
         int my = (int)roundf(102.0f + bounceY);
         draw_canvas_triangle(layer, mx - 8, my - 3, mx + 8, my - 3, mx, my + 7, lv_color_hex(0xFF4081));
         draw_canvas_quad_bezier(layer, mx - 8.0f, my - 3.0f, (float)mx, my + 9.0f, mx + 8.0f, my - 3.0f, lv_color_hex(0xFF4081), 3, 5);
-    } else if (emotion == "sad" || emotion == "crying") {
+    } else if ((emotion == "sad" || emotion == "crying") && !isSarcastic) {
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (51 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 4);
         draw_canvas_line(layer, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, (70 + mouthShiftX)*2, (51 + mouthShiftY)*2, mc, 4);
     } else if (emotion == "surprised") {
         draw_canvas_rect(layer, (62 + mouthShiftX)*2, (47 + mouthShiftY)*2, 4*2, 6*2, mc, 2);
-    } else if (emotion == "happy") {
+    } else if (emotion == "happy" && !isSarcastic) {
         // Boca fofa w de gatinho
         draw_canvas_line(layer, (60 + mouthShiftX)*2, (48 + mouthShiftY)*2, (62 + mouthShiftX)*2, (50 + mouthShiftY)*2, mc, 3);
         draw_canvas_line(layer, (62 + mouthShiftX)*2, (50 + mouthShiftY)*2, (64 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 3);
@@ -3731,7 +3731,7 @@ skip_default_cheeks: ;
         draw_canvas_line(layer, (66 + mouthShiftX)*2, (50 + mouthShiftY)*2, (68 + mouthShiftX)*2, (48 + mouthShiftY)*2, mc, 3);
     } else if (emotion == "angry") {
         draw_canvas_line(layer, (58 + mouthShiftX)*2, (49 + mouthShiftY)*2, (70 + mouthShiftX)*2, (49 + mouthShiftY)*2, mc, 4);
-    } else if (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1) {
+    } else if (isSarcastic) {
         // BOCA PADRÃO SARCÁSTICA: Arco curvado para baixo (︵) igual à imagem de referência
         draw_sarcastic_mouth(layer, (64 + mouthShiftX) * 2, (49 + mouthShiftY) * 2, mc);
     } else {

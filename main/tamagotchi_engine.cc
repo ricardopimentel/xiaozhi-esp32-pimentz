@@ -46,7 +46,10 @@ void TamagotchiEngine::Initialize() {
         if (nvs_get_u8(handle, "estaDoente", &doente) == ESP_OK) esta_doente_ = (doente != 0);
         if (nvs_get_u8(handle, "estNasc", &estNasc) == ESP_OK) estado_nascimento_ = static_cast<EstadoNascimento>(estNasc);
         if (nvs_get_u16(handle, "segChoc", &segChoc) == ESP_OK) segundos_chocados_ = segChoc;
-        if (nvs_get_u8(handle, "personalidade", &persNat) == ESP_OK) personalidade_natural_ = static_cast<Personalidade>(persNat);
+        if (nvs_get_u8(handle, "personalidade", &persNat) == ESP_OK) {
+            personalidade_natural_ = static_cast<Personalidade>(persNat);
+            personalidade_ = personalidade_natural_;
+        }
         if (nvs_get_u8(handle, "vinculo", &vinculo) == ESP_OK) pontos_de_vinculo_ = vinculo;
         if (nvs_get_u32(handle, "segVida", &segVida) == ESP_OK) segundos_de_vida_ = segVida;
 
@@ -491,9 +494,11 @@ std::string TamagotchiEngine::GetCurrentEmotion() const {
     }
     // Atributos moderadamente baixos (Triste)
     if (fome_ <= 50 || diversao_ <= 50 || saude_ <= 50) {
+        if (personalidade_ == PERSONALIDADE_SARCASTICA) return "neutral";
         return "sad";
     }
     if (esta_doente_) {
+        if (personalidade_ == PERSONALIDADE_SARCASTICA) return "neutral";
         return "sad";
     }
     
