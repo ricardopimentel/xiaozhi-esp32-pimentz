@@ -151,11 +151,15 @@ void AfeWakeWord::AudioDetectionTask() {
 
         if (res->wakeup_state == WAKENET_DETECTED) {
             Stop();
+            if (!wake_words_.empty() && res->wakenet_model_index > 0 && res->wakenet_model_index <= wake_words_.size()) {
+                last_detected_wake_word_ = wake_words_[res->wakenet_model_index - 1];
+            } else {
 #ifdef CONFIG_CUSTOM_WAKE_WORD
-            last_detected_wake_word_ = CONFIG_CUSTOM_WAKE_WORD;
+                last_detected_wake_word_ = CONFIG_CUSTOM_WAKE_WORD;
 #else
-            last_detected_wake_word_ = "luquinhas";
+                last_detected_wake_word_ = "Hi, Jason";
 #endif
+            }
 
             if (wake_word_detected_callback_) {
                 wake_word_detected_callback_(last_detected_wake_word_);
