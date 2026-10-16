@@ -79,6 +79,7 @@ protected:
     void DrawStar(float x, float y, float radius, lv_color_t color, lv_layer_t* layer);
     void DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, lv_color_t fgColor, lv_color_t outlineColor);
     void DrawAlarmClock(lv_layer_t* layer);
+    void DrawEggScreen(lv_layer_t* layer);
     void DrawOledFace(int xOffset);
 
     lv_timer_t* eye_timer_ = nullptr;

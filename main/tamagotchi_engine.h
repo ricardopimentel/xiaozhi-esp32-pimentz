@@ -50,6 +50,7 @@ public:
     void SetPersonalidade(Personalidade p) { personalidade_ = p; personalidade_natural_ = p; }
     uint8_t GetHumor() const { return humor_; }
     uint16_t GetSegundosChocados() const { return segundos_chocados_; }
+    uint16_t GetTempoIncubacaoSegundos() const { return 15; }
     
     float GetSensorTemperatura() const { return sensor_temperatura_; }
     float GetSensorUmidade() const { return sensor_umidade_; }
