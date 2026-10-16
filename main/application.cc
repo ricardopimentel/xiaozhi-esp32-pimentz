@@ -285,7 +285,7 @@ void Application::Run() {
                     nasceu_limpo = true;
                     display->SetStatus(Lang::Strings::STANDBY);
                     display->ClearChatMessages();
-                    display->SetEmotion("happy");
+                    display->SetEmotion("neutral");
                 }
             }
         

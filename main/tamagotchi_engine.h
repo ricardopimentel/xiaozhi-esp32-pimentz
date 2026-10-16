@@ -135,8 +135,8 @@ private:
     uint8_t uid_saude_[4] = {0};
     uint8_t uid_pet_[4] = {0};
     
-    Personalidade personalidade_natural_ = PERSONALIDADE_BASICA;
-    Personalidade personalidade_ = PERSONALIDADE_BASICA;
+    Personalidade personalidade_natural_ = PERSONALIDADE_SARCASTICA;
+    Personalidade personalidade_ = PERSONALIDADE_SARCASTICA;
     int8_t pontos_de_vinculo_ = 0;
     uint16_t segundos_chocados_ = 0;
     

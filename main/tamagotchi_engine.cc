@@ -412,6 +412,7 @@ void TamagotchiEngine::AtualizarVinculo(int8_t pontos) {
     } else {
         personalidade_natural_ = PERSONALIDADE_SENSIVEL;
     }
+    personalidade_ = personalidade_natural_;
     
     if (pontos_de_vinculo_ != antigo) {
         SaveState();
