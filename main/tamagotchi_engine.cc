@@ -349,6 +349,82 @@ void TamagotchiEngine::Update() {
             personalidade_ = personalidade_natural_;
         }
     }
+
+    // 5. Motor de Iniciativa Própria e Proatividade (Fase 1)
+    auto& app = Application::GetInstance();
+    if (estado_nascimento_ == ESTADO_NASCIDO && !alarme_ativo_ && now > 35000) {
+        static uint64_t last_proactive_any = 0;
+        static uint64_t last_proactive_shock = 0;
+        static uint64_t last_proactive_light = 0;
+        static uint64_t last_proactive_climate = 0;
+        static uint64_t last_proactive_needs = 0;
+        static uint64_t last_active_or_chat = 0;
+        static int prev_light_proactive = -1;
+
+        if (last_active_or_chat == 0) {
+            last_active_or_chat = now;
+        }
+
+        if (app.GetDeviceState() != kDeviceStateIdle) {
+            last_active_or_chat = now;
+        } else if (now - last_proactive_any >= 45000) {
+            // A) Susto / Choque na mesa (cooldown 60s)
+            if (sensor_choque_ && (now - last_proactive_shock >= 60000)) {
+                last_proactive_shock = now;
+                last_proactive_any = now;
+                last_active_or_chat = now;
+                app.NotifyMessage("[PROACTIVE:SHOCK] O sensor de choque detectou uma batida na mesa!");
+            }
+            // B) Mudança brusca de luminosidade: Luz apagou ou acendeu (cooldown 10 min)
+            else if (prev_light_proactive >= 0 && (now - last_proactive_light >= 600000)) {
+                if (prev_light_proactive >= 30 && sensor_luz_porcento_ < limiar_luz_baixo_) {
+                    last_proactive_light = now;
+                    last_proactive_any = now;
+                    last_active_or_chat = now;
+                    prev_light_proactive = sensor_luz_porcento_;
+                    app.NotifyMessage("[PROACTIVE:LIGHTS_OFF] A luz do ambiente acabou de se apagar!");
+                } else if (prev_light_proactive < limiar_luz_baixo_ && sensor_luz_porcento_ >= 35) {
+                    last_proactive_light = now;
+                    last_proactive_any = now;
+                    last_active_or_chat = now;
+                    prev_light_proactive = sensor_luz_porcento_;
+                    app.NotifyMessage("[PROACTIVE:LIGHTS_ON] A luz do ambiente acabou de acender!");
+                }
+            }
+            // C) Ponte Sensores -> Home Assistant: Calor ou Frio na mesa (cooldown 20 min, apenas acordado)
+            else if (sensor_luz_porcento_ >= limiar_luz_baixo_ && (now - last_proactive_climate >= 1200000)) {
+                if (sensor_temperatura_ >= limiar_temp_alto_) {
+                    last_proactive_climate = now;
+                    last_proactive_any = now;
+                    last_active_or_chat = now;
+                    app.NotifyMessage("[PROACTIVE:HEAT] Temperatura alta detectada na mesa!");
+                } else if (sensor_temperatura_ > 5.0f && sensor_temperatura_ <= limiar_temp_baixo_) {
+                    last_proactive_climate = now;
+                    last_proactive_any = now;
+                    last_active_or_chat = now;
+                    app.NotifyMessage("[PROACTIVE:COLD] Temperatura baixa detectada na mesa!");
+                }
+            }
+            // D) Necessidades Críticas do Tamagotchi (cooldown 20 min, apenas acordado)
+            else if (sensor_luz_porcento_ >= limiar_luz_baixo_ && (now - last_proactive_needs >= 1200000) &&
+                     (fome_ <= 20 || diversao_ <= 20 || esta_doente_)) {
+                last_proactive_needs = now;
+                last_proactive_any = now;
+                last_active_or_chat = now;
+                app.NotifyMessage("[PROACTIVE:NEEDS] O Tamagotchi precisa de cuidados urgentes!");
+            }
+            // E) Iniciativa Própria: Puxar assunto espontaneamente após 25 min em silêncio
+            else if (sensor_luz_porcento_ >= limiar_luz_baixo_ && (now - last_active_or_chat >= 1500000)) {
+                last_proactive_any = now;
+                last_active_or_chat = now;
+                app.NotifyMessage("[PROACTIVE:CHAT] Puxando assunto espontaneamente com o dono!");
+            }
+        }
+
+        if (prev_light_proactive < 0 || abs((int)sensor_luz_porcento_ - prev_light_proactive) >= 5) {
+            prev_light_proactive = sensor_luz_porcento_;
+        }
+    }
 }
 
 void TamagotchiEngine::ProcessarCicloIncubacao(bool rfidLido, const uint8_t* rfidUID) {

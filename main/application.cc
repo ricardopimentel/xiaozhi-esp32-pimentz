@@ -190,8 +190,12 @@ void Application::Run() {
         auto bits = xEventGroupWaitBits(event_group_, ALL_EVENTS, pdTRUE, pdFALSE, portMAX_DELAY);
 
         if (bits & MAIN_EVENT_ERROR) {
-            SetDeviceState(kDeviceStateIdle);
-            Alert(Lang::Strings::ERROR, last_error_message_.c_str(), "circle_xmark", Lang::Sounds::OGG_EXCLAMATION);
+            if (GetDeviceState() != kDeviceStateIdle) {
+                SetDeviceState(kDeviceStateIdle);
+                Alert(Lang::Strings::ERROR, last_error_message_.c_str(), "circle_xmark", Lang::Sounds::OGG_EXCLAMATION);
+            } else {
+                ESP_LOGW(TAG, "Standby network warning: %s", last_error_message_.c_str());
+            }
         }
 
         if (bits & MAIN_EVENT_NETWORK_CONNECTED) {
@@ -286,6 +290,22 @@ void Application::Run() {
                     display->SetStatus(Lang::Strings::STANDBY);
                     display->ClearChatMessages();
                     display->SetEmotion("neutral");
+                }
+            }
+
+            // Mantém o canal WebSocket conectado em Standby (kDeviceStateIdle) para que o servidor
+            // possa ativar o robô e falar na mesa a qualquer momento, mesmo fora do modo ouvir
+            if (clock_ticks_ % 10 == 5) {
+                if (GetDeviceState() == kDeviceStateIdle &&
+                    engine.GetEstadoNascimento() == ESTADO_NASCIDO &&
+                    !engine.IsAlarmeAtivo() &&
+                    protocol_ && !protocol_->IsAudioChannelOpened()) {
+                    Schedule([this]() {
+                        if (GetDeviceState() == kDeviceStateIdle && protocol_ && !protocol_->IsAudioChannelOpened()) {
+                            ESP_LOGI(TAG, "Conectando WebSocket em Standby (kDeviceStateIdle) para proatividade...");
+                            protocol_->OpenAudioChannel();
+                        }
+                    });
                 }
             }
         
@@ -540,7 +560,7 @@ void Application::InitializeProtocol() {
     });
     
     protocol_->OnIncomingAudio([this](std::unique_ptr<AudioStreamPacket> packet) {
-        if (GetDeviceState() == kDeviceStateConnecting || GetDeviceState() == kDeviceStateListening) {
+        if (GetDeviceState() == kDeviceStateConnecting || GetDeviceState() == kDeviceStateListening || GetDeviceState() == kDeviceStateIdle) {
             SetDeviceState(kDeviceStateSpeaking);
         }
         if (GetDeviceState() == kDeviceStateSpeaking) {
@@ -585,9 +605,15 @@ void Application::InitializeProtocol() {
                         }
                     }
                 });
+            } else if (strcmp(state->valuestring, "standby") == 0) {
+                Schedule([this]() {
+                    if (GetDeviceState() == kDeviceStateListening || GetDeviceState() == kDeviceStateSpeaking) {
+                        SetDeviceState(kDeviceStateIdle);
+                    }
+                });
             } else if (strcmp(state->valuestring, "sentence_start") == 0) {
                 Schedule([this]() {
-                    if (GetDeviceState() == kDeviceStateConnecting || GetDeviceState() == kDeviceStateListening) {
+                    if (GetDeviceState() == kDeviceStateConnecting || GetDeviceState() == kDeviceStateListening || GetDeviceState() == kDeviceStateIdle) {
                         SetDeviceState(kDeviceStateSpeaking);
                     }
                 });
@@ -768,13 +794,14 @@ void Application::HandleToggleChatEvent() {
     } else if (state == kDeviceStateSpeaking) {
         AbortSpeaking(kAbortReasonNone);
     } else if (state == kDeviceStateListening) {
-        protocol_->CloseAudioChannel();
+        protocol_->SendStopListening();
+        SetDeviceState(kDeviceStateIdle);
     }
 }
 
 void Application::ContinueOpenAudioChannel(ListeningMode mode) {
     // Check state again in case it was changed during scheduling
-    if (GetDeviceState() != kDeviceStateConnecting) {
+    if (GetDeviceState() != kDeviceStateConnecting && GetDeviceState() != kDeviceStateIdle) {
         return;
     }
 
@@ -899,7 +926,7 @@ void Application::HandleWakeWordDetectedEvent() {
 
 void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
     // Check state again in case it was changed during scheduling
-    if (GetDeviceState() != kDeviceStateConnecting) {
+    if (GetDeviceState() != kDeviceStateConnecting && GetDeviceState() != kDeviceStateIdle) {
         return;
     }
 
@@ -1121,8 +1148,9 @@ void Application::WakeWordInvoke(const std::string& wake_word) {
     } else if (state == kDeviceStateListening) {   
         Schedule([this]() {
             if (protocol_) {
-                protocol_->CloseAudioChannel();
+                protocol_->SendStopListening();
             }
+            SetDeviceState(kDeviceStateIdle);
         });
     }
 }
@@ -1138,7 +1166,7 @@ void Application::NotifyMessage(const std::string& message) {
             return;
         }
 
-        listening_mode_ = kListeningModeManualStop;
+        listening_mode_ = GetDefaultListeningMode();
         SetDeviceState(kDeviceStateConnecting);
 
         Schedule([this, message]() {
