@@ -607,6 +607,9 @@ void Application::InitializeProtocol() {
                 });
             } else if (strcmp(state->valuestring, "standby") == 0) {
                 Schedule([this]() {
+                    if (GetDeviceState() == kDeviceStateSpeaking && !aborted_) {
+                        audio_service_.WaitForPlaybackQueueEmpty();
+                    }
                     if (GetDeviceState() == kDeviceStateListening || GetDeviceState() == kDeviceStateSpeaking) {
                         SetDeviceState(kDeviceStateIdle);
                     }
@@ -793,7 +796,9 @@ void Application::HandleToggleChatEvent() {
         SetListeningMode(mode);
     } else if (state == kDeviceStateSpeaking) {
         AbortSpeaking(kAbortReasonNone);
+        SetDeviceState(kDeviceStateIdle);
     } else if (state == kDeviceStateListening) {
+        while (audio_service_.PopPacketFromSendQueue());
         protocol_->SendStopListening();
         SetDeviceState(kDeviceStateIdle);
     }
