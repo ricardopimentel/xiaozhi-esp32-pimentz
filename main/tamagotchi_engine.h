@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 enum EstadoNascimento : uint8_t {
     ESTADO_OVO = 0,
@@ -16,8 +17,18 @@ enum Personalidade : uint8_t {
     PERSONALIDADE_SENSIVEL = 2
 };
 
+struct TamagotchiMediaItem {
+    std::string title;
+    std::string artist;
+    std::string device;
+    int duration = 0;
+    int position = 0;
+    uint64_t last_update_ms = 0;
+};
+
 class TamagotchiEngine {
 public:
+    using TamagotchiMediaItem = ::TamagotchiMediaItem;
     static TamagotchiEngine& GetInstance();
 
     void Initialize();
@@ -83,16 +94,6 @@ public:
     void AtivarAlarme(const std::string& label);
     void DesativarAlarme();
     uint64_t GetUltimoDesarmeAlarme() const { return ultimo_desarme_alarme_; }
-
-struct TamagotchiMediaItem {
-    std::string title;
-    std::string artist;
-    std::string device;
-    int duration = 0;
-    int position = 0;
-    uint64_t last_update_ms = 0;
-};
-
     // Media Player (TV & Google Home)
     bool IsMediaActive() const { return !media_items_.empty(); }
     size_t GetMediaCount() const { return media_items_.size(); }
