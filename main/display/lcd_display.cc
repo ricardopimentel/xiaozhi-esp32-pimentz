@@ -2185,9 +2185,10 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     bool isSarcastic = (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
     int limiarHUD = (pers == PERSONALIDADE_SENSIVEL) ? 50 : 30;
     bool timerAtivo = engine.IsTimerActive();
-    bool precisaComida = !timerAtivo && (fome <= limiarHUD);
-    bool precisaBrincar = !timerAtivo && (diversao <= limiarHUD);
-    bool precisaSaude = !timerAtivo && (saude <= limiarHUD || estaDoente);
+    bool mediaAtiva = engine.IsMediaActive();
+    bool precisaComida = !timerAtivo && !mediaAtiva && (fome <= limiarHUD);
+    bool precisaBrincar = !timerAtivo && !mediaAtiva && (diversao <= limiarHUD);
+    bool precisaSaude = !timerAtivo && !mediaAtiva && (saude <= limiarHUD || estaDoente);
     int numIcons = 0;
     if (precisaComida) numIcons++;
     if (precisaBrincar) numIcons++;
@@ -3354,7 +3355,7 @@ skip_default_cheeks: ;
     // =========================================================================
     // 6. RENDERIZAÇÃO DA BOCA ARTICULADA E SINCRONIZADA COM A RESPIRAÇÃO
     // =========================================================================
-    int mouthShiftX = (int)(current_look_x * 0.85f);
+    int mouthShiftX = (int)((current_look_x + swayX) * 0.85f);
     int mouthShiftY = (int)((current_look_y + swayY + breathY) * 0.80f) + 4;
     lv_color_t mc = pal.mouth;
     
@@ -3766,9 +3767,6 @@ skip_default_cheeks: ;
     // =========================================================================
     // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE) OU TIMER
     // =========================================================================
-    bool timerAtivo = engine.IsTimerActive();
-    bool mediaAtiva = engine.IsMediaActive();
-
     // Se ambos estiverem ativos, alterna em carrossel a cada 4 segundos
     bool mostrarTimer = timerAtivo;
     bool mostrarMedia = mediaAtiva;
