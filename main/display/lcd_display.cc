@@ -3905,12 +3905,12 @@ skip_default_cheeks: ;
         if (percent > 100) percent = 100;
         if (percent < 0) percent = 0;
 
-        int bw = 144;
+        int bw = 216;
         int bh = 28;
         int bx = 120 - (bw / 2);
         int by = 4;
 
-        // 1. Fundo da cápsula com cantos perfeitamente arredondados
+        // 1. Fundo da cápsula com cantos perfeitamente arredondados (ocupa toda a horizontal)
         draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
         draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
 
@@ -3964,10 +3964,10 @@ skip_default_cheeks: ;
             draw_canvas_line(layer, arcX, arcY - 4, arcX + 3, arcY - 2, mediaColor, 1);
         }
 
-        // 4. Texto em Marquee estático (zero alocações de heap, buffer com tempo de vida permanente)
+        // 4. Texto em Marquee estático em linha única na largura expandida
         static char s_cached_raw[128] = {0};
         static char s_cached_clean[128] = {0};
-        static char s_marquee_buf[20] = {0};
+        static char s_marquee_buf[24] = {0};
         static int s_prev_offset = -1;
 
         // Monta texto formatado em buffer local de stack (sem heap malloc)
@@ -3988,20 +3988,21 @@ skip_default_cheeks: ;
             s_prev_offset = -1;
         }
 
+        const int kMaxVisibleChars = 14;
         size_t clean_len = strlen(s_cached_clean);
         if (clean_len == 0) {
             s_marquee_buf[0] = '\0';
-        } else if (clean_len <= 13) {
-            strncpy(s_marquee_buf, s_cached_clean, 13);
-            s_marquee_buf[13] = '\0';
+        } else if (clean_len <= kMaxVisibleChars) {
+            strncpy(s_marquee_buf, s_cached_clean, kMaxVisibleChars);
+            s_marquee_buf[kMaxVisibleChars] = '\0';
         } else {
             // Rolagem suave a cada 260ms através do buffer estático
-            int pool_len = (int)clean_len + 7; // texto + "   *   "
+            int pool_len = (int)clean_len + 6; // texto + "  *  "
             int offset = (int)((ms / 260) % pool_len);
             if (offset != s_prev_offset) {
                 s_prev_offset = offset;
-                const char* sep = "   *   ";
-                for (int i = 0; i < 13; i++) {
+                const char* sep = "  *  ";
+                for (int i = 0; i < kMaxVisibleChars; i++) {
                     int p = (offset + i) % pool_len;
                     if (p < (int)clean_len) {
                         s_marquee_buf[i] = s_cached_clean[p];
@@ -4009,20 +4010,14 @@ skip_default_cheeks: ;
                         s_marquee_buf[i] = sep[p - clean_len];
                     }
                 }
-                s_marquee_buf[13] = '\0';
+                s_marquee_buf[kMaxVisibleChars] = '\0';
             }
         }
 
         int textX = bx + 32;
-        int textY = by + 3;
-        draw_canvas_text(layer, textX, textY, 104, 22, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
-
-        // Notinha musical flutuante no ritmo da batida perto da sobrancelha/olho direito
-        int floatNoteX = 188 + (int)(sinf(ms * 0.004f) * 4.0f);
-        int floatNoteY = 28 - (int)fmodf(ms * 0.012f, 16.0f);
-        draw_canvas_disc(layer, floatNoteX - 2, floatNoteY + 2, 2, mediaColor);
-        draw_canvas_line(layer, floatNoteX, floatNoteY + 2, floatNoteX, floatNoteY - 4, mediaColor, 1);
-        draw_canvas_line(layer, floatNoteX, floatNoteY - 4, floatNoteX + 3, floatNoteY - 2, mediaColor, 1);
+        int textY = by + 4;
+        int textW = bw - 44; // 172px de largura útil: cabe 14 caracteres com folga total em linha única
+        draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
     } else if (numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;
