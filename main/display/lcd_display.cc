@@ -3808,8 +3808,6 @@ skip_default_cheeks: ;
     // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE), TIMER OU MÚSICA
     // =========================================================================
     // Suporte a carrossel dinâmico (Timer, Música 1, Música 2, etc.)
-    bool timerAtivo = engine.IsTimerActive();
-    bool mediaAtiva = engine.IsMediaActive();
     size_t mediaCount = engine.GetMediaCount();
 
     bool mostrarTimer = false;
