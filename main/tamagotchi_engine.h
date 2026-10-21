@@ -83,6 +83,16 @@ public:
     void AtivarAlarme(const std::string& label);
     void DesativarAlarme();
     uint64_t GetUltimoDesarmeAlarme() const { return ultimo_desarme_alarme_; }
+
+    // Media Player (TV & Google Home)
+    bool IsMediaActive() const { return media_active_; }
+    void SetMediaInfo(bool active, const std::string& title, const std::string& artist, const std::string& device, int duration, int position);
+    void ClearMediaInfo();
+    std::string GetMediaTitle() const { return media_title_; }
+    std::string GetMediaArtist() const { return media_artist_; }
+    std::string GetMediaDevice() const { return media_device_; }
+    int GetMediaDuration() const { return media_duration_; }
+    int GetMediaPosition() const;
     
     std::string GetCurrentEmotion() const;
     std::string GetPersonalidadeString() const;
@@ -174,6 +184,15 @@ private:
     uint64_t tempo_ultimo_toque_alarme_ = 0;
     uint64_t ultimo_desarme_alarme_ = 0;
     int volume_anterior_ = 0;
+
+    // Media Player (TV & Google Home)
+    bool media_active_ = false;
+    std::string media_title_ = "";
+    std::string media_artist_ = "";
+    std::string media_device_ = "";
+    int media_duration_ = 0;
+    int media_position_ = 0;
+    uint64_t media_last_update_ms_ = 0;
 };
 
 #endif // TAMAGOTCHI_ENGINE_H

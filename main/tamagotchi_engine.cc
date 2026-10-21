@@ -813,3 +813,36 @@ uint32_t TamagotchiEngine::GetTimerRemainingMs() const {
     return timer_duration_ms_ - elapsed;
 }
 
+void TamagotchiEngine::SetMediaInfo(bool active, const std::string& title, const std::string& artist, const std::string& device, int duration, int position) {
+    media_active_ = active;
+    media_title_ = title;
+    media_artist_ = artist;
+    media_device_ = device;
+    media_duration_ = duration;
+    media_position_ = position;
+    media_last_update_ms_ = esp_timer_get_time() / 1000;
+    ESP_LOGI("TamagotchiEngine", "Media info: active=%d, title='%s', artist='%s', dev='%s', dur=%d, pos=%d",
+             active, title.c_str(), artist.c_str(), device.c_str(), duration, position);
+}
+
+void TamagotchiEngine::ClearMediaInfo() {
+    media_active_ = false;
+    media_title_.clear();
+    media_artist_.clear();
+    media_device_.clear();
+    media_duration_ = 0;
+    media_position_ = 0;
+}
+
+int TamagotchiEngine::GetMediaPosition() const {
+    if (!media_active_) return media_position_;
+    uint64_t now_ms = esp_timer_get_time() / 1000;
+    int elapsed_sec = (int)((now_ms - media_last_update_ms_) / 1000);
+    int current_pos = media_position_ + elapsed_sec;
+    if (media_duration_ > 0 && current_pos > media_duration_) {
+        return media_duration_;
+    }
+    return current_pos;
+}
+
+

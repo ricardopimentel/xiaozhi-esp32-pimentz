@@ -35,8 +35,18 @@ static void draw_canvas_rect_empty(lv_layer_t * layer, int x, int y, int w, int 
     dsc.border_opa = LV_OPA_COVER;
     dsc.radius = radius;
     lv_area_t area = {x, y, x + w, y + h};
-    lv_draw_rect(layer, &dsc, &area);
-    }
+LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
+
+static void draw_canvas_text(lv_layer_t * layer, int x, int y, int w, int h, const char * text, lv_color_t color, const lv_font_t * font = nullptr) {
+    if (!text || text[0] == '\0' || !layer) return;
+    lv_draw_label_dsc_t dsc;
+    lv_draw_label_dsc_init(&dsc);
+    dsc.color = color;
+    dsc.font = font ? font : &BUILTIN_TEXT_FONT;
+    dsc.text = text;
+    lv_area_t area = {x, y, x + w, y + h};
+    lv_draw_label(layer, &dsc, &area);
+}
 
 static void draw_canvas_arc(lv_layer_t * layer, int x, int y, int radius, int start_angle, int end_angle, lv_color_t color, int width) {
     lv_draw_arc_dsc_t dsc;
@@ -213,7 +223,6 @@ static void draw_scalable_heart(lv_layer_t * layer, int cx, int cy, float scale,
 
 #define TAG "LcdDisplay"
 
-LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 LV_FONT_DECLARE(BUILTIN_ICON_FONT);
 LV_FONT_DECLARE(font_awesome_30_4);
 
@@ -3754,7 +3763,27 @@ skip_default_cheeks: ;
     // =========================================================================
     // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE) OU TIMER
     // =========================================================================
-    if (timerAtivo) {
+    bool timerAtivo = engine.IsTimerActive();
+    bool mediaAtiva = engine.IsMediaActive();
+
+    // Se ambos estiverem ativos, alterna em carrossel a cada 4 segundos
+    bool mostrarTimer = timerAtivo;
+    bool mostrarMedia = mediaAtiva;
+    if (timerAtivo && mediaAtiva) {
+        uint32_t rem = engine.GetTimerRemainingMs() / 1000;
+        if (rem <= 30) {
+            // Últimos 30s do timer: prioridade total para o alarme
+            mostrarTimer = true;
+            mostrarMedia = false;
+        } else {
+            // Alterna a cada 4s
+            bool cicloTimer = ((ms / 4000) % 2 == 0);
+            mostrarTimer = cicloTimer;
+            mostrarMedia = !cicloTimer;
+        }
+    }
+
+    if (mostrarTimer) {
         uint32_t rem = engine.GetTimerRemainingMs() / 1000;
         uint32_t total = engine.GetTimerDurationMs() / 1000;
         if (total == 0) total = 1;
@@ -3821,6 +3850,95 @@ skip_default_cheeks: ;
         for (int i = 0; i < 5; i++) {
             DrawTimerSegmentChar(layer, textX + i * 11, textY, timeStr[i], lv_color_hex(0xF0F6FC), lv_color_hex(0x000000));
         }
+    } else if (mostrarMedia) {
+        // =====================================================================
+        // MÚSICA HUD: ANEL ORBITAL CIRCULAR + MARQUEE (OPÇÃO 1)
+        // =====================================================================
+        std::string title = engine.GetMediaTitle();
+        std::string artist = engine.GetMediaArtist();
+        std::string device = engine.GetMediaDevice();
+        int dur = engine.GetMediaDuration();
+        int pos = engine.GetMediaPosition();
+
+        int percent = (dur > 0) ? (pos * 100) / dur : 0;
+        if (percent > 100) percent = 100;
+        if (percent < 0) percent = 0;
+
+        int bw = 114;
+        int bh = 22;
+        int bx = 128 - (bw / 2);
+        int by = 2;
+
+        // 1. Fundo da cápsula com cantos perfeitamente arredondados
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 11);
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 11);
+
+        // 2. Cor dinâmica pelo tipo de dispositivo (Google Home / Spotify = verde, TV = ciano)
+        lv_color_t mediaColor;
+        if (device.find("TV") != std::string::npos || device.find("tv") != std::string::npos) {
+            mediaColor = lv_color_hex(0x00E5FF); // Ciano TV
+        } else {
+            mediaColor = lv_color_hex(0x10B981); // Verde Google Home / Spotify
+        }
+
+        // 3. Anel Orbital Circular à esquerda
+        int arcX = bx + 14;
+        int arcY = by + 11;
+        int arcR = 7;
+
+        // Trilho de fundo (360° cinza escuro)
+        draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, lv_color_hex(0x222634), 2);
+
+        // Arco ativo de progresso
+        if (percent >= 100) {
+            draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, mediaColor, 2);
+        } else if (percent > 0) {
+            int sweep = (360 * percent) / 100;
+            if (sweep < 6) sweep = 6;
+            if (sweep >= 360) {
+                draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, mediaColor, 2);
+            } else {
+                int endAngle = (270 + sweep) % 360;
+                draw_canvas_arc(layer, arcX, arcY, arcR, 270, endAngle, mediaColor, 2);
+            }
+        } else {
+            // Se duração desconhecida, anel pulsa em rotação contínua
+            int pulseSweep = (int)((ms / 12) % 360);
+            draw_canvas_arc(layer, arcX, arcY, arcR, pulseSweep, (pulseSweep + 60) % 360, mediaColor, 2);
+        }
+
+        // Nota musical ♪ estilizada no centro do anel
+        draw_canvas_disc(layer, arcX - 2, arcY + 2, 2, mediaColor);
+        draw_canvas_line(layer, arcX, arcY + 2, arcX, arcY - 3, mediaColor, 1);
+        draw_canvas_line(layer, arcX, arcY - 3, arcX + 2, arcY - 1, mediaColor, 1);
+
+        // 4. Texto em Marquee (rolagem suave) à direita
+        std::string disp_text = title;
+        if (!artist.empty() && artist != "Default Media Receiver") {
+            disp_text += " - " + artist;
+        }
+        if (disp_text.empty()) {
+            disp_text = "Musica no " + device;
+        }
+
+        std::string visible_text = disp_text;
+        if (disp_text.length() > 11) {
+            std::string pool = disp_text + "   ***   ";
+            int offset = (int)((ms / 280) % pool.length());
+            std::string rotated = pool.substr(offset) + pool.substr(0, offset);
+            visible_text = rotated.substr(0, 11);
+        }
+
+        int textX = bx + 27;
+        int textY = by + 3;
+        draw_canvas_text(layer, textX, textY, 82, 16, visible_text.c_str(), lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
+
+        // Notinha musical flutuante no ritmo da batida perto da sobrancelha/olho direito
+        int floatNoteX = 188 + (int)(sinf(ms * 0.004f) * 4.0f);
+        int floatNoteY = 28 - (int)fmodf(ms * 0.012f, 16.0f);
+        draw_canvas_disc(layer, floatNoteX - 2, floatNoteY + 2, 2, mediaColor);
+        draw_canvas_line(layer, floatNoteX, floatNoteY + 2, floatNoteX, floatNoteY - 4, mediaColor, 1);
+        draw_canvas_line(layer, floatNoteX, floatNoteY - 4, floatNoteX + 3, floatNoteY - 2, mediaColor, 1);
     } else if (numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;

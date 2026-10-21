@@ -670,6 +670,27 @@ void Application::InitializeProtocol() {
             } else {
                 ESP_LOGW(TAG, "Alert command requires status, message and emotion");
             }
+        } else if (strcmp(type->valuestring, "media") == 0) {
+            auto state = cJSON_GetObjectItem(root, "state");
+            bool is_playing = (state && cJSON_IsString(state) && strcmp(state->valuestring, "playing") == 0);
+            if (!is_playing) {
+                TamagotchiEngine::GetInstance().ClearMediaInfo();
+            } else {
+                auto title = cJSON_GetObjectItem(root, "title");
+                auto artist = cJSON_GetObjectItem(root, "artist");
+                auto device = cJSON_GetObjectItem(root, "device");
+                auto duration = cJSON_GetObjectItem(root, "duration");
+                auto position = cJSON_GetObjectItem(root, "position");
+
+                TamagotchiEngine::GetInstance().SetMediaInfo(
+                    true,
+                    (title && title->valuestring) ? title->valuestring : "",
+                    (artist && artist->valuestring) ? artist->valuestring : "",
+                    (device && device->valuestring) ? device->valuestring : "",
+                    (duration && cJSON_IsNumber(duration)) ? duration->valueint : 0,
+                    (position && cJSON_IsNumber(position)) ? position->valueint : 0
+                );
+            }
 #if CONFIG_RECEIVE_CUSTOM_MESSAGE
         } else if (strcmp(type->valuestring, "custom") == 0) {
             auto payload = cJSON_GetObjectItem(root, "payload");
