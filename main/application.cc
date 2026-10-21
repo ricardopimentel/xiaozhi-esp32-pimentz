@@ -732,6 +732,9 @@ void Application::Alert(const char* status, const char* message, const char* emo
 }
 
 void Application::DismissAlert() {
+    if (GetDeviceState() == kDeviceStateListening) {
+        SetDeviceState(kDeviceStateIdle);
+    }
     if (GetDeviceState() == kDeviceStateIdle) {
         auto display = Board::GetInstance().GetDisplay();
         display->SetStatus(Lang::Strings::STANDBY);

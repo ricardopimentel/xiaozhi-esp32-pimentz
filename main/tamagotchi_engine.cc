@@ -778,6 +778,9 @@ void TamagotchiEngine::AtivarAlarme(const std::string& label) {
     }
     
     auto& app = Application::GetInstance();
+    if (app.GetDeviceState() == kDeviceStateListening) {
+        app.SetDeviceState(kDeviceStateIdle);
+    }
     app.Alert("ALARME", "Pressione BOOT para parar", "alarm", Lang::Sounds::OGG_EXCLAMATION);
 }
 

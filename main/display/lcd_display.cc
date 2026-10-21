@@ -1890,13 +1890,13 @@ void LcdDisplay::DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, l
     if (!face_canvas_ || !layer) return;
 
     if (c == ':') {
-        int dotX = x + 2;
+        int dotX = x + 3;
         // Outline (preto)
-        draw_canvas_disc(layer, dotX, y + 3, 3, outlineColor);
-        draw_canvas_disc(layer, dotX, y + 9, 3, outlineColor);
+        draw_canvas_disc(layer, dotX, y + 3, 2, outlineColor);
+        draw_canvas_disc(layer, dotX, y + 9, 2, outlineColor);
         // Core (branco)
-        draw_canvas_disc(layer, dotX, y + 3, 2, fgColor);
-        draw_canvas_disc(layer, dotX, y + 9, 2, fgColor);
+        draw_canvas_disc(layer, dotX, y + 3, 1, fgColor);
+        draw_canvas_disc(layer, dotX, y + 9, 1, fgColor);
         return;
     }
 
@@ -1927,10 +1927,10 @@ void LcdDisplay::DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, l
         { x + 1, y + 6,  x + 6, y + 6  }  // 6: g (meio)
     };
 
-    // 1º passo: contorno grosso de 4px para alto contraste
+    // 1º passo: contorno nítido de 3px para alto contraste sem borrar
     for (int i = 0; i < 7; i++) {
         if (mask & (1 << i)) {
-            draw_canvas_line(layer, segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2, outlineColor, 4);
+            draw_canvas_line(layer, segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2, outlineColor, 3);
         }
     }
     // 2º passo: núcleo nítido de 2px
@@ -3767,30 +3767,59 @@ skip_default_cheeks: ;
         if (percent > 100) percent = 100;
         if (percent < 0) percent = 0;
 
-        int bw = 84;
-        int bh = 20;
+        // =====================================================================
+        // IDEIA 2: ANEL ORBITAL CIRCULAR (ARC GAUGE)
+        // =====================================================================
+        int bw = 88;
+        int bh = 22;
         int bx = 128 - (bw / 2);
         int by = 2;
         
-        // Fundo escuro do balão
-        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x161622), 5);
+        // 1. Fundo da cápsula com cantos perfeitamente arredondados (pílula moderna)
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 11);
+        // Borda sutil e discreta
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 11);
         
-        // Preenchimento de progresso amarelo (diminui proporcionalmente com o tempo)
-        int maxFillW = bw - 4;
-        int curFillW = (maxFillW * percent) / 100;
-        if (curFillW > 0) {
-            draw_canvas_rect(layer, bx + 2, by + 2, curFillW, bh - 4, lv_color_hex(0xFFD700), 3);
+        // 2. Cor dinâmica inteligente por urgência do timer
+        lv_color_t arcColor;
+        if (percent > 50) {
+            arcColor = lv_color_hex(0x10B981); // Verde esmeralda vivo
+        } else if (percent > 20) {
+            arcColor = lv_color_hex(0xF59E0B); // Âmbar vibrante
+        } else {
+            arcColor = lv_color_hex(0xEF4444); // Vermelho de urgência
         }
         
-        // Borda do balão e ponta inferior estilizada
-        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x3E4466), 2, 5);
-        draw_canvas_line(layer, 128, by + bh, 126, by + bh + 4, lv_color_hex(0x3E4466), 2);
+        // 3. Anel Orbital Circular (lado esquerdo da cápsula)
+        int arcX = bx + 14;
+        int arcY = by + 11;
+        int arcR = 7;
         
-        // Dígitos digitais no centro com alto contraste (branco com contorno preto)
-        int textX = bx + (bw - 47) / 2;
-        int textY = by + (bh - 13) / 2 + 1;
+        // Trilho de fundo do anel (360° cinza escuro)
+        draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, lv_color_hex(0x222634), 2);
+        
+        // Arco ativo de progresso (diminui em sentido horário a partir do topo - 12h)
+        if (percent >= 100) {
+            draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, arcColor, 2);
+        } else if (percent > 0) {
+            int sweep = (360 * percent) / 100;
+            if (sweep < 4) sweep = 4;
+            if (sweep >= 360) {
+                draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, arcColor, 2);
+            } else {
+                int endAngle = (270 + sweep) % 360;
+                draw_canvas_arc(layer, arcX, arcY, arcR, 270, endAngle, arcColor, 2);
+            }
+        }
+        
+        // Micro-ponto no centro do anel para toque tecnológico
+        draw_canvas_disc(layer, arcX, arcY, 1, arcColor);
+        
+        // 4. Dígitos digitais no lado direito (fundo sempre escuro, contraste perfeito)
+        int textX = bx + 28;
+        int textY = by + 5;
         for (int i = 0; i < 5; i++) {
-            DrawTimerSegmentChar(layer, textX + i * 10, textY, timeStr[i], lv_color_hex(0xFFFFFF), lv_color_hex(0x000000));
+            DrawTimerSegmentChar(layer, textX + i * 11, textY, timeStr[i], lv_color_hex(0xF0F6FC), lv_color_hex(0x000000));
         }
     } else if (numIcons > 0) {
         int iconW = 12;
