@@ -1904,11 +1904,11 @@ void LcdDisplay::DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, l
     if (c == ':') {
         int dotX = x + 3;
         // Outline (preto)
-        draw_canvas_disc(layer, dotX, y + 3, 2, outlineColor);
-        draw_canvas_disc(layer, dotX, y + 9, 2, outlineColor);
+        draw_canvas_disc(layer, dotX, y + 4, 2, outlineColor);
+        draw_canvas_disc(layer, dotX, y + 10, 2, outlineColor);
         // Core (branco)
-        draw_canvas_disc(layer, dotX, y + 3, 1, fgColor);
-        draw_canvas_disc(layer, dotX, y + 9, 1, fgColor);
+        draw_canvas_disc(layer, dotX, y + 4, 1, fgColor);
+        draw_canvas_disc(layer, dotX, y + 10, 1, fgColor);
         return;
     }
 
@@ -1927,16 +1927,16 @@ void LcdDisplay::DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, l
         default: return;
     }
 
-    // Coordenadas dos 7 segmentos (w=7, h=12)
+    // Coordenadas dos 7 segmentos ampliados (w=8, h=14)
     struct SegCoord { int x1, y1, x2, y2; };
     SegCoord segs[7] = {
-        { x + 1, y,      x + 6, y      }, // 0: a (topo)
-        { x + 6, y,      x + 6, y + 6  }, // 1: b (sup dir)
-        { x + 6, y + 6,  x + 6, y + 12 }, // 2: c (inf dir)
-        { x + 1, y + 12, x + 6, y + 12 }, // 3: d (base)
-        { x,     y + 6,  x,     y + 12 }, // 4: e (inf esq)
-        { x,     y,      x,     y + 6  }, // 5: f (sup esq)
-        { x + 1, y + 6,  x + 6, y + 6  }  // 6: g (meio)
+        { x + 1, y,      x + 7, y      }, // 0: a (topo)
+        { x + 7, y,      x + 7, y + 7  }, // 1: b (sup dir)
+        { x + 7, y + 7,  x + 7, y + 14 }, // 2: c (inf dir)
+        { x + 1, y + 14, x + 7, y + 14 }, // 3: d (base)
+        { x,     y + 7,  x,     y + 14 }, // 4: e (inf esq)
+        { x,     y,      x,     y + 7  }, // 5: f (sup esq)
+        { x + 1, y + 7,  x + 7, y + 7  }  // 6: g (meio)
     };
 
     // 1º passo: contorno nítido de 3px para alto contraste sem borrar
@@ -3798,17 +3798,17 @@ skip_default_cheeks: ;
         if (percent < 0) percent = 0;
 
         // =====================================================================
-        // IDEIA 2: ANEL ORBITAL CIRCULAR (ARC GAUGE)
+        // ANEL ORBITAL CIRCULAR EXPANDIDO (108 x 28 px)
         // =====================================================================
-        int bw = 88;
-        int bh = 22;
-        int bx = 128 - (bw / 2);
-        int by = 2;
+        int bw = 108;
+        int bh = 28;
+        int bx = 120 - (bw / 2);
+        int by = 4;
         
         // 1. Fundo da cápsula com cantos perfeitamente arredondados (pílula moderna)
-        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 11);
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
         // Borda sutil e discreta
-        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 11);
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
         
         // 2. Cor dinâmica inteligente por urgência do timer
         lv_color_t arcColor;
@@ -3821,9 +3821,9 @@ skip_default_cheeks: ;
         }
         
         // 3. Anel Orbital Circular (lado esquerdo da cápsula)
-        int arcX = bx + 14;
-        int arcY = by + 11;
-        int arcR = 7;
+        int arcX = bx + 16;
+        int arcY = by + 14;
+        int arcR = 8;
         
         // Trilho de fundo do anel (360° cinza escuro)
         draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, lv_color_hex(0x222634), 2);
@@ -3842,18 +3842,18 @@ skip_default_cheeks: ;
             }
         }
         
-        // Micro-ponto no centro do anel para toque tecnológico
-        draw_canvas_disc(layer, arcX, arcY, 1, arcColor);
+        // Ponto perfeitamente centralizado no núcleo da barra circular
+        draw_canvas_disc(layer, arcX, arcY, 2, arcColor);
         
-        // 4. Dígitos digitais no lado direito (fundo sempre escuro, contraste perfeito)
-        int textX = bx + 28;
-        int textY = by + 5;
+        // 4. Dígitos digitais perfeitamente centralizados no espaço restante à direita
+        int textX = bx + 38;
+        int textY = by + 7;
         for (int i = 0; i < 5; i++) {
-            DrawTimerSegmentChar(layer, textX + i * 11, textY, timeStr[i], lv_color_hex(0xF0F6FC), lv_color_hex(0x000000));
+            DrawTimerSegmentChar(layer, textX + i * 12, textY, timeStr[i], lv_color_hex(0xF0F6FC), lv_color_hex(0x000000));
         }
     } else if (mostrarMedia) {
         // =====================================================================
-        // MÚSICA HUD: ANEL ORBITAL CIRCULAR + MARQUEE (OPÇÃO 1)
+        // MÚSICA HUD: ANEL ORBITAL EXPANDIDO + MARQUEE (144 x 28 px)
         // =====================================================================
         std::string title = engine.GetMediaTitle();
         std::string artist = engine.GetMediaArtist();
@@ -3865,27 +3865,28 @@ skip_default_cheeks: ;
         if (percent > 100) percent = 100;
         if (percent < 0) percent = 0;
 
-        int bw = 114;
-        int bh = 22;
-        int bx = 128 - (bw / 2);
-        int by = 2;
+        int bw = 144;
+        int bh = 28;
+        int bx = 120 - (bw / 2);
+        int by = 4;
 
         // 1. Fundo da cápsula com cantos perfeitamente arredondados
-        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 11);
-        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 11);
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
 
-        // 2. Cor dinâmica pelo tipo de dispositivo (Google Home / Spotify = verde, TV = ciano)
+        // 2. Cor dinâmica pelo tipo de dispositivo (TV = Roxo Neon, Google Home = Verde Esmeralda)
+        bool isTv = (device.find("TV") != std::string::npos || device.find("tv") != std::string::npos);
         lv_color_t mediaColor;
-        if (device.find("TV") != std::string::npos || device.find("tv") != std::string::npos) {
-            mediaColor = lv_color_hex(0x00E5FF); // Ciano TV
+        if (isTv) {
+            mediaColor = lv_color_hex(0xA855F7); // Roxo Neon vibrante (TV)
         } else {
-            mediaColor = lv_color_hex(0x10B981); // Verde Google Home / Spotify
+            mediaColor = lv_color_hex(0x10B981); // Verde Esmeralda (Google Home / Spotify)
         }
 
         // 3. Anel Orbital Circular à esquerda
-        int arcX = bx + 14;
-        int arcY = by + 11;
-        int arcR = 7;
+        int arcX = bx + 16;
+        int arcY = by + 14;
+        int arcR = 8;
 
         // Trilho de fundo (360° cinza escuro)
         draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, lv_color_hex(0x222634), 2);
@@ -3908,12 +3909,22 @@ skip_default_cheeks: ;
             draw_canvas_arc(layer, arcX, arcY, arcR, pulseSweep, (pulseSweep + 60) % 360, mediaColor, 2);
         }
 
-        // Nota musical ♪ estilizada no centro do anel
-        draw_canvas_disc(layer, arcX - 2, arcY + 2, 2, mediaColor);
-        draw_canvas_line(layer, arcX, arcY + 2, arcX, arcY - 3, mediaColor, 1);
-        draw_canvas_line(layer, arcX, arcY - 3, arcX + 2, arcY - 1, mediaColor, 1);
+        // Ícone centralizado no miolo do anel: Play do YouTube (TV) ou Nota Musical (Google Home)
+        if (isTv) {
+            // Triângulo Play do YouTube (▶)
+            draw_canvas_line(layer, arcX - 2, arcY - 4, arcX - 2, arcY + 4, mediaColor, 2);
+            draw_canvas_line(layer, arcX - 2, arcY - 4, arcX + 4, arcY, mediaColor, 2);
+            draw_canvas_line(layer, arcX - 2, arcY + 4, arcX + 4, arcY, mediaColor, 2);
+            draw_canvas_line(layer, arcX, arcY - 2, arcX, arcY + 2, mediaColor, 2);
+            draw_canvas_disc(layer, arcX + 1, arcY, 1, mediaColor);
+        } else {
+            // Nota musical ♪ estilizada
+            draw_canvas_disc(layer, arcX - 2, arcY + 2, 2, mediaColor);
+            draw_canvas_line(layer, arcX, arcY + 2, arcX, arcY - 4, mediaColor, 1);
+            draw_canvas_line(layer, arcX, arcY - 4, arcX + 3, arcY - 2, mediaColor, 1);
+        }
 
-        // 4. Texto em Marquee (rolagem suave) à direita
+        // 4. Texto em Marquee (rolagem suave) à direita com altura confortável de 22px
         std::string disp_text = title;
         if (!artist.empty() && artist != "Default Media Receiver") {
             disp_text += " - " + artist;
@@ -3923,16 +3934,16 @@ skip_default_cheeks: ;
         }
 
         std::string visible_text = disp_text;
-        if (disp_text.length() > 11) {
+        if (disp_text.length() > 13) {
             std::string pool = disp_text + "   ***   ";
-            int offset = (int)((ms / 280) % pool.length());
+            int offset = (int)((ms / 260) % pool.length());
             std::string rotated = pool.substr(offset) + pool.substr(0, offset);
-            visible_text = rotated.substr(0, 11);
+            visible_text = rotated.substr(0, 13);
         }
 
-        int textX = bx + 27;
+        int textX = bx + 32;
         int textY = by + 3;
-        draw_canvas_text(layer, textX, textY, 82, 16, visible_text.c_str(), lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
+        draw_canvas_text(layer, textX, textY, 104, 22, visible_text.c_str(), lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
 
         // Notinha musical flutuante no ritmo da batida perto da sobrancelha/olho direito
         int floatNoteX = 188 + (int)(sinf(ms * 0.004f) * 4.0f);
