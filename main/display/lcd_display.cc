@@ -35,6 +35,9 @@ static void draw_canvas_rect_empty(lv_layer_t * layer, int x, int y, int w, int 
     dsc.border_opa = LV_OPA_COVER;
     dsc.radius = radius;
     lv_area_t area = {x, y, x + w, y + h};
+    lv_draw_rect(layer, &dsc, &area);
+}
+
 LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 
 static void draw_canvas_text(lv_layer_t * layer, int x, int y, int w, int h, const char * text, lv_color_t color, const lv_font_t * font = nullptr) {
