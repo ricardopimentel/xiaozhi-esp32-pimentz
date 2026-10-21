@@ -813,34 +813,69 @@ uint32_t TamagotchiEngine::GetTimerRemainingMs() const {
     return timer_duration_ms_ - elapsed;
 }
 
+void TamagotchiEngine::SetMediaList(const std::vector<TamagotchiMediaItem>& items) {
+    media_items_ = items;
+    uint64_t now_ms = esp_timer_get_time() / 1000;
+    for (auto& it : media_items_) {
+        it.last_update_ms = now_ms;
+    }
+    ESP_LOGI("TamagotchiEngine", "SetMediaList: count=%zu", media_items_.size());
+}
+
 void TamagotchiEngine::SetMediaInfo(bool active, const std::string& title, const std::string& artist, const std::string& device, int duration, int position) {
-    media_active_ = active;
-    media_title_ = title;
-    media_artist_ = artist;
-    media_device_ = device;
-    media_duration_ = duration;
-    media_position_ = position;
-    media_last_update_ms_ = esp_timer_get_time() / 1000;
+    media_items_.clear();
+    if (active) {
+        TamagotchiMediaItem it;
+        it.title = title;
+        it.artist = artist;
+        it.device = device;
+        it.duration = duration;
+        it.position = position;
+        it.last_update_ms = esp_timer_get_time() / 1000;
+        media_items_.push_back(it);
+    }
     ESP_LOGI("TamagotchiEngine", "Media info: active=%d, title='%s', artist='%s', dev='%s', dur=%d, pos=%d",
              active, title.c_str(), artist.c_str(), device.c_str(), duration, position);
 }
 
 void TamagotchiEngine::ClearMediaInfo() {
-    media_active_ = false;
-    media_title_.clear();
-    media_artist_.clear();
-    media_device_.clear();
-    media_duration_ = 0;
-    media_position_ = 0;
+    media_items_.clear();
 }
 
-int TamagotchiEngine::GetMediaPosition() const {
-    if (!media_active_) return media_position_;
+const TamagotchiMediaItem* TamagotchiEngine::GetMediaItem(size_t index) const {
+    if (index < media_items_.size()) {
+        return &media_items_[index];
+    }
+    return nullptr;
+}
+
+const std::string& TamagotchiEngine::GetMediaTitle() const {
+    static const std::string s_empty = "";
+    return media_items_.empty() ? s_empty : media_items_[0].title;
+}
+
+const std::string& TamagotchiEngine::GetMediaArtist() const {
+    static const std::string s_empty = "";
+    return media_items_.empty() ? s_empty : media_items_[0].artist;
+}
+
+const std::string& TamagotchiEngine::GetMediaDevice() const {
+    static const std::string s_empty = "";
+    return media_items_.empty() ? s_empty : media_items_[0].device;
+}
+
+int TamagotchiEngine::GetMediaDuration() const {
+    return media_items_.empty() ? 0 : media_items_[0].duration;
+}
+
+int TamagotchiEngine::GetMediaPosition(size_t index) const {
+    if (index >= media_items_.size()) return 0;
+    const auto& it = media_items_[index];
     uint64_t now_ms = esp_timer_get_time() / 1000;
-    int elapsed_sec = (int)((now_ms - media_last_update_ms_) / 1000);
-    int current_pos = media_position_ + elapsed_sec;
-    if (media_duration_ > 0 && current_pos > media_duration_) {
-        return media_duration_;
+    int elapsed_sec = (int)((now_ms - it.last_update_ms) / 1000);
+    int current_pos = it.position + elapsed_sec;
+    if (it.duration > 0 && current_pos > it.duration) {
+        return it.duration;
     }
     return current_pos;
 }

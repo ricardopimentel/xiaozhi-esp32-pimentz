@@ -3805,22 +3805,46 @@ skip_default_cheeks: ;
     }
  
     // =========================================================================
-    // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE) OU TIMER
+    // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE), TIMER OU MÚSICA
     // =========================================================================
-    // Se ambos estiverem ativos, alterna em carrossel a cada 4 segundos
-    bool mostrarTimer = timerAtivo;
-    bool mostrarMedia = mediaAtiva;
-    if (timerAtivo && mediaAtiva) {
-        uint32_t rem = engine.GetTimerRemainingMs() / 1000;
-        if (rem <= 30) {
+    // Suporte a carrossel dinâmico (Timer, Música 1, Música 2, etc.)
+    bool timerAtivo = engine.IsTimerActive();
+    bool mediaAtiva = engine.IsMediaActive();
+    size_t mediaCount = engine.GetMediaCount();
+
+    bool mostrarTimer = false;
+    bool mostrarMedia = false;
+    int activeMediaIdx = 0;
+
+    int totalCarouselSlots = (timerAtivo ? 1 : 0) + (int)mediaCount;
+
+    if (totalCarouselSlots > 0) {
+        if (timerAtivo && (engine.GetTimerRemainingMs() / 1000) <= 30) {
             // Últimos 30s do timer: prioridade total para o alarme
             mostrarTimer = true;
             mostrarMedia = false;
+        } else if (totalCarouselSlots == 1) {
+            if (timerAtivo) {
+                mostrarTimer = true;
+            } else {
+                mostrarMedia = true;
+                activeMediaIdx = 0;
+            }
         } else {
-            // Alterna a cada 4s
-            bool cicloTimer = ((ms / 4000) % 2 == 0);
-            mostrarTimer = cicloTimer;
-            mostrarMedia = !cicloTimer;
+            // Alterna a cada 4 segundos entre os slots disponíveis
+            // Ex: Timer + TV + Google Home -> 0: Timer, 1: TV, 2: Google Home
+            int currentSlot = (int)((ms / 4000) % totalCarouselSlots);
+            if (timerAtivo && currentSlot == 0) {
+                mostrarTimer = true;
+                mostrarMedia = false;
+            } else {
+                mostrarTimer = false;
+                mostrarMedia = true;
+                activeMediaIdx = currentSlot - (timerAtivo ? 1 : 0);
+                if (activeMediaIdx < 0 || activeMediaIdx >= (int)mediaCount) {
+                    activeMediaIdx = 0;
+                }
+            }
         }
     }
 
@@ -3893,13 +3917,14 @@ skip_default_cheeks: ;
         }
     } else if (mostrarMedia) {
         // =====================================================================
-        // MÚSICA HUD: ANEL ORBITAL EXPANDIDO + MARQUEE (144 x 28 px)
+        // MÚSICA HUD: ANEL ORBITAL EXPANDIDO + MARQUEE (216 x 28 px)
         // =====================================================================
-        const std::string& title = engine.GetMediaTitle();
-        const std::string& artist = engine.GetMediaArtist();
-        const std::string& device = engine.GetMediaDevice();
-        int dur = engine.GetMediaDuration();
-        int pos = engine.GetMediaPosition();
+        const TamagotchiEngine::TamagotchiMediaItem* curMedia = engine.GetMediaItem((size_t)activeMediaIdx);
+        std::string title = curMedia ? curMedia->title : engine.GetMediaTitle();
+        std::string artist = curMedia ? curMedia->artist : engine.GetMediaArtist();
+        std::string device = curMedia ? curMedia->device : engine.GetMediaDevice();
+        int dur = curMedia ? curMedia->duration : engine.GetMediaDuration();
+        int pos = engine.GetMediaPosition((size_t)activeMediaIdx);
 
         int percent = (dur > 0) ? (pos * 100) / dur : 0;
         if (percent > 100) percent = 100;

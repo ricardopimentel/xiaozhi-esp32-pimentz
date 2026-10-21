@@ -84,15 +84,27 @@ public:
     void DesativarAlarme();
     uint64_t GetUltimoDesarmeAlarme() const { return ultimo_desarme_alarme_; }
 
+struct TamagotchiMediaItem {
+    std::string title;
+    std::string artist;
+    std::string device;
+    int duration = 0;
+    int position = 0;
+    uint64_t last_update_ms = 0;
+};
+
     // Media Player (TV & Google Home)
-    bool IsMediaActive() const { return media_active_; }
+    bool IsMediaActive() const { return !media_items_.empty(); }
+    size_t GetMediaCount() const { return media_items_.size(); }
+    const TamagotchiMediaItem* GetMediaItem(size_t index) const;
+    void SetMediaList(const std::vector<TamagotchiMediaItem>& items);
     void SetMediaInfo(bool active, const std::string& title, const std::string& artist, const std::string& device, int duration, int position);
     void ClearMediaInfo();
-    const std::string& GetMediaTitle() const { return media_title_; }
-    const std::string& GetMediaArtist() const { return media_artist_; }
-    const std::string& GetMediaDevice() const { return media_device_; }
-    int GetMediaDuration() const { return media_duration_; }
-    int GetMediaPosition() const;
+    const std::string& GetMediaTitle() const;
+    const std::string& GetMediaArtist() const;
+    const std::string& GetMediaDevice() const;
+    int GetMediaDuration() const;
+    int GetMediaPosition(size_t index = 0) const;
     
     std::string GetCurrentEmotion() const;
     std::string GetPersonalidadeString() const;
@@ -186,13 +198,7 @@ private:
     int volume_anterior_ = 0;
 
     // Media Player (TV & Google Home)
-    bool media_active_ = false;
-    std::string media_title_ = "";
-    std::string media_artist_ = "";
-    std::string media_device_ = "";
-    int media_duration_ = 0;
-    int media_position_ = 0;
-    uint64_t media_last_update_ms_ = 0;
+    std::vector<TamagotchiMediaItem> media_items_;
 };
 
 #endif // TAMAGOTCHI_ENGINE_H

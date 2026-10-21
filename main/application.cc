@@ -673,8 +673,30 @@ void Application::InitializeProtocol() {
         } else if (strcmp(type->valuestring, "media") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
             bool is_playing = (state && cJSON_IsString(state) && strcmp(state->valuestring, "playing") == 0);
+            auto players = cJSON_GetObjectItem(root, "players");
             if (!is_playing) {
                 TamagotchiEngine::GetInstance().ClearMediaInfo();
+            } else if (players && cJSON_IsArray(players) && cJSON_GetArraySize(players) > 0) {
+                std::vector<TamagotchiEngine::TamagotchiMediaItem> items;
+                int count = cJSON_GetArraySize(players);
+                for (int i = 0; i < count; i++) {
+                    cJSON* p = cJSON_GetArrayItem(players, i);
+                    if (p && cJSON_IsObject(p)) {
+                        TamagotchiEngine::TamagotchiMediaItem item;
+                        auto title = cJSON_GetObjectItem(p, "title");
+                        auto artist = cJSON_GetObjectItem(p, "artist");
+                        auto device = cJSON_GetObjectItem(p, "device");
+                        auto duration = cJSON_GetObjectItem(p, "duration");
+                        auto position = cJSON_GetObjectItem(p, "position");
+                        item.title = (title && title->valuestring) ? title->valuestring : "";
+                        item.artist = (artist && artist->valuestring) ? artist->valuestring : "";
+                        item.device = (device && device->valuestring) ? device->valuestring : "";
+                        item.duration = (duration && cJSON_IsNumber(duration)) ? duration->valueint : 0;
+                        item.position = (position && cJSON_IsNumber(position)) ? position->valueint : 0;
+                        items.push_back(item);
+                    }
+                }
+                TamagotchiEngine::GetInstance().SetMediaList(items);
             } else {
                 auto title = cJSON_GetObjectItem(root, "title");
                 auto artist = cJSON_GetObjectItem(root, "artist");
