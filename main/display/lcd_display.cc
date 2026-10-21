@@ -3914,11 +3914,11 @@ skip_default_cheeks: ;
         draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
         draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
 
-        // 2. Cor dinâmica pelo tipo de dispositivo (TV = Roxo Neon, Google Home = Verde Esmeralda)
+        // 2. Cor dinâmica pelo tipo de dispositivo (TV = Vermelho YouTube, Google Home = Verde Esmeralda)
         bool isTv = (device.find("TV") != std::string::npos || device.find("tv") != std::string::npos);
         lv_color_t mediaColor;
         if (isTv) {
-            mediaColor = lv_color_hex(0xA855F7); // Roxo Neon vibrante (TV)
+            mediaColor = lv_color_hex(0xFF334B); // Vermelho vibrante YouTube (TV)
         } else {
             mediaColor = lv_color_hex(0x10B981); // Verde Esmeralda (Google Home / Spotify)
         }
@@ -4016,8 +4016,15 @@ skip_default_cheeks: ;
 
         int textX = bx + 32;
         int textY = by + 4;
-        int textW = bw - 44; // 172px de largura útil: cabe 14 caracteres com folga total em linha única
+        int textW = bw - 50; // 166px de largura útil: cabe 14 caracteres com folga total em linha única
         draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
+
+        // Notinha musical flutuante no ritmo da batida na lateral direita da cápsula
+        int floatNoteX = bx + bw - 11 + (int)(sinf(ms * 0.004f) * 2.5f);
+        int floatNoteY = by + 13 - (int)fmodf(ms * 0.010f, 10.0f);
+        draw_canvas_disc(layer, floatNoteX - 2, floatNoteY + 2, 2, mediaColor);
+        draw_canvas_line(layer, floatNoteX, floatNoteY + 2, floatNoteX, floatNoteY - 4, mediaColor, 1);
+        draw_canvas_line(layer, floatNoteX, floatNoteY - 4, floatNoteX + 3, floatNoteY - 2, mediaColor, 1);
     } else if (numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;
