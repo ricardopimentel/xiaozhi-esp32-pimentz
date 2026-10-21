@@ -88,9 +88,9 @@ public:
     bool IsMediaActive() const { return media_active_; }
     void SetMediaInfo(bool active, const std::string& title, const std::string& artist, const std::string& device, int duration, int position);
     void ClearMediaInfo();
-    std::string GetMediaTitle() const { return media_title_; }
-    std::string GetMediaArtist() const { return media_artist_; }
-    std::string GetMediaDevice() const { return media_device_; }
+    const std::string& GetMediaTitle() const { return media_title_; }
+    const std::string& GetMediaArtist() const { return media_artist_; }
+    const std::string& GetMediaDevice() const { return media_device_; }
     int GetMediaDuration() const { return media_duration_; }
     int GetMediaPosition() const;
     

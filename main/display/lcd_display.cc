@@ -38,6 +38,46 @@ static void draw_canvas_rect_empty(lv_layer_t * layer, int x, int y, int w, int 
     lv_draw_rect(layer, &dsc, &area);
 }
 
+static void SanitizeToAscii(const char* src, char* dst, size_t max_len) {
+    if (!src || !dst || max_len == 0) return;
+    size_t d = 0;
+    for (size_t s = 0; src[s] != '\0' && d + 1 < max_len; s++) {
+        unsigned char c = (unsigned char)src[s];
+        if (c < 0x80) {
+            if (c >= 0x20 && c <= 0x7E) {
+                dst[d++] = (char)c;
+            } else if (c == '\t') {
+                dst[d++] = ' ';
+            }
+        } else if (c == 0xC3 && src[s + 1] != '\0') {
+            s++;
+            unsigned char c2 = (unsigned char)src[s];
+            char mapped = ' ';
+            if (c2 >= 0x80 && c2 <= 0x85) mapped = 'A';
+            else if (c2 >= 0xA0 && c2 <= 0xA5) mapped = 'a';
+            else if (c2 == 0x87) mapped = 'C';
+            else if (c2 == 0xA7) mapped = 'c';
+            else if (c2 >= 0x88 && c2 <= 0x8B) mapped = 'E';
+            else if (c2 >= 0xA8 && c2 <= 0xAB) mapped = 'e';
+            else if (c2 >= 0x8C && c2 <= 0x8F) mapped = 'I';
+            else if (c2 >= 0xAC && c2 <= 0xAF) mapped = 'i';
+            else if (c2 >= 0x92 && c2 <= 0x96) mapped = 'O';
+            else if (c2 >= 0xB2 && c2 <= 0xB6) mapped = 'o';
+            else if (c2 >= 0x99 && c2 <= 0x9C) mapped = 'U';
+            else if (c2 >= 0xB9 && c2 <= 0xBC) mapped = 'u';
+            if (mapped != ' ') dst[d++] = mapped;
+        } else if (c == 0xE2 && (unsigned char)src[s + 1] == 0x80) {
+            s += 2;
+            dst[d++] = '-';
+        } else {
+            while ((src[s + 1] & 0xC0) == 0x80) {
+                s++;
+            }
+        }
+    }
+    dst[d] = '\0';
+}
+
 LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 
 static void draw_canvas_text(lv_layer_t * layer, int x, int y, int w, int h, const char * text, lv_color_t color, const lv_font_t * font = nullptr) {
@@ -3855,9 +3895,9 @@ skip_default_cheeks: ;
         // =====================================================================
         // MÚSICA HUD: ANEL ORBITAL EXPANDIDO + MARQUEE (144 x 28 px)
         // =====================================================================
-        std::string title = engine.GetMediaTitle();
-        std::string artist = engine.GetMediaArtist();
-        std::string device = engine.GetMediaDevice();
+        const std::string& title = engine.GetMediaTitle();
+        const std::string& artist = engine.GetMediaArtist();
+        const std::string& device = engine.GetMediaDevice();
         int dur = engine.GetMediaDuration();
         int pos = engine.GetMediaPosition();
 
@@ -3924,26 +3964,58 @@ skip_default_cheeks: ;
             draw_canvas_line(layer, arcX, arcY - 4, arcX + 3, arcY - 2, mediaColor, 1);
         }
 
-        // 4. Texto em Marquee (rolagem suave) à direita com altura confortável de 22px
-        std::string disp_text = title;
-        if (!artist.empty() && artist != "Default Media Receiver") {
-            disp_text += " - " + artist;
-        }
-        if (disp_text.empty()) {
-            disp_text = "Musica no " + device;
+        // 4. Texto em Marquee estático (zero alocações de heap, buffer com tempo de vida permanente)
+        static char s_cached_raw[128] = {0};
+        static char s_cached_clean[128] = {0};
+        static char s_marquee_buf[20] = {0};
+        static int s_prev_offset = -1;
+
+        // Monta texto formatado em buffer local de stack (sem heap malloc)
+        char raw_buf[128];
+        if (title.empty()) {
+            snprintf(raw_buf, sizeof(raw_buf), "Musica no %s", device.empty() ? "Dispositivo" : device.c_str());
+        } else if (!artist.empty() && artist != "Default Media Receiver") {
+            snprintf(raw_buf, sizeof(raw_buf), "%s - %s", title.c_str(), artist.c_str());
+        } else {
+            snprintf(raw_buf, sizeof(raw_buf), "%s", title.c_str());
         }
 
-        std::string visible_text = disp_text;
-        if (disp_text.length() > 13) {
-            std::string pool = disp_text + "   ***   ";
-            int offset = (int)((ms / 260) % pool.length());
-            std::string rotated = pool.substr(offset) + pool.substr(0, offset);
-            visible_text = rotated.substr(0, 13);
+        // Se o título ou dispositivo mudou, sanitiza para ASCII limpo uma única vez
+        if (strcmp(raw_buf, s_cached_raw) != 0) {
+            strncpy(s_cached_raw, raw_buf, sizeof(s_cached_raw) - 1);
+            s_cached_raw[sizeof(s_cached_raw) - 1] = '\0';
+            SanitizeToAscii(s_cached_raw, s_cached_clean, sizeof(s_cached_clean));
+            s_prev_offset = -1;
+        }
+
+        size_t clean_len = strlen(s_cached_clean);
+        if (clean_len == 0) {
+            s_marquee_buf[0] = '\0';
+        } else if (clean_len <= 13) {
+            strncpy(s_marquee_buf, s_cached_clean, 13);
+            s_marquee_buf[13] = '\0';
+        } else {
+            // Rolagem suave a cada 260ms através do buffer estático
+            int pool_len = (int)clean_len + 7; // texto + "   *   "
+            int offset = (int)((ms / 260) % pool_len);
+            if (offset != s_prev_offset) {
+                s_prev_offset = offset;
+                const char* sep = "   *   ";
+                for (int i = 0; i < 13; i++) {
+                    int p = (offset + i) % pool_len;
+                    if (p < (int)clean_len) {
+                        s_marquee_buf[i] = s_cached_clean[p];
+                    } else {
+                        s_marquee_buf[i] = sep[p - clean_len];
+                    }
+                }
+                s_marquee_buf[13] = '\0';
+            }
         }
 
         int textX = bx + 32;
         int textY = by + 3;
-        draw_canvas_text(layer, textX, textY, 104, 22, visible_text.c_str(), lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
+        draw_canvas_text(layer, textX, textY, 104, 22, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
 
         // Notinha musical flutuante no ritmo da batida perto da sobrancelha/olho direito
         int floatNoteX = 188 + (int)(sinf(ms * 0.004f) * 4.0f);
