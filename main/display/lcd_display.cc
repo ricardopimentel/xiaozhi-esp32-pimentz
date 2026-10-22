@@ -80,13 +80,14 @@ static void SanitizeToAscii(const char* src, char* dst, size_t max_len) {
 
 LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 
-static void draw_canvas_text(lv_layer_t * layer, int x, int y, int w, int h, const char * text, lv_color_t color, const lv_font_t * font = nullptr) {
+static void draw_canvas_text(lv_layer_t * layer, int x, int y, int w, int h, const char * text, lv_color_t color, const lv_font_t * font = nullptr, lv_text_align_t align = LV_TEXT_ALIGN_LEFT) {
     if (!text || text[0] == '\0' || !layer) return;
     lv_draw_label_dsc_t dsc;
     lv_draw_label_dsc_init(&dsc);
     dsc.color = color;
     dsc.font = font ? font : &BUILTIN_TEXT_FONT;
     dsc.text = text;
+    dsc.align = align;
     lv_area_t area = {x, y, x + w, y + h};
     lv_draw_label(layer, &dsc, &area);
 }
@@ -3864,7 +3865,7 @@ skip_default_cheeks: ;
         // =====================================================================
         int bw = 108;
         int bh = 28;
-        int bx = 120 - (bw / 2);
+        int bx = 128 - (bw / 2);
         int by = 4;
         
         // 1. Fundo da cápsula com cantos perfeitamente arredondados (pílula moderna)
@@ -3930,10 +3931,10 @@ skip_default_cheeks: ;
 
         int bw = 216;
         int bh = 28;
-        int bx = 120 - (bw / 2);
+        int bx = 128 - (bw / 2);
         int by = 4;
 
-        // 1. Fundo da cápsula com cantos perfeitamente arredondados (ocupa toda a horizontal)
+        // 1. Fundo da cápsula com cantos perfeitamente arredondados (perfeitamente centralizado no canvas 256px)
         draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
         draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
 
@@ -4037,17 +4038,33 @@ skip_default_cheeks: ;
             }
         }
 
-        int textX = bx + 32;
+        // Texto perfeitamente centralizado no espaço útil entre o anel e as notinhas flutuantes
+        int textX = bx + 30;
         int textY = by + 4;
-        int textW = bw - 50; // 166px de largura útil: cabe 14 caracteres com folga total em linha única
-        draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT);
+        int textW = bw - 64; // Área central de 152px
+        draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
-        // Notinha musical flutuante no ritmo da batida na lateral direita da cápsula
-        int floatNoteX = bx + bw - 11 + (int)(sinf(ms * 0.004f) * 2.5f);
-        int floatNoteY = by + 13 - (int)fmodf(ms * 0.010f, 10.0f);
-        draw_canvas_disc(layer, floatNoteX - 2, floatNoteY + 2, 2, mediaColor);
-        draw_canvas_line(layer, floatNoteX, floatNoteY + 2, floatNoteX, floatNoteY - 4, mediaColor, 1);
-        draw_canvas_line(layer, floatNoteX, floatNoteY - 4, floatNoteX + 3, floatNoteY - 2, mediaColor, 1);
+        // 5. Notinhas musicais flutuantes no ritmo da batida na lateral direita da cápsula
+        // Notinha 1 (Mais à direita, nota principal)
+        int fn1X = bx + bw - 11 + (int)(sinf(ms * 0.005f) * 2.0f);
+        int fn1Y = by + 13 - (int)fmodf(ms * 0.010f, 10.0f);
+        draw_canvas_disc(layer, fn1X - 2, fn1Y + 2, 2, mediaColor);
+        draw_canvas_line(layer, fn1X, fn1Y + 2, fn1X, fn1Y - 4, mediaColor, 1);
+        draw_canvas_line(layer, fn1X, fn1Y - 4, fn1X + 3, fn1Y - 2, mediaColor, 1);
+
+        // Notinha 2 (Meio, nota intermediária com ritmo defasado)
+        int fn2X = bx + bw - 20 + (int)(cosf((ms + 300) * 0.006f) * 1.8f);
+        int fn2Y = by + 15 - (int)fmodf((ms + 350) * 0.009f, 9.0f);
+        draw_canvas_disc(layer, fn2X - 2, fn2Y + 2, 2, mediaColor);
+        draw_canvas_line(layer, fn2X, fn2Y + 2, fn2X, fn2Y - 3, mediaColor, 1);
+        draw_canvas_line(layer, fn2X, fn2Y - 3, fn2X + 3, fn2Y - 1, mediaColor, 1);
+
+        // Notinha 3 (Mais à esquerda do trio, brotando com charme)
+        int fn3X = bx + bw - 28 + (int)(sinf((ms + 600) * 0.007f) * 1.5f);
+        int fn3Y = by + 16 - (int)fmodf((ms + 700) * 0.008f, 8.0f);
+        draw_canvas_disc(layer, fn3X - 1, fn3Y + 2, 1, mediaColor);
+        draw_canvas_line(layer, fn3X, fn3Y + 2, fn3X, fn3Y - 2, mediaColor, 1);
+        draw_canvas_line(layer, fn3X, fn3Y - 2, fn3X + 2, fn3Y - 1, mediaColor, 1);
     } else if (numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;
