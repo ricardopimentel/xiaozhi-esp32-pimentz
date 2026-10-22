@@ -3929,7 +3929,7 @@ skip_default_cheeks: ;
         if (percent > 100) percent = 100;
         if (percent < 0) percent = 0;
 
-        int bw = 216;
+        int bw = 236;
         int bh = 28;
         int bx = 128 - (bw / 2);
         int by = 4;
@@ -3991,7 +3991,7 @@ skip_default_cheeks: ;
         // 4. Texto em Marquee estático em linha única na largura expandida
         static char s_cached_raw[128] = {0};
         static char s_cached_clean[128] = {0};
-        static char s_marquee_buf[24] = {0};
+        static char s_marquee_buf[16] = {0};
         static int s_prev_offset = -1;
 
         // Monta texto formatado em buffer local de stack (sem heap malloc)
@@ -4012,17 +4012,20 @@ skip_default_cheeks: ;
             s_prev_offset = -1;
         }
 
-        const int kMaxVisibleChars = 14;
+        const int kMaxVisibleChars = 9;
         size_t clean_len = strlen(s_cached_clean);
+        bool has_space = (strchr(s_cached_clean, ' ') != nullptr);
+        bool is_short_static = (clean_len <= 7) || (!has_space && clean_len <= 8);
+
         if (clean_len == 0) {
             s_marquee_buf[0] = '\0';
-        } else if (clean_len <= kMaxVisibleChars) {
+        } else if (is_short_static) {
             strncpy(s_marquee_buf, s_cached_clean, kMaxVisibleChars);
             s_marquee_buf[kMaxVisibleChars] = '\0';
         } else {
-            // Rolagem suave a cada 260ms através do buffer estático
+            // Rolagem suave a cada 240ms através do buffer estático
             int pool_len = (int)clean_len + 6; // texto + "  *  "
-            int offset = (int)((ms / 260) % pool_len);
+            int offset = (int)((ms / 240) % pool_len);
             if (offset != s_prev_offset) {
                 s_prev_offset = offset;
                 const char* sep = "  *  ";
@@ -4041,7 +4044,7 @@ skip_default_cheeks: ;
         // Texto perfeitamente centralizado no espaço útil entre o anel e as notinhas flutuantes
         int textX = bx + 30;
         int textY = by + 4;
-        int textW = bw - 64; // Área central de 152px
+        int textW = bw - 64; // Área central de 172px: cabe 9 caracteres com folga total em linha única
         draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
         // 5. Notinhas musicais flutuantes no ritmo da batida na lateral direita da cápsula
