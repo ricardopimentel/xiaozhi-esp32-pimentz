@@ -2227,13 +2227,14 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     int limiarHUD = (pers == PERSONALIDADE_SENSIVEL) ? 50 : 30;
     bool timerAtivo = engine.IsTimerActive();
     bool mediaAtiva = engine.IsMediaActive();
-    bool precisaComida = !timerAtivo && !mediaAtiva && (fome <= limiarHUD);
-    bool precisaBrincar = !timerAtivo && !mediaAtiva && (diversao <= limiarHUD);
-    bool precisaSaude = !timerAtivo && !mediaAtiva && (saude <= limiarHUD || estaDoente);
+    bool precisaComida = (fome <= limiarHUD);
+    bool precisaBrincar = (diversao <= limiarHUD);
+    bool precisaSaude = (saude <= limiarHUD || estaDoente);
     int numIcons = 0;
     if (precisaComida) numIcons++;
     if (precisaBrincar) numIcons++;
     if (precisaSaude) numIcons++;
+    bool petStatusAtivo = (numIcons > 0);
 
     uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
     std::string emotion = engine.GetCurrentEmotion();
@@ -3808,40 +3809,52 @@ skip_default_cheeks: ;
     // =========================================================================
     // 7. BALÃO MODERNO HUD DE NECESSIDADES (FOME, BRINCAR, SAÚDE), TIMER OU MÚSICA
     // =========================================================================
-    // Suporte a carrossel dinâmico (Timer, Música 1, Música 2, etc.)
+    // Suporte a carrossel dinâmico (Timer, Mídias e Status do Pet a cada 10s)
     size_t mediaCount = engine.GetMediaCount();
 
     bool mostrarTimer = false;
     bool mostrarMedia = false;
+    bool mostrarPetStatus = false;
     int activeMediaIdx = 0;
 
-    int totalCarouselSlots = (timerAtivo ? 1 : 0) + (int)mediaCount;
+    int totalCarouselSlots = (timerAtivo ? 1 : 0) + (int)mediaCount + (petStatusAtivo ? 1 : 0);
 
     if (totalCarouselSlots > 0) {
         if (timerAtivo && (engine.GetTimerRemainingMs() / 1000) <= 30) {
             // Últimos 30s do timer: prioridade total para o alarme
             mostrarTimer = true;
             mostrarMedia = false;
+            mostrarPetStatus = false;
         } else if (totalCarouselSlots == 1) {
             if (timerAtivo) {
                 mostrarTimer = true;
-            } else {
+            } else if ((int)mediaCount > 0) {
                 mostrarMedia = true;
                 activeMediaIdx = 0;
+            } else if (petStatusAtivo) {
+                mostrarPetStatus = true;
             }
         } else {
             // Alterna a cada 10 segundos entre os slots disponíveis
-            // Ex: Timer + TV + Google Home -> 0: Timer, 1: TV, 2: Google Home
             int currentSlot = (int)((ms / 10000) % totalCarouselSlots);
-            if (timerAtivo && currentSlot == 0) {
-                mostrarTimer = true;
-                mostrarMedia = false;
-            } else {
-                mostrarTimer = false;
-                mostrarMedia = true;
-                activeMediaIdx = currentSlot - (timerAtivo ? 1 : 0);
-                if (activeMediaIdx < 0 || activeMediaIdx >= (int)mediaCount) {
-                    activeMediaIdx = 0;
+            int slotIdx = 0;
+
+            if (timerAtivo) {
+                if (currentSlot == slotIdx) {
+                    mostrarTimer = true;
+                }
+                slotIdx++;
+            }
+
+            if (!mostrarTimer) {
+                if ((int)mediaCount > 0 && currentSlot < (slotIdx + (int)mediaCount)) {
+                    mostrarMedia = true;
+                    activeMediaIdx = currentSlot - slotIdx;
+                    if (activeMediaIdx < 0 || activeMediaIdx >= (int)mediaCount) {
+                        activeMediaIdx = 0;
+                    }
+                } else if (petStatusAtivo) {
+                    mostrarPetStatus = true;
                 }
             }
         }
@@ -3938,13 +3951,13 @@ skip_default_cheeks: ;
         draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
         draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
 
-        // 2. Cor dinâmica pelo tipo de dispositivo (TV = Vermelho YouTube, Google Home = Verde Esmeralda)
+        // 2. Cor dinâmica pelo tipo de dispositivo (TV = #FF0000, Google Home = #a207f5)
         bool isTv = (device.find("TV") != std::string::npos || device.find("tv") != std::string::npos);
         lv_color_t mediaColor;
         if (isTv) {
-            mediaColor = lv_color_hex(0xFF334B); // Vermelho vibrante YouTube (TV)
+            mediaColor = lv_color_hex(0xFF0000); // Vermelho puro (#FF0000)
         } else {
-            mediaColor = lv_color_hex(0x10B981); // Verde Esmeralda (Google Home / Spotify)
+            mediaColor = lv_color_hex(0xA207F5); // Roxo/Violeta vibrante (#a207f5)
         }
 
         // 3. Anel Orbital Circular à esquerda
@@ -4068,7 +4081,7 @@ skip_default_cheeks: ;
         draw_canvas_disc(layer, fn3X - 1, fn3Y + 2, 1, mediaColor);
         draw_canvas_line(layer, fn3X, fn3Y + 2, fn3X, fn3Y - 2, mediaColor, 1);
         draw_canvas_line(layer, fn3X, fn3Y - 2, fn3X + 2, fn3Y - 1, mediaColor, 1);
-    } else if (numIcons > 0) {
+    } else if (mostrarPetStatus && numIcons > 0) {
         int iconW = 12;
         int iconGap = 4;
         int totalW = (numIcons * iconW) + ((numIcons - 1) * iconGap);
