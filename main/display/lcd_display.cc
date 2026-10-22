@@ -3830,9 +3830,9 @@ skip_default_cheeks: ;
                 activeMediaIdx = 0;
             }
         } else {
-            // Alterna a cada 4 segundos entre os slots disponíveis
+            // Alterna a cada 10 segundos entre os slots disponíveis
             // Ex: Timer + TV + Google Home -> 0: Timer, 1: TV, 2: Google Home
-            int currentSlot = (int)((ms / 4000) % totalCarouselSlots);
+            int currentSlot = (int)((ms / 10000) % totalCarouselSlots);
             if (timerAtivo && currentSlot == 0) {
                 mostrarTimer = true;
                 mostrarMedia = false;
