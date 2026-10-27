@@ -2643,6 +2643,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     current_look_y += (target_look_y - current_look_y) * 0.15f;
     
     uint8_t idleTipo = engine.GetTipoReacaoOciosa();
+    uint64_t tStart = engine.GetTempoInicioReacaoOciosa();
+    uint64_t tFim = engine.GetTempoFimReacaoOciosa();
 
     // =========================================================================
     // 1. PALETA DE CORES RICA (RGB565) POR PERSONALIDADE E EMOÇÃO
