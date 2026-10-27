@@ -1764,6 +1764,26 @@ void LcdDisplay::DesenharParticulas(int xOffset, lv_layer_t* layer) {
                 draw_canvas_disc(layer, px, py, 4, noteColor);
                 draw_canvas_line(layer, px + 2, py - 9, px + 2, py, noteColor, 2);
                 draw_canvas_line(layer, px + 2, py - 9, px + 7, py - 6, noteColor, 2);
+            } else if (particulasFisicas_[i].tipo == '$') {
+                // Moeda dourada com cifrão esmeralda (Banco Imobiliário / Jogo da Vida)
+                draw_canvas_disc(layer, px, py, 5, lv_color_hex(0xFFD700));
+                draw_canvas_disc(layer, px, py, 3, lv_color_hex(0x10B981));
+                draw_canvas_line(layer, px, py - 4, px, py + 4, lv_color_hex(0xFFFFFF), 1);
+            } else if (particulasFisicas_[i].tipo == 'F') {
+                // Chama de fogo picante (Pimenta Malagueta)
+                draw_canvas_triangle(layer, px - 5, py + 3, px + 5, py + 3, px, py - 7, lv_color_hex(0xFF3D00));
+                draw_canvas_triangle(layer, px - 3, py + 3, px + 3, py + 3, px, py - 3, lv_color_hex(0xFFEA00));
+            } else if (particulasFisicas_[i].tipo == 'I') {
+                // Cristal de gelo ciano (Sorvete / Brain Freeze)
+                lv_color_t iceCol = lv_color_hex(0x00E5FF);
+                draw_canvas_line(layer, px - 4, py, px + 4, py, iceCol, 2);
+                draw_canvas_line(layer, px, py - 4, px, py + 4, iceCol, 2);
+                draw_canvas_disc(layer, px, py, 1, lv_color_hex(0xFFFFFF));
+            } else if (particulasFisicas_[i].tipo == 'C') {
+                // Confete colorido de festa / vitória
+                static const uint32_t kConfettiHex[4] = {0xFF4081, 0x00E5FF, 0xFFD740, 0x69F0AE};
+                lv_color_t cCol = lv_color_hex(kConfettiHex[i & 3]);
+                draw_canvas_rect(layer, px - 3, py - 2, 6, 4, cCol, 1);
             }
         }
     }
@@ -2178,6 +2198,315 @@ void LcdDisplay::DrawEggScreen(lv_layer_t* layer) {
     }
 }
 
+void LcdDisplay::DrawSingleDie(lv_layer_t* layer, int cx, int cy, int halfSize, int val, lv_color_t accentColor) {
+    int x = cx - halfSize;
+    int y = cy - halfSize;
+    int sz = halfSize * 2;
+    // Sombra 3D suave
+    draw_canvas_rect(layer, x + 4, y + 5, sz, sz, lv_color_hex(0x161B26), 10);
+    // Corpo branco brilhante do dado + borda neon
+    draw_canvas_rect(layer, x, y, sz, sz, lv_color_hex(0xF8FAFC), 10);
+    draw_canvas_rect_empty(layer, x, y, sz, sz, accentColor, 3, 10);
+
+    int off = (halfSize * 52) / 100;
+    int pipR = (halfSize >= 30) ? 5 : 4;
+    lv_color_t pipCol = (val == 1 || val == 4) ? lv_color_hex(0xEF4444) : lv_color_hex(0x0F172A);
+
+    if (val == 1 || val == 3 || val == 5) {
+        draw_canvas_disc(layer, cx, cy, (val == 1) ? (pipR + 2) : pipR, pipCol);
+    }
+    if (val >= 2) {
+        draw_canvas_disc(layer, cx - off, cy - off, pipR, pipCol);
+        draw_canvas_disc(layer, cx + off, cy + off, pipR, pipCol);
+    }
+    if (val >= 4) {
+        draw_canvas_disc(layer, cx + off, cy - off, pipR, pipCol);
+        draw_canvas_disc(layer, cx - off, cy + off, pipR, pipCol);
+    }
+    if (val == 6) {
+        draw_canvas_disc(layer, cx - off, cy, pipR, pipCol);
+        draw_canvas_disc(layer, cx + off, cy, pipR, pipCol);
+    }
+}
+
+void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
+    if (!face_canvas_ || !layer) return;
+    auto& engine = TamagotchiEngine::GetInstance();
+    uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
+    float prog = engine.GetDiceProgress();
+    int v1 = engine.GetDiceVal1();
+    int v2 = engine.GetDiceVal2();
+    bool dual = (v2 > 0);
+
+    bool rolling = (prog < 0.62f);
+    int disp1 = rolling ? ((int)((ms / 70) % 6) + 1) : v1;
+    int disp2 = rolling ? ((int)(((ms + 190) / 65) % 6) + 1) : v2;
+
+    int bounceY = 0;
+    int shakeX = 0;
+    if (rolling) {
+        bounceY = (int)(-fabsf(sinf(ms * 0.018f)) * 18.0f);
+        shakeX = (int)(sinf(ms * 0.045f) * 6.0f);
+    } else {
+        float settle = (prog - 0.62f) / 0.38f;
+        if (settle < 0.35f) {
+            bounceY = (int)(-sinf((settle / 0.35f) * 3.14159f) * 8.0f);
+        }
+    }
+
+    lv_color_t accent = rolling ? lv_color_hex(0x00E5FF) : lv_color_hex(0xFFD700);
+    if (!dual) {
+        DrawSingleDie(layer, 128 + shakeX, 56 + bounceY, 34, disp1, accent);
+        if (!rolling) {
+            DrawStar(74.0f, 32.0f, 5.0f, lv_color_hex(0xFFD700), layer);
+            DrawStar(182.0f, 36.0f, 4.5f, lv_color_hex(0x00E5FF), layer);
+            char buf[24];
+            snprintf(buf, sizeof(buf), "DADO: %d", v1);
+            draw_canvas_text(layer, 58, 102, 140, 22, buf, lv_color_hex(0xFFD700), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        } else {
+            draw_canvas_text(layer, 48, 102, 160, 22, "ROLANDO...", lv_color_hex(0x00E5FF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        }
+    } else {
+        DrawSingleDie(layer, 82 + shakeX, 54 + bounceY, 28, disp1, accent);
+        DrawSingleDie(layer, 174 - shakeX, 54 + (bounceY / 2), 28, disp2, accent);
+        if (!rolling) {
+            char buf[32];
+            if (v1 == v2) {
+                snprintf(buf, sizeof(buf), "DUPLA! %d + %d = %d", v1, v2, v1 + v2);
+            } else {
+                snprintf(buf, sizeof(buf), "TOTAL: %d", v1 + v2);
+            }
+            draw_canvas_text(layer, 28, 98, 200, 24, buf, lv_color_hex(0xFFD700), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        } else {
+            draw_canvas_text(layer, 48, 98, 160, 24, "DADOS...", lv_color_hex(0x00E5FF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        }
+    }
+}
+
+void LcdDisplay::DrawWheelScene(lv_layer_t* layer) {
+    if (!face_canvas_ || !layer) return;
+    auto& engine = TamagotchiEngine::GetInstance();
+    float prog = engine.GetWheelProgress();
+    int target = engine.GetWheelVal();
+
+    float inv = 1.0f - prog;
+    float ease = 1.0f - (inv * inv * inv);
+    float spinAngle = ease * 25.1327f; // ~4 voltas completas com desaceleração suave
+
+    int cx = 128;
+    int cy = 66;
+    int rOuter = 48;
+
+    // Aro externo colorido da Roleta da Vida
+    draw_canvas_disc(layer, cx, cy, rOuter + 4, lv_color_hex(0x1E293B));
+    draw_canvas_arc(layer, cx, cy, rOuter + 2, 0, 360, lv_color_hex(0xFFD700), 3);
+
+    static const uint32_t kSliceCols[10] = {
+        0xEF4444, 0xF97316, 0xFACC15, 0x22C55E, 0x10B981,
+        0x06B6D4, 0x3B82F6, 0x6366F1, 0xA855F7, 0xEC4899
+    };
+
+    for (int i = 0; i < 10; i++) {
+        float a = spinAngle + (i * 0.628318f);
+        int sx = cx + (int)(cosf(a) * (rOuter - 8));
+        int sy = cy + (int)(sinf(a) * (rOuter - 8));
+        draw_canvas_line(layer, cx, cy, sx, sy, lv_color_hex(kSliceCols[i]), 4);
+        draw_canvas_disc(layer, sx, sy, 5, lv_color_hex(kSliceCols[i]));
+    }
+
+    // Núcleo central mostrando o número da Roleta (1 a 10)
+    draw_canvas_disc(layer, cx, cy, 24, lv_color_hex(0x0F172A));
+    lv_color_t ringCol = (prog >= 0.78f) ? lv_color_hex(0xFFD700) : lv_color_hex(0x00E5FF);
+    draw_canvas_arc(layer, cx, cy, 24, 0, 360, ringCol, 3);
+
+    int shownVal = (prog < 0.78f) ? (((int)(ease * 40.0f) % 10) + 1) : target;
+    char numBuf[8];
+    snprintf(numBuf, sizeof(numBuf), "%d", shownVal);
+    draw_canvas_text(layer, cx - 22, cy - 11, 44, 22, numBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+
+    // Ponteiro dourado fixo no topo (12h)
+    draw_canvas_triangle(layer, cx - 8, 8, cx + 8, 8, cx, 22, lv_color_hex(0xFFD700));
+    if (prog >= 0.78f) {
+        DrawStar((float)(cx - 64), 38.0f, 5.0f, lv_color_hex(0xFFD700), layer);
+        DrawStar((float)(cx + 64), 38.0f, 5.0f, lv_color_hex(0x00E5FF), layer);
+    }
+}
+
+void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overlay) {
+    if (!face_canvas_ || !layer) return;
+    uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
+    int cx = 128;
+    int cy = 50;
+    int bobY = (int)(sinf(ms * 0.008f) * 3.0f);
+
+    if (overlay == "jokenpo_rock") {
+        // Punho fechado (Pedra)
+        lv_color_t col = lv_color_hex(0x00E5FF);
+        draw_canvas_disc(layer, cx, cy + bobY, 28, lv_color_hex(0x1E293B));
+        draw_canvas_arc(layer, cx, cy + bobY, 28, 0, 360, col, 3);
+        draw_canvas_rect(layer, cx - 18, cy - 10 + bobY, 36, 24, col, 8);
+        draw_canvas_line(layer, cx - 8, cy - 10 + bobY, cx - 8, cy + 4 + bobY, lv_color_hex(0x0F172A), 2);
+        draw_canvas_line(layer, cx + 2, cy - 10 + bobY, cx + 2, cy + 4 + bobY, lv_color_hex(0x0F172A), 2);
+        draw_canvas_line(layer, cx + 10, cy - 10 + bobY, cx + 10, cy + 4 + bobY, lv_color_hex(0x0F172A), 2);
+        draw_canvas_text(layer, 48, 94, 160, 24, "PEDRA!", col, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    } else if (overlay == "jokenpo_paper") {
+        // Mão aberta (Papel)
+        lv_color_t col = lv_color_hex(0x10B981);
+        draw_canvas_disc(layer, cx, cy + bobY, 28, lv_color_hex(0x1E293B));
+        draw_canvas_arc(layer, cx, cy + bobY, 28, 0, 360, col, 3);
+        draw_canvas_rect(layer, cx - 14, cy - 2 + bobY, 28, 18, col, 5);
+        for (int f = -2; f <= 2; f++) {
+            int fx = cx + f * 6;
+            int fh = (f == 0) ? 18 : 15;
+            draw_canvas_line(layer, fx, cy - 2 + bobY, fx, cy - 2 - fh + bobY, col, 4);
+        }
+        draw_canvas_text(layer, 48, 94, 160, 24, "PAPEL!", col, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    } else if (overlay == "jokenpo_scissors") {
+        // Dois dedos em V (Tesoura)
+        lv_color_t col = lv_color_hex(0xFF4081);
+        draw_canvas_disc(layer, cx, cy + bobY, 28, lv_color_hex(0x1E293B));
+        draw_canvas_arc(layer, cx, cy + bobY, 28, 0, 360, col, 3);
+        draw_canvas_rect(layer, cx - 12, cy + 2 + bobY, 24, 16, col, 6);
+        draw_canvas_line(layer, cx - 5, cy + 2 + bobY, cx - 12, cy - 18 + bobY, col, 5);
+        draw_canvas_line(layer, cx + 5, cy + 2 + bobY, cx + 12, cy - 18 + bobY, col, 5);
+        draw_canvas_text(layer, 48, 94, 160, 24, "TESOURA!", col, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    } else if (overlay == "crystal_ball") {
+        // Bola de Cristal Mística (Oráculo)
+        draw_canvas_rect(layer, cx - 26, 86, 52, 12, lv_color_hex(0xD97706), 4);
+        draw_canvas_rect(layer, cx - 32, 96, 64, 8, lv_color_hex(0xB45309), 3);
+        draw_canvas_disc(layer, cx, 52 + bobY, 34, lv_color_hex(0x3B0764));
+        draw_canvas_disc(layer, cx, 52 + bobY, 28, lv_color_hex(0x7E22CE));
+        int orbX = cx + (int)(cosf(ms * 0.005f) * 10.0f);
+        int orbY = 52 + bobY + (int)(sinf(ms * 0.007f) * 8.0f);
+        draw_canvas_disc(layer, orbX, orbY, 10, lv_color_hex(0x00E5FF));
+        draw_canvas_arc(layer, cx, 52 + bobY, 34, 0, 360, lv_color_hex(0xE879F9), 2);
+        draw_canvas_arc(layer, cx - 8, 44 + bobY, 18, 190, 255, lv_color_hex(0xFFFFFF), 2);
+        DrawStar((float)(cx - 48), 32.0f, 4.5f, lv_color_hex(0xFFD700), layer);
+        DrawStar((float)(cx + 48), 36.0f, 4.5f, lv_color_hex(0x00E5FF), layer);
+    }
+}
+
+void LcdDisplay::DrawAccessoryOverlay(lv_layer_t* layer, uint8_t acc_id, float eyeLx, float eyeLy, float eyeRx, float eyeRy) {
+    if (!face_canvas_ || !layer || acc_id == 0) return;
+    int lx = (int)(eyeLx * 2.0f);
+    int ly = (int)(eyeLy * 2.0f);
+    int rx = (int)(eyeRx * 2.0f);
+    int ry = (int)(eyeRy * 2.0f);
+    int midX = (lx + rx) / 2;
+    int topY = ((ly < ry) ? ly : ry) - 28;
+
+    if (acc_id == 1) {
+        // 1: Óculos Escuros Cool ("Thug Life")
+        draw_canvas_rect(layer, lx - 22, ly - 14, 44, 26, lv_color_hex(0x090D16), 4);
+        draw_canvas_rect_empty(layer, lx - 22, ly - 14, 44, 26, lv_color_hex(0xE2E8F0), 2, 4);
+        draw_canvas_rect(layer, rx - 22, ry - 14, 44, 26, lv_color_hex(0x090D16), 4);
+        draw_canvas_rect_empty(layer, rx - 22, ry - 14, 44, 26, lv_color_hex(0xE2E8F0), 2, 4);
+        draw_canvas_line(layer, lx + 22, ly - 4, rx - 22, ry - 4, lv_color_hex(0xE2E8F0), 3);
+        draw_canvas_line(layer, lx - 36, ly - 6, lx - 22, ly - 6, lv_color_hex(0xE2E8F0), 3);
+        draw_canvas_line(layer, rx + 22, ry - 6, rx + 36, ry - 6, lv_color_hex(0xE2E8F0), 3);
+        // Reflexo branco diagonal nas lentes
+        draw_canvas_line(layer, lx - 14, ly - 8, lx - 4, ly + 4, lv_color_hex(0xFFFFFF), 2);
+        draw_canvas_line(layer, rx - 14, ry - 8, rx - 4, ry + 4, lv_color_hex(0xFFFFFF), 2);
+    } else if (acc_id == 2) {
+        // 2: Cartola de Magnata (Banco Imobiliário)
+        int hy = (topY < 32) ? 32 : topY;
+        draw_canvas_rect(layer, midX - 42, hy, 84, 6, lv_color_hex(0x1E293B), 3);
+        draw_canvas_rect(layer, midX - 26, hy - 26, 52, 26, lv_color_hex(0x0F172A), 3);
+        draw_canvas_rect_empty(layer, midX - 26, hy - 26, 52, 26, lv_color_hex(0x475569), 2, 3);
+        draw_canvas_rect(layer, midX - 26, hy - 7, 52, 6, lv_color_hex(0xFFD700), 0);
+    } else if (acc_id == 3) {
+        // 3: Coroa Real Dourada
+        int cy = (topY < 28) ? 28 : topY;
+        lv_color_t gold = lv_color_hex(0xFFD700);
+        draw_canvas_rect(layer, midX - 30, cy - 6, 60, 8, gold, 2);
+        draw_canvas_triangle(layer, midX - 30, cy - 6, midX - 14, cy - 6, midX - 24, cy - 22, gold);
+        draw_canvas_triangle(layer, midX - 12, cy - 6, midX + 12, cy - 6, midX, cy - 26, gold);
+        draw_canvas_triangle(layer, midX + 14, cy - 6, midX + 30, cy - 6, midX + 24, cy - 22, gold);
+        draw_canvas_disc(layer, midX, cy - 3, 3, lv_color_hex(0xEF4444));
+        draw_canvas_disc(layer, midX - 18, cy - 3, 2, lv_color_hex(0x00E5FF));
+        draw_canvas_disc(layer, midX + 18, cy - 3, 2, lv_color_hex(0x10B981));
+    } else if (acc_id == 4) {
+        // 4: Chapéu de Chef Gastronômico
+        int cy = (topY < 30) ? 30 : topY;
+        lv_color_t white = lv_color_hex(0xF8FAFC);
+        draw_canvas_disc(layer, midX - 16, cy - 16, 12, white);
+        draw_canvas_disc(layer, midX + 16, cy - 16, 12, white);
+        draw_canvas_disc(layer, midX, cy - 20, 14, white);
+        draw_canvas_rect(layer, midX - 24, cy - 10, 48, 10, lv_color_hex(0xE2E8F0), 2);
+    } else if (acc_id == 5) {
+        // 5: Óculos de Leitura / Foco Pomodoro
+        lv_color_t frameCol = lv_color_hex(0x38BDF8);
+        draw_canvas_arc(layer, lx, ly, 22, 0, 360, frameCol, 2);
+        draw_canvas_arc(layer, rx, ry, 22, 0, 360, frameCol, 2);
+        draw_canvas_line(layer, lx + 22, ly, rx - 22, ry, frameCol, 2);
+    } else if (acc_id == 6) {
+        // 6: Headphone Neon DJ
+        lv_color_t neon = lv_color_hex(0xA855F7);
+        draw_canvas_arc(layer, midX, ly - 4, 86, 195, 345, neon, 4);
+        draw_canvas_rect(layer, 12, ly - 18, 14, 36, neon, 6);
+        draw_canvas_rect(layer, 230, ry - 18, 14, 36, neon, 6);
+        draw_canvas_rect(layer, 16, ly - 12, 6, 24, lv_color_hex(0x00E5FF), 3);
+        draw_canvas_rect(layer, 234, ry - 12, 6, 24, lv_color_hex(0x00E5FF), 3);
+    } else if (acc_id == 7) {
+        // 7: Gravata Borboleta Neon
+        int by = 114;
+        lv_color_t bow = lv_color_hex(0xFF4081);
+        draw_canvas_triangle(layer, midX - 20, by - 9, midX - 20, by + 9, midX, by, bow);
+        draw_canvas_triangle(layer, midX + 20, by - 9, midX + 20, by + 9, midX, by, bow);
+        draw_canvas_disc(layer, midX, by, 4, lv_color_hex(0xFFD700));
+    }
+}
+
+void LcdDisplay::DrawFaceOverlay(lv_layer_t* layer, const std::string& overlay) {
+    if (!face_canvas_ || !layer || overlay.empty()) return;
+    uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
+
+    if (overlay == "jail") {
+        // Grades metálicas da Prisão (Banco Imobiliário)
+        lv_color_t barDark = lv_color_hex(0x475569);
+        lv_color_t barLight = lv_color_hex(0x94A3B8);
+        draw_canvas_rect(layer, 0, 0, 256, 8, barDark, 0);
+        draw_canvas_rect(layer, 0, 120, 256, 8, barDark, 0);
+        for (int bx = 24; bx <= 232; bx += 42) {
+            draw_canvas_rect(layer, bx, 0, 7, 128, barDark, 0);
+            draw_canvas_line(layer, bx + 2, 0, bx + 2, 128, barLight, 2);
+        }
+    } else if (overlay == "dance") {
+        // Barras de Equalizador RGB Neon (Modo Festa / Dança)
+        static const uint32_t kEqCols[8] = {
+            0xFF4081, 0xFF6E40, 0xFFD740, 0x69F0AE,
+            0x00E5FF, 0x448AFF, 0xB388FF, 0xEA80FC
+        };
+        for (int b = 0; b < 8; b++) {
+            int h = 6 + (int)(fabsf(sinf(ms * 0.012f + b * 0.9f)) * 18.0f);
+            int bx = 20 + b * 28;
+            draw_canvas_rect(layer, bx, 126 - h, 18, h, lv_color_hex(kEqCols[b]), 3);
+        }
+    } else if (overlay == "ladder_up") {
+        // Setas neon verdes subindo nas laterais (Escada!)
+        int offY = (int)((ms / 25) % 24);
+        lv_color_t upCol = lv_color_hex(0x10B981);
+        for (int k = 0; k < 3; k++) {
+            int ay = 100 - k * 34 - offY;
+            draw_canvas_line(layer, 20, ay, 28, ay - 8, upCol, 3);
+            draw_canvas_line(layer, 28, ay - 8, 36, ay, upCol, 3);
+            draw_canvas_line(layer, 220, ay, 228, ay - 8, upCol, 3);
+            draw_canvas_line(layer, 228, ay - 8, 236, ay, upCol, 3);
+        }
+    } else if (overlay == "snake_down") {
+        // Setas vermelhas descendo nas laterais (Escorregador!)
+        int offY = (int)((ms / 25) % 24);
+        lv_color_t dnCol = lv_color_hex(0xEF4444);
+        for (int k = 0; k < 3; k++) {
+            int ay = 20 + k * 34 + offY;
+            draw_canvas_line(layer, 20, ay, 28, ay + 8, dnCol, 3);
+            draw_canvas_line(layer, 28, ay + 8, 36, ay, dnCol, 3);
+            draw_canvas_line(layer, 220, ay, 228, ay + 8, dnCol, 3);
+            draw_canvas_line(layer, 228, ay + 8, 236, ay, dnCol, 3);
+        }
+    }
+}
+
 void LcdDisplay::DrawOledFace(int xOffset) {
     if (!face_canvas_) return;
     lv_canvas_fill_bg(face_canvas_, lv_color_black(), LV_OPA_COVER);
@@ -2208,6 +2537,31 @@ void LcdDisplay::DrawOledFace(int xOffset) {
         return;
     }
     
+    // Cenas interativas do Companion App (Dados, Roleta, Jokenpô, Bola de Cristal)
+    if (engine.IsDiceActive()) {
+        DrawDiceScene(layer);
+#if LVGL_VERSION_MAJOR >= 9
+        lv_canvas_finish_layer(face_canvas_, &layer_obj);
+#endif
+        return;
+    }
+    if (engine.IsWheelActive()) {
+        DrawWheelScene(layer);
+#if LVGL_VERSION_MAJOR >= 9
+        lv_canvas_finish_layer(face_canvas_, &layer_obj);
+#endif
+        return;
+    }
+    std::string activeCompanionOverlay = engine.GetActiveOverlay();
+    if (activeCompanionOverlay == "jokenpo_rock" || activeCompanionOverlay == "jokenpo_paper" ||
+        activeCompanionOverlay == "jokenpo_scissors" || activeCompanionOverlay == "crystal_ball") {
+        DrawCompanionScene(layer, activeCompanionOverlay);
+#if LVGL_VERSION_MAJOR >= 9
+        lv_canvas_finish_layer(face_canvas_, &layer_obj);
+#endif
+        return;
+    }
+
     float eyeLx = 44, eyeLy = 37, eyeLw = 12, eyeLh = 24, eyeRadius = 6;
     float eyeRx = 84, eyeRy = 37, eyeRw = 12, eyeRh = 24;
     
@@ -4181,6 +4535,29 @@ skip_default_cheeks: ;
         for (int w = 0; w <= wavePhase; w++) {
             draw_canvas_arc(layer, 110*2, 37*2, (9 + w * 4)*2, 290, 70, earColor, 2);
         }
+    }
+
+    // Acessórios visuais do Guarda-Roupa e Overlays de Jogos (Prisão, Dança, Escadas)
+    uint8_t accId = engine.GetAccessory();
+    if (accId > 0 && emotion != "sleeping") {
+        DrawAccessoryOverlay(layer, accId, eyeLx + current_look_x * 0.25f, eyeLy + current_look_y * 0.25f,
+                             eyeRx + current_look_x * 0.25f, eyeRy + current_look_y * 0.25f);
+    }
+    if (!activeCompanionOverlay.empty()) {
+        DrawFaceOverlay(layer, activeCompanionOverlay);
+    }
+
+    // Partículas especiais de Gastronomia e Jogos
+    uint8_t foodReact = engine.GetFoodReactionType();
+    if (foodReact == 1 && (rand() % 100) < 22) {
+        CriarParticula(64 + mouthShiftX + (rand() % 36 - 18), 52, ((rand() % 10) - 5) / 10.0f, -0.7f, 'F', 35);
+    } else if (foodReact == 2 && (rand() % 100) < 20) {
+        CriarParticula(20 + (rand() % 88), 10, 0.0f, 0.6f, 'I', 45);
+    }
+    if (activeCompanionOverlay == "money_gain" && (rand() % 100) < 25) {
+        CriarParticula(16 + (rand() % 96), 58, ((rand() % 8) - 4) / 10.0f, -0.7f, '$', 45);
+    } else if ((activeCompanionOverlay == "victory" || activeCompanionOverlay == "dance") && (rand() % 100) < 28) {
+        CriarParticula(10 + (rand() % 108), 8, ((rand() % 10) - 5) / 10.0f, 0.7f, 'C', 50);
     }
 
     AtualizarParticulas();

@@ -49,6 +49,33 @@ public:
     void Play();
     void Heal();
     void Pet();
+    void FeedCustom(const std::string& food_type, int hunger_gain, int fun_gain, int health_gain);
+    void HealCustom(const std::string& med_type, int health_gain);
+    void AddPlayProgress(int fun_gain, int bond_gain, bool animate = false);
+    uint8_t GetFoodReactionType() const;
+
+    // Companion App: Jogos, Dados, Roleta, Acessorios e Pomodoro
+    void TriggerDiceRoll(int val1, int val2 = 0, uint32_t duration_ms = 3200);
+    bool IsDiceActive() const;
+    int GetDiceVal1() const { return dice_val1_; }
+    int GetDiceVal2() const { return dice_val2_; }
+    float GetDiceProgress() const;
+
+    void TriggerWheelSpin(int target_val, uint32_t duration_ms = 3800);
+    bool IsWheelActive() const;
+    int GetWheelVal() const { return wheel_val_; }
+    float GetWheelProgress() const;
+
+    void TriggerOverlay(const std::string& overlay_type, uint32_t duration_ms = 4500);
+    std::string GetActiveOverlay() const;
+
+    void TriggerCustomExpression(uint8_t idle_type, const std::string& emotion_override, uint32_t duration_ms = 5000);
+
+    void SetAccessory(uint8_t acc_id);
+    uint8_t GetAccessory() const;
+
+    void SetPomodoroMode(bool active);
+    bool IsPomodoroMode() const { return pomodoro_mode_; }
 
     // Getters
     EstadoNascimento GetEstadoNascimento() const { return estado_nascimento_; }
@@ -200,6 +227,30 @@ private:
 
     // Media Player (TV & Google Home)
     std::vector<TamagotchiMediaItem> media_items_;
+
+    // Companion App: Dados, Roleta, Overlays, Gastronomia e Acessorios
+    uint8_t food_reaction_type_ = 0;
+    uint64_t food_reaction_until_ms_ = 0;
+
+    bool dice_active_ = false;
+    uint64_t dice_start_ms_ = 0;
+    uint32_t dice_duration_ms_ = 3200;
+    int dice_val1_ = 1;
+    int dice_val2_ = 0;
+
+    bool wheel_active_ = false;
+    uint64_t wheel_start_ms_ = 0;
+    uint32_t wheel_duration_ms_ = 3800;
+    int wheel_val_ = 1;
+
+    std::string overlay_type_ = "";
+    uint64_t overlay_until_ms_ = 0;
+
+    std::string emotion_override_ = "";
+    uint64_t emotion_override_until_ms_ = 0;
+
+    uint8_t acessorio_id_ = 0;
+    bool pomodoro_mode_ = false;
 };
 
 #endif // TAMAGOTCHI_ENGINE_H

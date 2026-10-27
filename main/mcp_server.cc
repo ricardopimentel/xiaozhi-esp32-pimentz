@@ -8,6 +8,7 @@
 #include <esp_app_desc.h>
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>
 #include <esp_pthread.h>
 
 #include "application.h"
@@ -65,6 +66,8 @@ void McpServer::AddCommonTools() {
             cJSON_AddBoolToObject(root, "shock_detected", engine.GetSensorChoque());
             cJSON_AddNumberToObject(root, "sound_level", engine.GetSensorSom());
             cJSON_AddBoolToObject(root, "obstacle_detected", engine.GetSensorObstaculo());
+            cJSON_AddNumberToObject(root, "accessory_id", engine.GetAccessory());
+            cJSON_AddBoolToObject(root, "pomodoro_mode", engine.IsPomodoroMode());
             
             char* json_str = cJSON_PrintUnformatted(root);
             std::string res(json_str);
@@ -125,6 +128,36 @@ void McpServer::AddCommonTools() {
             auto& engine = TamagotchiEngine::GetInstance();
             engine.StopTimer();
             return "Timer/Alarm stopped.";
+        });
+
+    AddTool("self.roll_dice",
+        "Roll 1 or 2 animated dice on the robot screen and increase playfulness. Use when the user asks to roll a die or play dice.",
+        PropertyList({
+            Property("count", kPropertyTypeInteger, 1, 1, 2)
+        }),
+        [](const PropertyList& properties) -> ReturnValue {
+            auto& engine = TamagotchiEngine::GetInstance();
+            int count = properties["count"].value<int>();
+            int v1 = (rand() % 6) + 1;
+            int v2 = (count == 2) ? ((rand() % 6) + 1) : 0;
+            engine.TriggerDiceRoll(v1, v2, 3400);
+            engine.AddPlayProgress(6, 2, false);
+            if (v2 > 0) {
+                return "Rolled two dice on screen: " + std::to_string(v1) + " and " + std::to_string(v2) + " (total " + std::to_string(v1 + v2) + ").";
+            }
+            return "Rolled die on screen: " + std::to_string(v1) + ".";
+        });
+
+    AddTool("self.set_accessory",
+        "Equip or remove a visual accessory on the robot's face screen: 0=none, 1=sunglasses, 2=tophat, 3=crown, 4=chef_hat, 5=reading_glasses, 6=headphones, 7=bowtie.",
+        PropertyList({
+            Property("accessory_id", kPropertyTypeInteger, 0, 0, 7)
+        }),
+        [](const PropertyList& properties) -> ReturnValue {
+            auto& engine = TamagotchiEngine::GetInstance();
+            int acc = properties["accessory_id"].value<int>();
+            engine.SetAccessory(static_cast<uint8_t>(acc));
+            return "Accessory updated to ID " + std::to_string(acc) + ".";
         });
 
     AddTool("self.get_device_status",

@@ -8,6 +8,7 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <algorithm>
+#include <cstdlib>
 
 #define TAG "TamagotchiEngine"
 
@@ -52,6 +53,8 @@ void TamagotchiEngine::Initialize() {
         }
         if (nvs_get_u8(handle, "vinculo", &vinculo) == ESP_OK) pontos_de_vinculo_ = vinculo;
         if (nvs_get_u32(handle, "segVida", &segVida) == ESP_OK) segundos_de_vida_ = segVida;
+        uint8_t acc = 0;
+        if (nvs_get_u8(handle, "acessorio", &acc) == ESP_OK) acessorio_id_ = acc;
 
         nvs_close(handle);
         
@@ -79,6 +82,7 @@ void TamagotchiEngine::SaveState() {
         nvs_set_u8(handle, "personalidade", static_cast<uint8_t>(personalidade_natural_));
         nvs_set_u8(handle, "vinculo", pontos_de_vinculo_);
         nvs_set_u32(handle, "segVida", segundos_de_vida_);
+        nvs_set_u8(handle, "acessorio", acessorio_id_);
         
         nvs_commit(handle);
         nvs_close(handle);
@@ -166,7 +170,6 @@ void TamagotchiEngine::Update() {
         }
         
         if (tipo_reacao_ociosa_ == 0 && now > tempo_proxima_reacao_ociosa_) {
-            int r = rand() % 100;
             Personalidade pers = GetPersonalidade();
             tempo_inicio_reacao_ociosa_ = now;
             
@@ -414,7 +417,7 @@ void TamagotchiEngine::Update() {
                 app.NotifyMessage("[PROACTIVE:NEEDS] O Tamagotchi precisa de cuidados urgentes!");
             }
             // E) Iniciativa Própria: Puxar assunto espontaneamente após 25 min em silêncio
-            else if (sensor_luz_porcento_ >= limiar_luz_baixo_ && (now - last_active_or_chat >= 1500000)) {
+            else if (!pomodoro_mode_ && sensor_luz_porcento_ >= limiar_luz_baixo_ && (now - last_active_or_chat >= 1500000)) {
                 last_proactive_any = now;
                 last_active_or_chat = now;
                 app.NotifyMessage("[PROACTIVE:CHAT] Puxando assunto espontaneamente com o dono!");
@@ -499,33 +502,28 @@ void TamagotchiEngine::AtualizarVinculo(int8_t pontos) {
 }
 
 void TamagotchiEngine::Feed() {
-    if (estado_nascimento_ != ESTADO_NASCIDO) return;
-    fome_ = std::min(100, fome_ + 20);
-    AtualizarVinculo(2);
-    SaveState();
+    FeedCustom("burger", 20, 0, 0);
 }
 
 void TamagotchiEngine::Play() {
     if (estado_nascimento_ != ESTADO_NASCIDO) return;
-    diversao_ = std::min(100, diversao_ + 15);
+    uint64_t now = esp_timer_get_time() / 1000;
+    diversao_ = static_cast<uint8_t>(std::min(100, static_cast<int>(diversao_) + 15));
+    sensor_animacao_brincando_ = true;
+    tempo_inicio_animacao_brincando_ = now;
     AtualizarVinculo(2);
     SaveState();
 }
 
 void TamagotchiEngine::Heal() {
-    if (estado_nascimento_ != ESTADO_NASCIDO) return;
-    if (esta_doente_) {
-        esta_doente_ = false;
-        saude_ = std::min(100, saude_ + 30);
-        AtualizarVinculo(5);
-    } else {
-        saude_ = std::min(100, saude_ + 10);
-    }
-    SaveState();
+    HealCustom("pill", esta_doente_ ? 30 : 15);
 }
 
 void TamagotchiEngine::Pet() {
     if (estado_nascimento_ != ESTADO_NASCIDO) return;
+    uint64_t now = esp_timer_get_time() / 1000;
+    sensor_animacao_acariciado_ = true;
+    tempo_inicio_animacao_acariciado_ = now;
     AtualizarVinculo(3);
     SaveState();
 }
@@ -542,6 +540,30 @@ void TamagotchiEngine::SetWebThresholds(uint16_t limPlay, uint16_t limSusto, uin
 std::string TamagotchiEngine::GetCurrentEmotion() const {
     if (estado_nascimento_ == ESTADO_OVO || estado_nascimento_ == ESTADO_CHOCANDO) {
         return "neutral";
+    }
+
+    uint64_t now = esp_timer_get_time() / 1000;
+    if (!emotion_override_.empty() && now < emotion_override_until_ms_) {
+        return emotion_override_;
+    }
+
+    uint8_t food_react = GetFoodReactionType();
+    if (food_react == 1 && (now > tempo_inicio_animacao_comendo_ + 1400)) {
+        return "embarrassed"; // Pimenta ardendo!
+    }
+    if (food_react == 2 && (now > tempo_inicio_animacao_comendo_ + 1400)) {
+        return "cold"; // Brain freeze do sorvete!
+    }
+
+    std::string active_ov = GetActiveOverlay();
+    if (active_ov == "jail" || active_ov == "pay_rent" || active_ov == "defeat") {
+        return "crying";
+    }
+    if (active_ov == "snake_down") {
+        return "confused";
+    }
+    if (active_ov == "victory" || active_ov == "ladder_up" || active_ov == "money_gain" || active_ov == "dance") {
+        return "happy";
     }
     
     // 1. Sono se estiver escuro (usa limiar_luz_baixo_)
@@ -881,3 +903,157 @@ int TamagotchiEngine::GetMediaPosition(size_t index) const {
 }
 
 
+
+void TamagotchiEngine::FeedCustom(const std::string& food_type, int hunger_gain, int fun_gain, int health_gain) {
+    if (estado_nascimento_ != ESTADO_NASCIDO) return;
+    uint64_t now = esp_timer_get_time() / 1000;
+    fome_ = static_cast<uint8_t>(std::max(0, std::min(100, static_cast<int>(fome_) + hunger_gain)));
+    if (fun_gain != 0) {
+        diversao_ = static_cast<uint8_t>(std::max(0, std::min(100, static_cast<int>(diversao_) + fun_gain)));
+    }
+    if (health_gain != 0) {
+        saude_ = static_cast<uint8_t>(std::max(0, std::min(100, static_cast<int>(saude_) + health_gain)));
+    }
+    sensor_animacao_comendo_ = true;
+    tempo_inicio_animacao_comendo_ = now;
+
+    if (food_type == "pepper" || food_type == "spicy") {
+        food_reaction_type_ = 1;
+        food_reaction_until_ms_ = now + 7500;
+    } else if (food_type == "ice_cream" || food_type == "acai") {
+        food_reaction_type_ = 2;
+        food_reaction_until_ms_ = now + 7000;
+    } else if (food_type == "coffee" || food_type == "energy") {
+        food_reaction_type_ = 3;
+        food_reaction_until_ms_ = now + 7000;
+    } else if (food_type == "healthy" || food_type == "soup") {
+        food_reaction_type_ = 4;
+        food_reaction_until_ms_ = now + 6000;
+    } else {
+        food_reaction_type_ = 0;
+        food_reaction_until_ms_ = 0;
+    }
+
+    AtualizarVinculo(2);
+    SaveState();
+}
+
+void TamagotchiEngine::HealCustom(const std::string& med_type, int health_gain) {
+    (void)med_type;
+    if (estado_nascimento_ != ESTADO_NASCIDO) return;
+    uint64_t now = esp_timer_get_time() / 1000;
+    int bonus_bond = esta_doente_ ? 5 : 2;
+    esta_doente_ = false;
+    saude_ = static_cast<uint8_t>(std::max(0, std::min(100, static_cast<int>(saude_) + health_gain)));
+    sensor_animacao_curando_ = true;
+    tempo_inicio_animacao_curando_ = now;
+    AtualizarVinculo(static_cast<int8_t>(bonus_bond));
+    SaveState();
+}
+
+void TamagotchiEngine::AddPlayProgress(int fun_gain, int bond_gain, bool animate) {
+    if (estado_nascimento_ != ESTADO_NASCIDO) return;
+    uint64_t now = esp_timer_get_time() / 1000;
+    diversao_ = static_cast<uint8_t>(std::max(0, std::min(100, static_cast<int>(diversao_) + fun_gain)));
+    if (animate) {
+        sensor_animacao_brincando_ = true;
+        tempo_inicio_animacao_brincando_ = now;
+    }
+    if (bond_gain != 0) {
+        AtualizarVinculo(static_cast<int8_t>(bond_gain));
+    }
+    SaveState();
+}
+
+uint8_t TamagotchiEngine::GetFoodReactionType() const {
+    uint64_t now = esp_timer_get_time() / 1000;
+    if (food_reaction_type_ != 0 && now < food_reaction_until_ms_) {
+        return food_reaction_type_;
+    }
+    return 0;
+}
+
+void TamagotchiEngine::TriggerDiceRoll(int val1, int val2, uint32_t duration_ms) {
+    dice_val1_ = std::max(1, std::min(6, val1));
+    dice_val2_ = (val2 > 0) ? std::max(1, std::min(6, val2)) : 0;
+    dice_duration_ms_ = (duration_ms < 1000) ? 1000 : duration_ms;
+    dice_start_ms_ = esp_timer_get_time() / 1000;
+    dice_active_ = true;
+    wheel_active_ = false;
+}
+
+bool TamagotchiEngine::IsDiceActive() const {
+    if (!dice_active_) return false;
+    uint64_t now = esp_timer_get_time() / 1000;
+    return (now - dice_start_ms_) < dice_duration_ms_;
+}
+
+float TamagotchiEngine::GetDiceProgress() const {
+    if (!dice_active_ || dice_duration_ms_ == 0) return 1.0f;
+    uint64_t now = esp_timer_get_time() / 1000;
+    uint64_t elapsed = (now > dice_start_ms_) ? (now - dice_start_ms_) : 0;
+    if (elapsed >= dice_duration_ms_) return 1.0f;
+    return static_cast<float>(elapsed) / static_cast<float>(dice_duration_ms_);
+}
+
+void TamagotchiEngine::TriggerWheelSpin(int target_val, uint32_t duration_ms) {
+    wheel_val_ = std::max(1, std::min(10, target_val));
+    wheel_duration_ms_ = (duration_ms < 1200) ? 1200 : duration_ms;
+    wheel_start_ms_ = esp_timer_get_time() / 1000;
+    wheel_active_ = true;
+    dice_active_ = false;
+}
+
+bool TamagotchiEngine::IsWheelActive() const {
+    if (!wheel_active_) return false;
+    uint64_t now = esp_timer_get_time() / 1000;
+    return (now - wheel_start_ms_) < wheel_duration_ms_;
+}
+
+float TamagotchiEngine::GetWheelProgress() const {
+    if (!wheel_active_ || wheel_duration_ms_ == 0) return 1.0f;
+    uint64_t now = esp_timer_get_time() / 1000;
+    uint64_t elapsed = (now > wheel_start_ms_) ? (now - wheel_start_ms_) : 0;
+    if (elapsed >= wheel_duration_ms_) return 1.0f;
+    return static_cast<float>(elapsed) / static_cast<float>(wheel_duration_ms_);
+}
+
+void TamagotchiEngine::TriggerOverlay(const std::string& overlay_type, uint32_t duration_ms) {
+    overlay_type_ = overlay_type;
+    overlay_until_ms_ = (esp_timer_get_time() / 1000) + duration_ms;
+}
+
+std::string TamagotchiEngine::GetActiveOverlay() const {
+    if (overlay_type_.empty()) return "";
+    uint64_t now = esp_timer_get_time() / 1000;
+    if (now >= overlay_until_ms_) return "";
+    return overlay_type_;
+}
+
+void TamagotchiEngine::TriggerCustomExpression(uint8_t idle_type, const std::string& emotion_override, uint32_t duration_ms) {
+    uint64_t now = esp_timer_get_time() / 1000;
+    if (idle_type > 0) {
+        tipo_reacao_ociosa_ = idle_type;
+        tempo_inicio_reacao_ociosa_ = now;
+        tempo_fim_reacao_ociosa_ = now + duration_ms;
+    }
+    if (!emotion_override.empty()) {
+        emotion_override_ = emotion_override;
+        emotion_override_until_ms_ = now + duration_ms;
+    }
+}
+
+void TamagotchiEngine::SetAccessory(uint8_t acc_id) {
+    acessorio_id_ = (acc_id <= 7) ? acc_id : 0;
+    SaveState();
+}
+
+uint8_t TamagotchiEngine::GetAccessory() const {
+    if (acessorio_id_ != 0) return acessorio_id_;
+    if (pomodoro_mode_) return 5; // Oculos de leitura no modo foco!
+    return 0;
+}
+
+void TamagotchiEngine::SetPomodoroMode(bool active) {
+    pomodoro_mode_ = active;
+}

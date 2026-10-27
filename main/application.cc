@@ -13,6 +13,7 @@
 #include "tamagotchi_engine.h"
 
 #include <cstring>
+#include <cstdlib>
 #include <esp_log.h>
 #include <cJSON.h>
 #include <driver/gpio.h>
@@ -726,7 +727,130 @@ void Application::InitializeProtocol() {
             }
 #endif
         } else {
-            ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);
+            if (strcmp(type->valuestring, "companion") == 0) {
+                auto action_item = cJSON_GetObjectItem(root, "action");
+                std::string act = (action_item && cJSON_IsString(action_item)) ? action_item->valuestring : "";
+
+                if (act == "feed") {
+                    auto ftype = cJSON_GetObjectItem(root, "food_type");
+                    auto h_gain = cJSON_GetObjectItem(root, "hunger_gain");
+                    auto fun_gain = cJSON_GetObjectItem(root, "fun_gain");
+                    auto hl_gain = cJSON_GetObjectItem(root, "health_gain");
+                    std::string ft = (ftype && cJSON_IsString(ftype)) ? ftype->valuestring : "burger";
+                    int hg = (h_gain && cJSON_IsNumber(h_gain)) ? h_gain->valueint : 20;
+                    int fg = (fun_gain && cJSON_IsNumber(fun_gain)) ? fun_gain->valueint : 0;
+                    int hlg = (hl_gain && cJSON_IsNumber(hl_gain)) ? hl_gain->valueint : 0;
+                    Schedule([this, ft, hg, fg, hlg]() {
+                        TamagotchiEngine::GetInstance().FeedCustom(ft, hg, fg, hlg);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
+                } else if (act == "heal") {
+                    auto mtype = cJSON_GetObjectItem(root, "med_type");
+                    auto hl_gain = cJSON_GetObjectItem(root, "health_gain");
+                    std::string mt = (mtype && cJSON_IsString(mtype)) ? mtype->valuestring : "pill";
+                    int hlg = (hl_gain && cJSON_IsNumber(hl_gain)) ? hl_gain->valueint : 30;
+                    Schedule([this, mt, hlg]() {
+                        TamagotchiEngine::GetInstance().HealCustom(mt, hlg);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
+                        }
+                    });
+                } else if (act == "pet") {
+                    Schedule([this]() {
+                        TamagotchiEngine::GetInstance().Pet();
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
+                } else if (act == "play_progress") {
+                    auto fg_item = cJSON_GetObjectItem(root, "fun_gain");
+                    auto bg_item = cJSON_GetObjectItem(root, "bond_gain");
+                    auto anim_item = cJSON_GetObjectItem(root, "animate");
+                    int fg = (fg_item && cJSON_IsNumber(fg_item)) ? fg_item->valueint : 5;
+                    int bg = (bg_item && cJSON_IsNumber(bg_item)) ? bg_item->valueint : 1;
+                    bool anim = (anim_item && cJSON_IsTrue(anim_item));
+                    Schedule([fg, bg, anim]() {
+                        TamagotchiEngine::GetInstance().AddPlayProgress(fg, bg, anim);
+                    });
+                } else if (act == "roll_dice") {
+                    auto v1_item = cJSON_GetObjectItem(root, "val1");
+                    auto v2_item = cJSON_GetObjectItem(root, "val2");
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    auto fg_item = cJSON_GetObjectItem(root, "fun_gain");
+                    int v1 = (v1_item && cJSON_IsNumber(v1_item)) ? v1_item->valueint : ((rand() % 6) + 1);
+                    int v2 = (v2_item && cJSON_IsNumber(v2_item)) ? v2_item->valueint : 0;
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 3200;
+                    int fg = (fg_item && cJSON_IsNumber(fg_item)) ? fg_item->valueint : 4;
+                    Schedule([this, v1, v2, dur, fg]() {
+                        TamagotchiEngine::GetInstance().TriggerDiceRoll(v1, v2, dur);
+                        TamagotchiEngine::GetInstance().AddPlayProgress(fg, 1, false);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
+                } else if (act == "spin_wheel") {
+                    auto val_item = cJSON_GetObjectItem(root, "val");
+                    if (!val_item) val_item = cJSON_GetObjectItem(root, "value");
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    int val = (val_item && cJSON_IsNumber(val_item)) ? val_item->valueint : ((rand() % 10) + 1);
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 3800;
+                    Schedule([this, val, dur]() {
+                        TamagotchiEngine::GetInstance().TriggerWheelSpin(val, dur);
+                        TamagotchiEngine::GetInstance().AddPlayProgress(4, 1, false);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
+                } else if (act == "overlay") {
+                    auto ov_item = cJSON_GetObjectItem(root, "overlay_type");
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    std::string ov = (ov_item && cJSON_IsString(ov_item)) ? ov_item->valuestring : "";
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 4500;
+                    Schedule([this, ov, dur]() {
+                        TamagotchiEngine::GetInstance().TriggerOverlay(ov, dur);
+                        if (GetDeviceState() == kDeviceStateIdle && (ov == "victory" || ov == "ladder_up" || ov == "money_gain")) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
+                        }
+                    });
+                } else if (act == "expression") {
+                    auto idle_item = cJSON_GetObjectItem(root, "idle_type");
+                    auto emo_item = cJSON_GetObjectItem(root, "emotion");
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    uint8_t idle_t = (idle_item && cJSON_IsNumber(idle_item)) ? (uint8_t)idle_item->valueint : 0;
+                    std::string emo = (emo_item && cJSON_IsString(emo_item)) ? emo_item->valuestring : "";
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 5000;
+                    Schedule([idle_t, emo, dur]() {
+                        TamagotchiEngine::GetInstance().TriggerCustomExpression(idle_t, emo, dur);
+                    });
+                } else if (act == "accessory") {
+                    auto acc_item = cJSON_GetObjectItem(root, "accessory_id");
+                    uint8_t acc_id = (acc_item && cJSON_IsNumber(acc_item)) ? (uint8_t)acc_item->valueint : 0;
+                    Schedule([this, acc_id]() {
+                        TamagotchiEngine::GetInstance().SetAccessory(acc_id);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
+                } else if (act == "pomodoro") {
+                    auto active_item = cJSON_GetObjectItem(root, "active");
+                    auto dur_min_item = cJSON_GetObjectItem(root, "duration_minutes");
+                    bool active = (active_item && cJSON_IsTrue(active_item));
+                    int dur_min = (dur_min_item && cJSON_IsNumber(dur_min_item)) ? dur_min_item->valueint : 0;
+                    Schedule([active, dur_min]() {
+                        auto& eng = TamagotchiEngine::GetInstance();
+                        eng.SetPomodoroMode(active);
+                        if (active && dur_min > 0) {
+                            eng.StartTimer((uint32_t)(dur_min * 60 * 1000), "Pomodoro");
+                        } else if (!active) {
+                            eng.StopTimer();
+                        }
+                    });
+                }
+            } else {
+                ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);
+            }
         }
     });
     

@@ -80,6 +80,12 @@ protected:
     void DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, lv_color_t fgColor, lv_color_t outlineColor);
     void DrawAlarmClock(lv_layer_t* layer);
     void DrawEggScreen(lv_layer_t* layer);
+    void DrawSingleDie(lv_layer_t* layer, int cx, int cy, int halfSize, int val, lv_color_t accentColor);
+    void DrawDiceScene(lv_layer_t* layer);
+    void DrawWheelScene(lv_layer_t* layer);
+    void DrawCompanionScene(lv_layer_t* layer, const std::string& overlay);
+    void DrawAccessoryOverlay(lv_layer_t* layer, uint8_t acc_id, float eyeLx, float eyeLy, float eyeRx, float eyeRy);
+    void DrawFaceOverlay(lv_layer_t* layer, const std::string& overlay);
     void DrawOledFace(int xOffset);
 
     lv_timer_t* eye_timer_ = nullptr;
