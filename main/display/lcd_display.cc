@@ -2270,7 +2270,7 @@ void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
         DrawSingleDie(layer, 82 + shakeX, 54 + bounceY, 28, disp1, accent);
         DrawSingleDie(layer, 174 - shakeX, 54 + (bounceY / 2), 28, disp2, accent);
         if (!rolling) {
-            char buf[32];
+            char buf[64];
             if (v1 == v2) {
                 snprintf(buf, sizeof(buf), "DUPLA! %d + %d = %d", v1, v2, v1 + v2);
             } else {
@@ -2580,7 +2580,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     bool isSarcastic = (pers == PERSONALIDADE_SARCASTICA || engine.GetHumor() == 1);
     int limiarHUD = (pers == PERSONALIDADE_SENSIVEL) ? 50 : 30;
     bool timerAtivo = engine.IsTimerActive();
-    bool mediaAtiva = engine.IsMediaActive();
+    // bool mediaAtiva = engine.IsMediaActive();
     bool precisaComida = (fome <= limiarHUD);
     bool precisaBrincar = (diversao <= limiarHUD);
     bool precisaSaude = (saude <= limiarHUD || estaDoente);
@@ -2643,18 +2643,6 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     current_look_y += (target_look_y - current_look_y) * 0.15f;
     
     uint8_t idleTipo = engine.GetTipoReacaoOciosa();
-    float reactionProgress = 1.0f;
-    uint64_t tStart = engine.GetTempoInicioReacaoOciosa();
-    uint64_t tFim = engine.GetTempoFimReacaoOciosa();
-    if (idleTipo != 0 && tFim > tStart && ms >= tStart && ms <= tFim) {
-        float elapsed = (float)(ms - tStart);
-        float remain = (float)(tFim - ms);
-        if (elapsed < 350.0f) {
-            reactionProgress = elapsed / 350.0f;
-        } else if (remain < 350.0f) {
-            reactionProgress = remain / 350.0f;
-        }
-    }
 
     // =========================================================================
     // 1. PALETA DE CORES RICA (RGB565) POR PERSONALIDADE E EMOÇÃO
