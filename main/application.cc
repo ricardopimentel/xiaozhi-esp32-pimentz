@@ -724,8 +724,7 @@ void Application::InitializeProtocol() {
                 ESP_LOGW(TAG, "Invalid custom message format: missing payload");
             }
 #endif
-        } else {
-            if (strcmp(type->valuestring, "companion") == 0) {
+        } else if (strcmp(type->valuestring, "companion") == 0) {
                 auto action_item = cJSON_GetObjectItem(root, "action");
                 std::string act = (action_item && cJSON_IsString(action_item)) ? action_item->valuestring : "";
 
@@ -846,9 +845,8 @@ void Application::InitializeProtocol() {
                         }
                     });
                 }
-            } else {
-                ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);
-            }
+        } else {
+            ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);
         }
     });
     
