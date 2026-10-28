@@ -2391,6 +2391,56 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         draw_canvas_arc(layer, cx - 8, 44 + bobY, 18, 190, 255, lv_color_hex(0xFFFFFF), 2);
         DrawStarDirect(cx - 48, 32, 5, lv_color_hex(0xFFD700), layer);
         DrawStarDirect(cx + 48, 36, 5, lv_color_hex(0x00E5FF), layer);
+    } else if (overlay == "jail") {
+        // Grades de Prisão com o Robô Preso atrás das barras (256x128)
+        draw_canvas_rect(layer, 16, 6, 224, 102, lv_color_hex(0x0F172A), 8);
+        draw_canvas_rect(layer, 20, 10, 216, 94, lv_color_hex(0x020617), 6);
+        
+        // Olhos tristes/chorando do robô atrás das grades (em ciano)
+        int eyeY = 46 + bobY;
+        draw_canvas_rect(layer, 86, eyeY, 24, 16, lv_color_hex(0x00E5FF), 5);
+        draw_canvas_rect(layer, 92, eyeY + 4, 10, 10, lv_color_hex(0x0F172A), 3);
+        draw_canvas_disc(layer, 98, eyeY + 22, 3, lv_color_hex(0x38BDF8));
+        draw_canvas_disc(layer, 98, eyeY + 29, 2, lv_color_hex(0x38BDF8));
+        
+        draw_canvas_rect(layer, 146, eyeY, 24, 16, lv_color_hex(0x00E5FF), 5);
+        draw_canvas_rect(layer, 154, eyeY + 4, 10, 10, lv_color_hex(0x0F172A), 3);
+        draw_canvas_disc(layer, 158, eyeY + 22, 3, lv_color_hex(0x38BDF8));
+        draw_canvas_disc(layer, 158, eyeY + 29, 2, lv_color_hex(0x38BDF8));
+        
+        // Sobrancelhas caídas de tristeza
+        draw_canvas_line(layer, 84, eyeY - 6, 110, eyeY - 2, lv_color_hex(0x00E5FF), 3);
+        draw_canvas_line(layer, 146, eyeY - 2, 172, eyeY - 6, lv_color_hex(0x00E5FF), 3);
+        
+        // Boca curva triste invertida
+        draw_canvas_arc(layer, 128, eyeY + 36, 16, 40, 140, lv_color_hex(0x00E5FF), 3);
+        
+        // Grades de ferro verticais pesadas
+        int barPositions[] = { 40, 75, 110, 146, 181, 216 };
+        for (int i = 0; i < 6; i++) {
+            int bx = barPositions[i];
+            draw_canvas_rect(layer, bx - 4, 8, 8, 98, lv_color_hex(0x1E293B), 2);
+            draw_canvas_rect(layer, bx - 3, 8, 6, 98, lv_color_hex(0x94A3B8), 1);
+            draw_canvas_line(layer, bx - 1, 8, bx - 1, 106, lv_color_hex(0xF8FAFC), 1);
+        }
+        
+        // Travessas horizontais de aço (superior e inferior)
+        draw_canvas_rect(layer, 20, 20, 216, 8, lv_color_hex(0x475569), 2);
+        draw_canvas_line(layer, 20, 23, 236, 23, lv_color_hex(0xCBD5E1), 2);
+        
+        draw_canvas_rect(layer, 20, 84, 216, 8, lv_color_hex(0x475569), 2);
+        draw_canvas_line(layer, 20, 87, 236, 87, lv_color_hex(0xCBD5E1), 2);
+        
+        // Rebites / Parafusos brilhantes nas junções
+        for (int i = 0; i < 6; i++) {
+            int bx = barPositions[i];
+            draw_canvas_disc(layer, bx, 24, 2, lv_color_hex(0xF8FAFC));
+            draw_canvas_disc(layer, bx, 88, 2, lv_color_hex(0xF8FAFC));
+        }
+        
+        // Faixa de texto vermelha "NA CADEIA!"
+        draw_canvas_rect(layer, 68, 108, 120, 18, lv_color_hex(0xDC2626), 4);
+        draw_canvas_text(layer, 68, 110, 120, 16, "NA CADEIA!", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
@@ -2562,7 +2612,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     }
     std::string activeCompanionOverlay = engine.GetActiveOverlay();
     if (activeCompanionOverlay == "jokenpo_rock" || activeCompanionOverlay == "jokenpo_paper" ||
-        activeCompanionOverlay == "jokenpo_scissors" || activeCompanionOverlay == "crystal_ball") {
+        activeCompanionOverlay == "jokenpo_scissors" || activeCompanionOverlay == "crystal_ball" ||
+        activeCompanionOverlay == "jail") {
         DrawCompanionScene(layer, activeCompanionOverlay);
 #if LVGL_VERSION_MAJOR >= 9
         lv_canvas_finish_layer(face_canvas_, &layer_obj);
