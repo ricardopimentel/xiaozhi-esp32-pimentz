@@ -75,8 +75,7 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
             
             // Atualiza o motor do Tamagotchi com as leituras físicas do corpo
             auto& engine = TamagotchiEngine::GetInstance();
-            engine.SyncRemoteState(state.fome, state.diversao, state.saude, 
-                                  state.humor, 0, state.personalidade, state.estadoNascimento, state.idadeDias);
+            // Mantém necessidades vitais autônomas no cérebro (não sobrescreve fome/diversao/saude com corpo)
             engine.SetWebThresholds(state.limiarBrincar, state.limiarSusto,
                                     state.limiarLuzBaixo, state.limiarLuzAlto,
                                     state.limiarTempBaixo, state.limiarTempAlto);
@@ -91,9 +90,13 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
                                      state.animacaoCurando, state.animacaoAcariciado);
             engine.Update();
             
-            // Define a expressão facial dinamicamente gerada pelo motor Tamagotchi
-            std::string emotion = engine.GetCurrentEmotion();
-            display->SetEmotion(emotion.c_str());
+            // Define a expressão facial sem interromper animações prioritárias (comer, carinho, dados, roleta, overlays)
+            if (!engine.GetAnimacaoComendo() && !engine.GetAnimacaoAcariciado() &&
+                !engine.IsDiceActive() && !engine.IsWheelActive() &&
+                engine.GetActiveOverlay().empty()) {
+                std::string emotion = engine.GetCurrentEmotion();
+                display->SetEmotion(emotion.c_str());
+            }
             
             // Exibe balão de texto se o robô estiver com uma fala ativa
             if (strlen(state.fala) > 0) {

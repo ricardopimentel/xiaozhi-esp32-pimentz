@@ -95,32 +95,53 @@ void TamagotchiEngine::SaveState() {
 void TamagotchiEngine::SetAnimationState(bool comendo, bool brincando, bool curando, bool acariciado) {
     uint64_t now = esp_timer_get_time() / 1000;
     
-    if (comendo && !sensor_animacao_comendo_) tempo_inicio_animacao_comendo_ = now;
-    if (brincando && !sensor_animacao_brincando_) tempo_inicio_animacao_brincando_ = now;
-    if (curando && !sensor_animacao_curando_) tempo_inicio_animacao_curando_ = now;
-    if (acariciado && !sensor_animacao_acariciado_) tempo_inicio_animacao_acariciado_ = now;
+    if (comendo) {
+        if (!sensor_animacao_comendo_) tempo_inicio_animacao_comendo_ = now;
+        sensor_animacao_comendo_ = true;
+    } else if (now >= tempo_fim_animacao_comendo_) {
+        sensor_animacao_comendo_ = false;
+    }
 
-    sensor_animacao_comendo_ = comendo;
-    sensor_animacao_brincando_ = brincando;
-    sensor_animacao_curando_ = curando;
-    sensor_animacao_acariciado_ = acariciado;
+    if (brincando) {
+        if (!sensor_animacao_brincando_) tempo_inicio_animacao_brincando_ = now;
+        sensor_animacao_brincando_ = true;
+    } else {
+        sensor_animacao_brincando_ = false;
+    }
+
+    if (curando) {
+        if (!sensor_animacao_curando_) tempo_inicio_animacao_curando_ = now;
+        sensor_animacao_curando_ = true;
+    } else {
+        sensor_animacao_curando_ = false;
+    }
+
+    if (acariciado) {
+        if (!sensor_animacao_acariciado_) tempo_inicio_animacao_acariciado_ = now;
+        sensor_animacao_acariciado_ = true;
+    } else if (now >= tempo_fim_animacao_acariciado_) {
+        sensor_animacao_acariciado_ = false;
+    }
 }
 
 void TamagotchiEngine::SyncRemoteState(uint8_t fome, uint8_t diversao, uint8_t saude, uint8_t humor, uint8_t vinculo, uint8_t pers, uint8_t estNasc, uint32_t idade) {
     tempo_ultimo_pacote_espnow_ = esp_timer_get_time() / 1000;
-    modo_autonomo_ = false;
+    // O cérebro mantém vitalidade e decaimento local de forma autônoma
+    modo_autonomo_ = true;
+    (void)fome;
+    (void)diversao;
+    (void)saude;
 
-    fome_ = fome;
-    diversao_ = diversao;
-    saude_ = saude;
     humor_ = humor;
-    personalidade_ = static_cast<Personalidade>(pers);
-    personalidade_natural_ = static_cast<Personalidade>(pers);
+    if (pers <= 2) {
+        personalidade_ = static_cast<Personalidade>(pers);
+        personalidade_natural_ = static_cast<Personalidade>(pers);
+    }
     if (vinculo > 0) {
         pontos_de_vinculo_ = vinculo;
         AtualizarVinculo(0);
     }
-    if (estNasc <= 2) {
+    if (estNasc <= 2 && estado_nascimento_ != ESTADO_NASCIDO) {
         estado_nascimento_ = static_cast<EstadoNascimento>(estNasc);
     }
     if (idade > 0) {
@@ -148,16 +169,22 @@ void TamagotchiEngine::Update() {
         }
     }
     
-    // Se não recebe pacotes do Corpo por mais de 3 segundos, ativa modo autônomo
-    if (now - tempo_ultimo_pacote_espnow_ > 3000) {
-        modo_autonomo_ = true;
+    // Cérebro opera sempre de modo autônomo para cálculo de necessidades e ciclo de vida
+    modo_autonomo_ = true;
+
+    // Timeout explícito de dados e roleta do Companion
+    if (dice_active_ && (now >= dice_start_ms_ + dice_duration_ms_)) {
+        dice_active_ = false;
+    }
+    if (wheel_active_ && (now >= wheel_start_ms_ + wheel_duration_ms_)) {
+        wheel_active_ = false;
     }
 
-    // Proteção contra loop infinito de animações de ação (timeout de 6 segundos)
-    if (sensor_animacao_comendo_ && (now - tempo_inicio_animacao_comendo_ > 6000)) sensor_animacao_comendo_ = false;
+    // Proteção de duração das animações de ação
+    if (sensor_animacao_comendo_ && now >= tempo_fim_animacao_comendo_ && (now - tempo_inicio_animacao_comendo_ > 5000)) sensor_animacao_comendo_ = false;
     if (sensor_animacao_brincando_ && (now - tempo_inicio_animacao_brincando_ > 6000)) sensor_animacao_brincando_ = false;
     if (sensor_animacao_curando_ && (now - tempo_inicio_animacao_curando_ > 6000)) sensor_animacao_curando_ = false;
-    if (sensor_animacao_acariciado_ && (now - tempo_inicio_animacao_acariciado_ > 6000)) sensor_animacao_acariciado_ = false;
+    if (sensor_animacao_acariciado_ && now >= tempo_fim_animacao_acariciado_ && (now - tempo_inicio_animacao_acariciado_ > 4000)) sensor_animacao_acariciado_ = false;
 
     // Lógica de Micro-Animações Ociosas (Idle)
     if (estado_nascimento_ == ESTADO_NASCIDO && sensor_luz_porcento_ >= 10 &&
@@ -524,6 +551,7 @@ void TamagotchiEngine::Pet() {
     uint64_t now = esp_timer_get_time() / 1000;
     sensor_animacao_acariciado_ = true;
     tempo_inicio_animacao_acariciado_ = now;
+    tempo_fim_animacao_acariciado_ = now + 4000;
     AtualizarVinculo(3);
     SaveState();
 }
@@ -916,6 +944,7 @@ void TamagotchiEngine::FeedCustom(const std::string& food_type, int hunger_gain,
     }
     sensor_animacao_comendo_ = true;
     tempo_inicio_animacao_comendo_ = now;
+    tempo_fim_animacao_comendo_ = now + 5000;
 
     if (food_type == "pepper" || food_type == "spicy") {
         food_reaction_type_ = 1;
@@ -985,6 +1014,7 @@ void TamagotchiEngine::TriggerDiceRoll(int val1, int val2, uint32_t duration_ms)
 bool TamagotchiEngine::IsDiceActive() const {
     if (!dice_active_) return false;
     uint64_t now = esp_timer_get_time() / 1000;
+    if (now < dice_start_ms_) return false;
     return (now - dice_start_ms_) < dice_duration_ms_;
 }
 
@@ -1007,6 +1037,7 @@ void TamagotchiEngine::TriggerWheelSpin(int target_val, uint32_t duration_ms) {
 bool TamagotchiEngine::IsWheelActive() const {
     if (!wheel_active_) return false;
     uint64_t now = esp_timer_get_time() / 1000;
+    if (now < wheel_start_ms_) return false;
     return (now - wheel_start_ms_) < wheel_duration_ms_;
 }
 

@@ -1183,7 +1183,14 @@ void Application::HandleStateChangedEvent() {
             break;
         case kDeviceStateSpeaking:
             display->SetStatus(Lang::Strings::SPEAKING);
-            display->SetEmotion("happy");
+            {
+                auto& engine = TamagotchiEngine::GetInstance();
+                if (!engine.GetAnimacaoComendo() && !engine.GetAnimacaoAcariciado() &&
+                    !engine.IsDiceActive() && !engine.IsWheelActive() &&
+                    engine.GetActiveOverlay().empty()) {
+                    display->SetEmotion("happy");
+                }
+            }
 
             if (listening_mode_ != kListeningModeRealtime) {
                 audio_service_.EnableVoiceProcessing(false);

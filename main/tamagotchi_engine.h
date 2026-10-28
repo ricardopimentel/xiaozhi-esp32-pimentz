@@ -204,9 +204,11 @@ private:
     uint64_t tempo_fim_reacao_ociosa_ = 0;
     uint64_t tempo_proxima_reacao_ociosa_ = 0;
     uint64_t tempo_inicio_animacao_comendo_ = 0;
+    uint64_t tempo_fim_animacao_comendo_ = 0;
     uint64_t tempo_inicio_animacao_brincando_ = 0;
     uint64_t tempo_inicio_animacao_curando_ = 0;
     uint64_t tempo_inicio_animacao_acariciado_ = 0;
+    uint64_t tempo_fim_animacao_acariciado_ = 0;
     uint64_t tempo_ultimo_pacote_espnow_ = 0;
     uint64_t last_tick_time_ = 0;
     uint64_t last_save_time_ = 0;

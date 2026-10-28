@@ -88,6 +88,9 @@ static void draw_canvas_text(lv_layer_t * layer, int x, int y, int w, int h, con
     dsc.font = font ? font : &BUILTIN_TEXT_FONT;
     dsc.text = text;
     dsc.align = align;
+#if LVGL_VERSION_MAJOR >= 9
+    dsc.text_local = 1;
+#endif
     lv_area_t area = {x, y, x + w, y + h};
     lv_draw_label(layer, &dsc, &area);
 }
@@ -1944,12 +1947,11 @@ void LcdDisplay::DrawCheekBlush(float x, float y, float radiusX, float radiusY, 
     draw_canvas_rect(layer, px - pw/2, py - ph/2, pw, ph, color, ph/2);
 }
 
-void LcdDisplay::DrawStar(float x, float y, float radius, lv_color_t color, lv_layer_t* layer) {
+void LcdDisplay::DrawStarDirect(int px, int py, int r, lv_color_t color, lv_layer_t* layer) {
     if (!face_canvas_ || !layer) return;
-    int px = (int)(x * 2.0f);
-    int py = (int)(y * 2.0f);
-    int r = (int)(radius * 2.0f);
     if (r < 2) r = 2;
+    // Proteção contra estouro de limites do canvas 256x128
+    if (px < r || px >= (256 - r) || py < r || py >= (128 - r)) return;
     
     draw_canvas_line(layer, px, py - r, px, py + r, color, 3);
     draw_canvas_line(layer, px - r, py, px + r, py, color, 3);
@@ -1957,6 +1959,13 @@ void LcdDisplay::DrawStar(float x, float y, float radius, lv_color_t color, lv_l
     draw_canvas_line(layer, px - diag, py - diag, px + diag, py + diag, color, 2);
     draw_canvas_line(layer, px - diag, py + diag, px + diag, py - diag, color, 2);
     draw_canvas_disc(layer, px, py, 2, lv_color_hex(0xFFFFFF));
+}
+
+void LcdDisplay::DrawStar(float x, float y, float radius, lv_color_t color, lv_layer_t* layer) {
+    int px = (int)(x * 2.0f);
+    int py = (int)(y * 2.0f);
+    int r = (int)(radius * 2.0f);
+    DrawStarDirect(px, py, r, color, layer);
 }
 
 void LcdDisplay::DrawTimerSegmentChar(lv_layer_t* layer, int x, int y, char c, lv_color_t fgColor, lv_color_t outlineColor) {
@@ -2255,14 +2264,14 @@ void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
     }
 
     lv_color_t accent = rolling ? lv_color_hex(0x00E5FF) : lv_color_hex(0xFFD700);
+    static char s_dice_buf[64];
     if (!dual) {
         DrawSingleDie(layer, 128 + shakeX, 56 + bounceY, 34, disp1, accent);
         if (!rolling) {
-            DrawStar(74.0f, 32.0f, 5.0f, lv_color_hex(0xFFD700), layer);
-            DrawStar(182.0f, 36.0f, 4.5f, lv_color_hex(0x00E5FF), layer);
-            char buf[24];
-            snprintf(buf, sizeof(buf), "DADO: %d", v1);
-            draw_canvas_text(layer, 58, 102, 140, 22, buf, lv_color_hex(0xFFD700), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            DrawStarDirect(74, 32, 5, lv_color_hex(0xFFD700), layer);
+            DrawStarDirect(182, 36, 5, lv_color_hex(0x00E5FF), layer);
+            snprintf(s_dice_buf, sizeof(s_dice_buf), "DADO: %d", v1);
+            draw_canvas_text(layer, 58, 102, 140, 22, s_dice_buf, lv_color_hex(0xFFD700), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         } else {
             draw_canvas_text(layer, 48, 102, 160, 22, "ROLANDO...", lv_color_hex(0x00E5FF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         }
@@ -2270,13 +2279,12 @@ void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
         DrawSingleDie(layer, 82 + shakeX, 54 + bounceY, 28, disp1, accent);
         DrawSingleDie(layer, 174 - shakeX, 54 + (bounceY / 2), 28, disp2, accent);
         if (!rolling) {
-            char buf[64];
             if (v1 == v2) {
-                snprintf(buf, sizeof(buf), "DUPLA! %d + %d = %d", v1, v2, v1 + v2);
+                snprintf(s_dice_buf, sizeof(s_dice_buf), "DUPLA! %d + %d = %d", v1, v2, v1 + v2);
             } else {
-                snprintf(buf, sizeof(buf), "TOTAL: %d", v1 + v2);
+                snprintf(s_dice_buf, sizeof(s_dice_buf), "TOTAL: %d", v1 + v2);
             }
-            draw_canvas_text(layer, 28, 98, 200, 24, buf, lv_color_hex(0xFFD700), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            draw_canvas_text(layer, 28, 98, 200, 24, s_dice_buf, lv_color_hex(0xFFD700), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         } else {
             draw_canvas_text(layer, 48, 98, 160, 24, "DADOS...", lv_color_hex(0x00E5FF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         }
@@ -2320,15 +2328,15 @@ void LcdDisplay::DrawWheelScene(lv_layer_t* layer) {
     draw_canvas_arc(layer, cx, cy, 24, 0, 360, ringCol, 3);
 
     int shownVal = (prog < 0.78f) ? (((int)(ease * 40.0f) % 10) + 1) : target;
-    char numBuf[8];
-    snprintf(numBuf, sizeof(numBuf), "%d", shownVal);
-    draw_canvas_text(layer, cx - 22, cy - 11, 44, 22, numBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    static char s_wheel_buf[16];
+    snprintf(s_wheel_buf, sizeof(s_wheel_buf), "%d", shownVal);
+    draw_canvas_text(layer, cx - 22, cy - 11, 44, 22, s_wheel_buf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
     // Ponteiro dourado fixo no topo (12h)
     draw_canvas_triangle(layer, cx - 8, 8, cx + 8, 8, cx, 22, lv_color_hex(0xFFD700));
     if (prog >= 0.78f) {
-        DrawStar((float)(cx - 64), 38.0f, 5.0f, lv_color_hex(0xFFD700), layer);
-        DrawStar((float)(cx + 64), 38.0f, 5.0f, lv_color_hex(0x00E5FF), layer);
+        DrawStarDirect(cx - 64, 38, 5, lv_color_hex(0xFFD700), layer);
+        DrawStarDirect(cx + 64, 38, 5, lv_color_hex(0x00E5FF), layer);
     }
 }
 
@@ -2381,8 +2389,8 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         draw_canvas_disc(layer, orbX, orbY, 10, lv_color_hex(0x00E5FF));
         draw_canvas_arc(layer, cx, 52 + bobY, 34, 0, 360, lv_color_hex(0xE879F9), 2);
         draw_canvas_arc(layer, cx - 8, 44 + bobY, 18, 190, 255, lv_color_hex(0xFFFFFF), 2);
-        DrawStar((float)(cx - 48), 32.0f, 4.5f, lv_color_hex(0xFFD700), layer);
-        DrawStar((float)(cx + 48), 36.0f, 4.5f, lv_color_hex(0x00E5FF), layer);
+        DrawStarDirect(cx - 48, 32, 5, lv_color_hex(0xFFD700), layer);
+        DrawStarDirect(cx + 48, 36, 5, lv_color_hex(0x00E5FF), layer);
     }
 }
 
@@ -2448,12 +2456,12 @@ void LcdDisplay::DrawAccessoryOverlay(lv_layer_t* layer, uint8_t acc_id, float e
         draw_canvas_rect(layer, 16, ly - 12, 6, 24, lv_color_hex(0x00E5FF), 3);
         draw_canvas_rect(layer, 234, ry - 12, 6, 24, lv_color_hex(0x00E5FF), 3);
     } else if (acc_id == 7) {
-        // 7: Gravata Borboleta Neon
-        int by = 114;
+        // 7: Gravata Borboleta Neon (posicionada no colarinho/base da tela, abaixo da boca)
+        int by = 122;
         lv_color_t bow = lv_color_hex(0xFF4081);
-        draw_canvas_triangle(layer, midX - 20, by - 9, midX - 20, by + 9, midX, by, bow);
-        draw_canvas_triangle(layer, midX + 20, by - 9, midX + 20, by + 9, midX, by, bow);
-        draw_canvas_disc(layer, midX, by, 4, lv_color_hex(0xFFD700));
+        draw_canvas_triangle(layer, midX - 16, by - 5, midX - 16, by + 5, midX, by, bow);
+        draw_canvas_triangle(layer, midX + 16, by - 5, midX + 16, by + 5, midX, by, bow);
+        draw_canvas_disc(layer, midX, by, 3, lv_color_hex(0xFFD700));
     }
 }
 
