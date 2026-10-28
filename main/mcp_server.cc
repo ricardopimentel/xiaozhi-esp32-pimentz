@@ -143,9 +143,12 @@ void McpServer::AddCommonTools() {
             engine.TriggerDiceRoll(v1, v2, 3400);
             engine.AddPlayProgress(6, 2, false);
             if (v2 > 0) {
-                return "Rolled two dice on screen: " + std::to_string(v1) + " and " + std::to_string(v2) + " (total " + std::to_string(v1 + v2) + ").";
+                return "The dice are rolling on screen! The result that will settle on screen is: " + 
+                       std::to_string(v1) + " and " + std::to_string(v2) + " (total " + std::to_string(v1 + v2) + 
+                       "). Build suspense first (e.g. 'Rolando os dados na minha tela...'), then announce the numbers!";
             }
-            return "Rolled die on screen: " + std::to_string(v1) + ".";
+            return "The die is rolling on screen! The result that will settle on screen is: " + 
+                   std::to_string(v1) + ". Build suspense first (e.g. 'Rolando o dado na tela...'), then announce the number!";
         });
 
     AddTool("self.set_accessory",

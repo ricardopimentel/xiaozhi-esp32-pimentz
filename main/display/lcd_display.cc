@@ -2247,7 +2247,7 @@ void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
     int v2 = engine.GetDiceVal2();
     bool dual = (v2 > 0);
 
-    bool rolling = (prog < 0.62f);
+    bool rolling = (prog < 0.46f);
     int disp1 = rolling ? ((int)((ms / 70) % 6) + 1) : v1;
     int disp2 = rolling ? ((int)(((ms + 190) / 65) % 6) + 1) : v2;
 
@@ -2257,7 +2257,7 @@ void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
         bounceY = (int)(-fabsf(sinf(ms * 0.018f)) * 18.0f);
         shakeX = (int)(sinf(ms * 0.045f) * 6.0f);
     } else {
-        float settle = (prog - 0.62f) / 0.38f;
+        float settle = (prog - 0.46f) / 0.54f;
         if (settle < 0.35f) {
             bounceY = (int)(-sinf((settle / 0.35f) * 3.14159f) * 8.0f);
         }
@@ -2324,17 +2324,17 @@ void LcdDisplay::DrawWheelScene(lv_layer_t* layer) {
 
     // Núcleo central mostrando o número da Roleta (1 a 10)
     draw_canvas_disc(layer, cx, cy, 24, lv_color_hex(0x0F172A));
-    lv_color_t ringCol = (prog >= 0.78f) ? lv_color_hex(0xFFD700) : lv_color_hex(0x00E5FF);
+    lv_color_t ringCol = (prog >= 0.55f) ? lv_color_hex(0xFFD700) : lv_color_hex(0x00E5FF);
     draw_canvas_arc(layer, cx, cy, 24, 0, 360, ringCol, 3);
 
-    int shownVal = (prog < 0.78f) ? (((int)(ease * 40.0f) % 10) + 1) : target;
+    int shownVal = (prog < 0.55f) ? (((int)(ease * 40.0f) % 10) + 1) : target;
     static char s_wheel_buf[16];
     snprintf(s_wheel_buf, sizeof(s_wheel_buf), "%d", shownVal);
     draw_canvas_text(layer, cx - 22, cy - 11, 44, 22, s_wheel_buf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
     // Ponteiro dourado fixo no topo (12h)
     draw_canvas_triangle(layer, cx - 8, 8, cx + 8, 8, cx, 22, lv_color_hex(0xFFD700));
-    if (prog >= 0.78f) {
+    if (prog >= 0.55f) {
         DrawStarDirect(cx - 64, 38, 5, lv_color_hex(0xFFD700), layer);
         DrawStarDirect(cx + 64, 38, 5, lv_color_hex(0x00E5FF), layer);
     }
