@@ -69,7 +69,17 @@ void TamagotchiEngine::Initialize() {
     }
 }
 
+void TamagotchiEngine::MarkDirty() {
+    state_dirty_ = true;
+}
+
 void TamagotchiEngine::SaveState() {
+    auto& app = Application::GetInstance();
+    if (app.GetDeviceState() == kDeviceStateSpeaking || !app.GetAudioService().IsIdle()) {
+        state_dirty_ = true;
+        return;
+    }
+
     nvs_handle_t handle;
     esp_err_t err = nvs_open("tamagotchi", NVS_READWRITE, &handle);
     if (err == ESP_OK) {
@@ -87,6 +97,7 @@ void TamagotchiEngine::SaveState() {
         nvs_commit(handle);
         nvs_close(handle);
         
+        state_dirty_ = false;
         last_save_time_ = esp_timer_get_time() / 1000;
         ESP_LOGD(TAG, "Estado salvo com sucesso no NVS");
     }
@@ -161,11 +172,22 @@ void TamagotchiEngine::Update() {
         AtivarAlarme(label);
     }
     
-    // Alarme contínuo: toca repetidamente a cada 1200ms até ser desligado pelo botão BOOT
+    // Alarme contínuo: toca a cada 2000ms até ser desligado pelo botão BOOT,
+    // apenas quando o áudio anterior estiver totalmente concluído (IsIdle) para evitar colisão e distorção
     if (alarme_ativo_) {
-        if (tempo_ultimo_toque_alarme_ == 0 || (now - tempo_ultimo_toque_alarme_ >= 1200)) {
+        auto& audio = Application::GetInstance().GetAudioService();
+        if (audio.IsIdle() && (now - tempo_ultimo_toque_alarme_ >= 2000)) {
             tempo_ultimo_toque_alarme_ = now;
+            audio.ResetDecoder();
             Application::GetInstance().PlaySound(Lang::Sounds::OGG_EXCLAMATION);
+        }
+    }
+
+    // Se houver dados pendentes para salvar, grava no NVS apenas quando não estiver falando nem reproduzindo áudio
+    if (state_dirty_ && (now - last_save_time_ >= 15000)) {
+        auto& app = Application::GetInstance();
+        if (app.GetDeviceState() != kDeviceStateSpeaking && app.GetAudioService().IsIdle()) {
+            SaveState();
         }
     }
     
@@ -310,7 +332,7 @@ void TamagotchiEngine::Update() {
         if (now - last_fome_tick >= intervalo_fome) {
             fome_ = std::max(0, fome_ - 1);
             last_fome_tick = now;
-            SaveState();
+            MarkDirty();
         }
 
         // Diversão decai periodicamente
@@ -320,7 +342,7 @@ void TamagotchiEngine::Update() {
         if (now - last_brincar_tick >= intervalo_brincar) {
             diversao_ = std::max(0, diversao_ - 1);
             last_brincar_tick = now;
-            SaveState();
+            MarkDirty();
         }
 
         // Saúde decai se estiver faminto e entediado, ou doente
@@ -330,7 +352,7 @@ void TamagotchiEngine::Update() {
             uint8_t limiar = (personalidade_natural_ == PERSONALIDADE_SENSIVEL) ? 50 : 30;
             if ((fome_ <= limiar && diversao_ <= limiar) || esta_doente_) {
                 saude_ = std::max(0, saude_ - 1);
-                SaveState();
+                MarkDirty();
             }
             last_saude_tick = now;
         }
@@ -354,7 +376,7 @@ void TamagotchiEngine::Update() {
             tempo_no_frio_ = now;
             if ((rand() % 100) < 5) {
                 esta_doente_ = true;
-                SaveState();
+                MarkDirty();
                 ESP_LOGW(TAG, "O Robô ficou doente devido ao frio!");
             }
         }
@@ -524,7 +546,7 @@ void TamagotchiEngine::AtualizarVinculo(int8_t pontos) {
     personalidade_ = personalidade_natural_;
     
     if (pontos_de_vinculo_ != antigo) {
-        SaveState();
+        MarkDirty();
     }
 }
 
@@ -816,15 +838,14 @@ void TamagotchiEngine::AtivarAlarme(const std::string& label) {
     alarme_ativo_ = true;
     uint64_t now = esp_timer_get_time() / 1000;
     tempo_inicio_alarme_ = now;
-    tempo_ultimo_toque_alarme_ = 0; // Toca imediatamente
+    tempo_ultimo_toque_alarme_ = now; // Já tocará via app.Alert abaixo, não disparar imediatamente em Update()
     
-    // Aumenta o volume do speaker para garantir que o despertador seja bem audível
+    // Aumenta o volume do speaker de forma controlada sem estourar o amplificador (evita distorção analógica severa)
     auto codec = Board::GetInstance().GetAudioCodec();
     if (codec) {
         volume_anterior_ = codec->output_volume();
-        if (volume_anterior_ < 90) {
-            codec->SetOutputVolume(95);
-        }
+        int novo_volume = std::min(85, std::max(volume_anterior_, 80));
+        codec->SetOutputVolume(novo_volume);
     }
     
     auto& app = Application::GetInstance();

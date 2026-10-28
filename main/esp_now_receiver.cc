@@ -88,19 +88,27 @@ static void esp_now_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
                                  state.rfidLido, state.rfidAcao, state.rfidUID);
             engine.SetAnimationState(state.animacaoComendo, state.animacaoBrincando,
                                      state.animacaoCurando, state.animacaoAcariciado);
-            engine.Update();
-            
-            // Define a expressão facial sem interromper animações prioritárias (comer, carinho, dados, roleta, overlays)
-            if (!engine.GetAnimacaoComendo() && !engine.GetAnimacaoAcariciado() &&
+
+            auto& app = Application::GetInstance();
+            auto dev_state = app.GetDeviceState();
+            bool in_conversation = (dev_state == kDeviceStateSpeaking || dev_state == kDeviceStateListening);
+
+            // Define a expressão facial apenas quando não estiver em diálogo com a IA e sem interromper animações
+            if (!in_conversation &&
+                !engine.GetAnimacaoComendo() && !engine.GetAnimacaoAcariciado() &&
                 !engine.IsDiceActive() && !engine.IsWheelActive() &&
                 engine.GetActiveOverlay().empty()) {
                 std::string emotion = engine.GetCurrentEmotion();
                 display->SetEmotion(emotion.c_str());
             }
             
-            // Exibe balão de texto se o robô estiver com uma fala ativa
-            if (strlen(state.fala) > 0) {
-                display->SetChatMessage("assistant", state.fala);
+            // Exibe balão de texto se o robô estiver com uma fala ativa (apenas fora de diálogo IA e quando alterar)
+            if (!in_conversation && strlen(state.fala) > 0) {
+                static std::string s_last_fala = "";
+                if (s_last_fala != state.fala) {
+                    s_last_fala = state.fala;
+                    display->SetChatMessage("assistant", state.fala);
+                }
             }
         });
     } else {

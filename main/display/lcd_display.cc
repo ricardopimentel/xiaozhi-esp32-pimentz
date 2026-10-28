@@ -2081,8 +2081,8 @@ void LcdDisplay::DrawAlarmClock(lv_layer_t* layer) {
     draw_canvas_line(layer, cx + vibX, cy + vibY, cx + 15 + vibX, cy - 15 + vibY, lv_color_hex(0x212121), 3);
     // Ponteiro de segundos girando rápido
     float sAngle = ((ms % 2000) / 2000.0f) * 6.28318f;
-    int sX = (cx + vibX) + (int)(22.0f * sin(sAngle));
-    int sY = (cy + vibY) - (int)(22.0f * cos(sAngle));
+    int sX = (cx + vibX) + (int)(22.0f * sinf(sAngle));
+    int sY = (cy + vibY) - (int)(22.0f * cosf(sAngle));
     draw_canvas_line(layer, cx + vibX, cy + vibY, sX, sY, lv_color_hex(0xE53935), 2);
     
     // Centro dos ponteiros

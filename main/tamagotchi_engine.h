@@ -226,6 +226,9 @@ private:
     uint64_t tempo_ultimo_toque_alarme_ = 0;
     uint64_t ultimo_desarme_alarme_ = 0;
     int volume_anterior_ = 0;
+    bool state_dirty_ = false;
+
+    void MarkDirty();
 
     // Media Player (TV & Google Home)
     std::vector<TamagotchiMediaItem> media_items_;
