@@ -1272,7 +1272,7 @@ void LcdDisplay::SetupUI() {
     lv_draw_buf_t* draw_buf = lv_draw_buf_create(256, 128, LV_COLOR_FORMAT_NATIVE, LV_STRIDE_AUTO);
     if (draw_buf) {
         lv_canvas_set_draw_buf(face_canvas_, draw_buf);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -32);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -27);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrao ate nascer
     } else {
         ESP_LOGE(TAG, "Falha CRITICA ao alocar draw_buf para o Canvas! Desativando rosto.");
@@ -1286,7 +1286,7 @@ void LcdDisplay::SetupUI() {
         // Alinhamento manual de segurança para 64-bytes
         void* aligned_buf = (void*)(((uintptr_t)face_canvas_buf_ + 63) & ~63);
         lv_canvas_set_buffer(face_canvas_, aligned_buf, 256, 128, LV_COLOR_FORMAT_NATIVE);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -32);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -27);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     } else {
         ESP_LOGE(TAG, "Falha ao alocar Canvas! Desativando rosto.");
@@ -4288,7 +4288,7 @@ skip_default_cheeks: ;
         int bw = 108;
         int bh = 24;
         int bx = 128 - (bw / 2);
-        int by = 0;
+        int by = 2;
 
         drawSliderDots = true;
         activeSlotIdx = 0;
@@ -4358,7 +4358,7 @@ skip_default_cheeks: ;
         int bw = 236;
         int bh = 24;
         int bx = 128 - (bw / 2);
-        int by = 0;
+        int by = 2;
 
         drawSliderDots = true;
         activeSlotIdx = (timerAtivo ? 1 : 0) + activeMediaIdx;
@@ -4560,7 +4560,7 @@ skip_default_cheeks: ;
     // =========================================================================
     if (drawSliderDots && totalCarouselSlots > 1) {
         int dotStartX = hudBx + 8;
-        int dotY = 26; // 2 pixels abaixo da pílula (que termina em y = 24)
+        int dotY = 28; // 2 pixels abaixo da pílula (que termina em y = 26)
         for (int i = 0; i < totalCarouselSlots; i++) {
             if (i == activeSlotIdx) {
                 // Pílula ativa alongada em neon com cantos arredondados (10x3 px)
