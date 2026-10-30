@@ -68,6 +68,12 @@ void McpServer::AddCommonTools() {
             cJSON_AddBoolToObject(root, "obstacle_detected", engine.GetSensorObstaculo());
             cJSON_AddNumberToObject(root, "accessory_id", engine.GetAccessory());
             cJSON_AddBoolToObject(root, "pomodoro_mode", engine.IsPomodoroMode());
+            cJSON_AddBoolToObject(root, "timer_active", engine.IsTimerActive());
+            if (engine.IsTimerActive()) {
+                cJSON_AddNumberToObject(root, "timer_remaining_sec", engine.GetTimerRemainingMs() / 1000);
+                cJSON_AddNumberToObject(root, "timer_duration_sec", engine.GetTimerDurationMs() / 1000);
+                cJSON_AddStringToObject(root, "timer_label", engine.GetTimerLabel().c_str());
+            }
             
             char* json_str = cJSON_PrintUnformatted(root);
             std::string res(json_str);

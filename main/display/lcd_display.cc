@@ -1272,7 +1272,7 @@ void LcdDisplay::SetupUI() {
     lv_draw_buf_t* draw_buf = lv_draw_buf_create(256, 128, LV_COLOR_FORMAT_NATIVE, LV_STRIDE_AUTO);
     if (draw_buf) {
         lv_canvas_set_draw_buf(face_canvas_, draw_buf);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -22);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -32);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrao ate nascer
     } else {
         ESP_LOGE(TAG, "Falha CRITICA ao alocar draw_buf para o Canvas! Desativando rosto.");
@@ -1286,7 +1286,7 @@ void LcdDisplay::SetupUI() {
         // Alinhamento manual de segurança para 64-bytes
         void* aligned_buf = (void*)(((uintptr_t)face_canvas_buf_ + 63) & ~63);
         lv_canvas_set_buffer(face_canvas_, aligned_buf, 256, 128, LV_COLOR_FORMAT_NATIVE);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -22);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -32);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     } else {
         ESP_LOGE(TAG, "Falha ao alocar Canvas! Desativando rosto.");
@@ -4220,6 +4220,12 @@ skip_default_cheeks: ;
     bool mostrarPetStatus = false;
     int activeMediaIdx = 0;
 
+    // Estado do Slider Indicator
+    bool drawSliderDots = false;
+    int activeSlotIdx = 0;
+    int hudBx = 10;
+    lv_color_t activeDotColor = lv_color_hex(0x38BDF8);
+
     int totalCarouselSlots = (timerAtivo ? 1 : 0) + (int)mediaCount + (petStatusAtivo ? 1 : 0);
 
     if (totalCarouselSlots > 0) {
@@ -4280,14 +4286,17 @@ skip_default_cheeks: ;
         // ANEL ORBITAL CIRCULAR EXPANDIDO (108 x 28 px)
         // =====================================================================
         int bw = 108;
-        int bh = 28;
+        int bh = 24;
         int bx = 128 - (bw / 2);
-        int by = 4;
+        int by = 0;
+
+        drawSliderDots = true;
+        activeSlotIdx = 0;
+        hudBx = bx;
         
-        // 1. Fundo da cápsula com cantos perfeitamente arredondados (pílula moderna)
-        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
-        // Borda sutil e discreta
-        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
+        // 1. Fundo da cápsula com cantos perfeitamente arredondados (quase colada ao relógio)
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 12);
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 12);
         
         // 2. Cor dinâmica inteligente por urgência do timer
         lv_color_t arcColor;
@@ -4298,11 +4307,12 @@ skip_default_cheeks: ;
         } else {
             arcColor = lv_color_hex(0xEF4444); // Vermelho de urgência
         }
+        activeDotColor = arcColor;
         
         // 3. Anel Orbital Circular (lado esquerdo da cápsula)
-        int arcX = bx + 16;
-        int arcY = by + 14;
-        int arcR = 8;
+        int arcX = bx + 14;
+        int arcY = by + 12;
+        int arcR = 7;
         
         // Trilho de fundo do anel (360° cinza escuro)
         draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, lv_color_hex(0x222634), 2);
@@ -4325,8 +4335,8 @@ skip_default_cheeks: ;
         draw_canvas_disc(layer, arcX, arcY, 2, arcColor);
         
         // 4. Dígitos digitais perfeitamente centralizados no espaço restante à direita
-        int textX = bx + 38;
-        int textY = by + 7;
+        int textX = bx + 36;
+        int textY = by + 5;
         for (int i = 0; i < 5; i++) {
             DrawTimerSegmentChar(layer, textX + i * 12, textY, timeStr[i], lv_color_hex(0xF0F6FC), lv_color_hex(0x000000));
         }
@@ -4346,13 +4356,17 @@ skip_default_cheeks: ;
         if (percent < 0) percent = 0;
 
         int bw = 236;
-        int bh = 28;
+        int bh = 24;
         int bx = 128 - (bw / 2);
-        int by = 4;
+        int by = 0;
 
-        // 1. Fundo da cápsula com cantos perfeitamente arredondados (perfeitamente centralizado no canvas 256px)
-        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 14);
-        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 14);
+        drawSliderDots = true;
+        activeSlotIdx = (timerAtivo ? 1 : 0) + activeMediaIdx;
+        hudBx = bx;
+
+        // 1. Fundo da cápsula com cantos perfeitamente arredondados (quase colada ao relógio)
+        draw_canvas_rect(layer, bx, by, bw, bh, lv_color_hex(0x0C0F17), 12);
+        draw_canvas_rect_empty(layer, bx, by, bw, bh, lv_color_hex(0x272F40), 1, 12);
 
         // 2. Cor dinâmica pelo tipo de dispositivo (TV = #FF0000, Google Home = #a207f5)
         bool isTv = (device.find("TV") != std::string::npos || device.find("tv") != std::string::npos);
@@ -4362,11 +4376,12 @@ skip_default_cheeks: ;
         } else {
             mediaColor = lv_color_hex(0xA207F5); // Roxo/Violeta vibrante (#a207f5)
         }
+        activeDotColor = mediaColor;
 
         // 3. Anel Orbital Circular à esquerda
-        int arcX = bx + 16;
-        int arcY = by + 14;
-        int arcR = 8;
+        int arcX = bx + 14;
+        int arcY = by + 12;
+        int arcR = 7;
 
         // Trilho de fundo (360° cinza escuro)
         draw_canvas_arc(layer, arcX, arcY, arcR, 0, 360, lv_color_hex(0x222634), 2);
@@ -4392,16 +4407,15 @@ skip_default_cheeks: ;
         // Ícone centralizado no miolo do anel: Play do YouTube (TV) ou Nota Musical (Google Home)
         if (isTv) {
             // Triângulo Play do YouTube (▶)
-            draw_canvas_line(layer, arcX - 2, arcY - 4, arcX - 2, arcY + 4, mediaColor, 2);
-            draw_canvas_line(layer, arcX - 2, arcY - 4, arcX + 4, arcY, mediaColor, 2);
-            draw_canvas_line(layer, arcX - 2, arcY + 4, arcX + 4, arcY, mediaColor, 2);
-            draw_canvas_line(layer, arcX, arcY - 2, arcX, arcY + 2, mediaColor, 2);
-            draw_canvas_disc(layer, arcX + 1, arcY, 1, mediaColor);
+            draw_canvas_line(layer, arcX - 2, arcY - 3, arcX - 2, arcY + 3, mediaColor, 2);
+            draw_canvas_line(layer, arcX - 2, arcY - 3, arcX + 3, arcY, mediaColor, 2);
+            draw_canvas_line(layer, arcX - 2, arcY + 3, arcX + 3, arcY, mediaColor, 2);
+            draw_canvas_disc(layer, arcX, arcY, 1, mediaColor);
         } else {
             // Nota musical ♪ estilizada
             draw_canvas_disc(layer, arcX - 2, arcY + 2, 2, mediaColor);
-            draw_canvas_line(layer, arcX, arcY + 2, arcX, arcY - 4, mediaColor, 1);
-            draw_canvas_line(layer, arcX, arcY - 4, arcX + 3, arcY - 2, mediaColor, 1);
+            draw_canvas_line(layer, arcX, arcY + 2, arcX, arcY - 3, mediaColor, 1);
+            draw_canvas_line(layer, arcX, arcY - 3, arcX + 3, arcY - 2, mediaColor, 1);
         }
 
         // 4. Texto em Marquee estático em linha única na largura expandida
@@ -4458,29 +4472,29 @@ skip_default_cheeks: ;
         }
 
         // Texto perfeitamente centralizado no espaço útil entre o anel e as notinhas flutuantes
-        int textX = bx + 30;
-        int textY = by + 4;
-        int textW = bw - 64; // Área central de 172px: cabe 9 caracteres com folga total em linha única
-        draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        int textX = bx + 28;
+        int textY = by + 3;
+        int textW = bw - 58;
+        draw_canvas_text(layer, textX, textY, textW, 18, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
         // 5. Notinhas musicais flutuantes no ritmo da batida na lateral direita da cápsula
         // Notinha 1 (Mais à direita, nota principal)
         int fn1X = bx + bw - 11 + (int)(sinf(ms * 0.005f) * 2.0f);
-        int fn1Y = by + 13 - (int)fmodf(ms * 0.010f, 10.0f);
+        int fn1Y = by + 11 - (int)fmodf(ms * 0.010f, 8.0f);
         draw_canvas_disc(layer, fn1X - 2, fn1Y + 2, 2, mediaColor);
         draw_canvas_line(layer, fn1X, fn1Y + 2, fn1X, fn1Y - 4, mediaColor, 1);
         draw_canvas_line(layer, fn1X, fn1Y - 4, fn1X + 3, fn1Y - 2, mediaColor, 1);
 
         // Notinha 2 (Meio, nota intermediária com ritmo defasado)
-        int fn2X = bx + bw - 20 + (int)(cosf((ms + 300) * 0.006f) * 1.8f);
-        int fn2Y = by + 15 - (int)fmodf((ms + 350) * 0.009f, 9.0f);
+        int fn2X = bx + bw - 19 + (int)(cosf((ms + 300) * 0.006f) * 1.8f);
+        int fn2Y = by + 12 - (int)fmodf((ms + 350) * 0.009f, 7.0f);
         draw_canvas_disc(layer, fn2X - 2, fn2Y + 2, 2, mediaColor);
         draw_canvas_line(layer, fn2X, fn2Y + 2, fn2X, fn2Y - 3, mediaColor, 1);
         draw_canvas_line(layer, fn2X, fn2Y - 3, fn2X + 3, fn2Y - 1, mediaColor, 1);
 
         // Notinha 3 (Mais à esquerda do trio, brotando com charme)
-        int fn3X = bx + bw - 28 + (int)(sinf((ms + 600) * 0.007f) * 1.5f);
-        int fn3Y = by + 16 - (int)fmodf((ms + 700) * 0.008f, 8.0f);
+        int fn3X = bx + bw - 26 + (int)(sinf((ms + 600) * 0.007f) * 1.5f);
+        int fn3Y = by + 13 - (int)fmodf((ms + 700) * 0.008f, 6.0f);
         draw_canvas_disc(layer, fn3X - 1, fn3Y + 2, 1, mediaColor);
         draw_canvas_line(layer, fn3X, fn3Y + 2, fn3X, fn3Y - 2, mediaColor, 1);
         draw_canvas_line(layer, fn3X, fn3Y - 2, fn3X + 2, fn3Y - 1, mediaColor, 1);
@@ -4533,6 +4547,30 @@ skip_default_cheeks: ;
             draw_canvas_line(layer, (currentX + 5)*2, (drawY + 6)*2, (currentX + 5)*2, (drawY + 9)*2, whiteColor, 2);
             draw_canvas_line(layer, (currentX + 4)*2, (drawY + 7)*2, (currentX + 6)*2, (drawY + 7)*2, whiteColor, 2);
             currentX += (iconW + iconGap);
+        }
+
+        drawSliderDots = true;
+        activeSlotIdx = totalCarouselSlots - 1;
+        hudBx = (startX - 4) * 2;
+        activeDotColor = lv_color_hex(0xF472B6);
+    }
+
+    // =========================================================================
+    // 7.1 BOLINHAS INDICADORAS DE SLIDER EMBAIXO DA PÍLULA (ESTILO DYNAMIC ISLAND)
+    // =========================================================================
+    if (drawSliderDots && totalCarouselSlots > 1) {
+        int dotStartX = hudBx + 8;
+        int dotY = 26; // 2 pixels abaixo da pílula (que termina em y = 24)
+        for (int i = 0; i < totalCarouselSlots; i++) {
+            if (i == activeSlotIdx) {
+                // Pílula ativa alongada em neon com cantos arredondados (10x3 px)
+                draw_canvas_rect(layer, dotStartX, dotY, 10, 3, activeDotColor, 1);
+                dotStartX += 10 + 3;
+            } else {
+                // Bolinha inativa discreta (3x3 px)
+                draw_canvas_disc(layer, dotStartX + 1, dotY + 1, 1, lv_color_hex(0x475569));
+                dotStartX += 4 + 3;
+            }
         }
     }
     
