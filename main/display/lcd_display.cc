@@ -4336,7 +4336,7 @@ skip_default_cheeks: ;
         
         // 4. Dígitos digitais perfeitamente centralizados no espaço restante à direita
         int textX = bx + 36;
-        int textY = by + 5;
+        int textY = by + 4;
         for (int i = 0; i < 5; i++) {
             DrawTimerSegmentChar(layer, textX + i * 12, textY, timeStr[i], lv_color_hex(0xF0F6FC), lv_color_hex(0x000000));
         }
@@ -4473,9 +4473,9 @@ skip_default_cheeks: ;
 
         // Texto perfeitamente centralizado no espaço útil entre o anel e as notinhas flutuantes
         int textX = bx + 28;
-        int textY = by + 3;
+        int textY = by + 1;
         int textW = bw - 58;
-        draw_canvas_text(layer, textX, textY, textW, 18, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_text(layer, textX, textY, textW, 20, s_marquee_buf, lv_color_hex(0xF0F6FC), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
         // 5. Notinhas musicais flutuantes no ritmo da batida na lateral direita da cápsula
         // Notinha 1 (Mais à direita, nota principal)
@@ -4560,16 +4560,18 @@ skip_default_cheeks: ;
     // =========================================================================
     if (drawSliderDots && totalCarouselSlots > 1) {
         int dotStartX = hudBx + 8;
-        int dotY = 28; // 2 pixels abaixo da pílula (que termina em y = 26)
+        // Se for o balãozinho de pet status, o rabinho desce até y=32, então posiciona em y=36.
+        // Se for cápsula de música/timer (base em y=26), posiciona com respiro em y=31.
+        int dotY = (mostrarPetStatus) ? 36 : 31;
         for (int i = 0; i < totalCarouselSlots; i++) {
             if (i == activeSlotIdx) {
                 // Pílula ativa alongada em neon com cantos arredondados (10x3 px)
                 draw_canvas_rect(layer, dotStartX, dotY, 10, 3, activeDotColor, 1);
-                dotStartX += 10 + 3;
+                dotStartX += 10 + 4;
             } else {
                 // Bolinha inativa discreta (3x3 px)
                 draw_canvas_disc(layer, dotStartX + 1, dotY + 1, 1, lv_color_hex(0x475569));
-                dotStartX += 4 + 3;
+                dotStartX += 4 + 4;
             }
         }
     }
