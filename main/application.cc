@@ -847,6 +847,16 @@ void Application::InitializeProtocol() {
                             eng.StopTimer();
                         }
                     });
+                } else if (act == "show_image" || act == "show_gif") {
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 12000;
+                    std::string ov = (act == "show_gif") ? "gif_view" : "photo_view";
+                    Schedule([this, ov, dur]() {
+                        TamagotchiEngine::GetInstance().TriggerOverlay(ov, dur);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
                 }
         } else {
             ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);

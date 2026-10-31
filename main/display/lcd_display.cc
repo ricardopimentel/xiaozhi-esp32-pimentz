@@ -2441,6 +2441,27 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         // Faixa de texto vermelha "NA CADEIA!"
         draw_canvas_rect(layer, 68, 108, 120, 18, lv_color_hex(0xDC2626), 4);
         draw_canvas_text(layer, 68, 110, 120, 16, "NA CADEIA!", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    } else if (overlay == "photo_view") {
+        // Moldura Neon Ciano Fotografica com Icone de Camera (256x128)
+        lv_color_t colBorder = lv_color_hex(0x00E5FF);
+        lv_color_t colCard = lv_color_hex(0x0A192F);
+        draw_canvas_rect(layer, cx - 64, cy - 36 + bobY, 128, 72, colCard, 10);
+        draw_canvas_rect_empty(layer, cx - 64, cy - 36 + bobY, 128, 72, colBorder, 2, 10);
+        draw_canvas_rect(layer, cx - 18, cy - 14 + bobY, 36, 22, colBorder, 5);
+        draw_canvas_disc(layer, cx, cy - 3 + bobY, 6, colCard);
+        draw_canvas_disc(layer, cx, cy - 3 + bobY, 3, colBorder);
+        draw_canvas_rect(layer, cx - 10, cy - 18 + bobY, 8, 4, colBorder, 2);
+        draw_canvas_rect(layer, 56, 108, 144, 18, lv_color_hex(0x0284C7), 4);
+        draw_canvas_text(layer, 56, 110, 144, 16, "FOTO NO LCD", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    } else if (overlay == "gif_view") {
+        // Moldura Magenta com Icone de Play e Rolo de Animacao (256x128)
+        lv_color_t colBorder = lv_color_hex(0xEC4899);
+        lv_color_t colCard = lv_color_hex(0x180B26);
+        draw_canvas_rect(layer, cx - 64, cy - 36 + bobY, 128, 72, colCard, 10);
+        draw_canvas_rect_empty(layer, cx - 64, cy - 36 + bobY, 128, 72, colBorder, 2, 10);
+        draw_canvas_triangle(layer, cx - 8, cy - 14 + bobY, cx + 12, cy - 2 + bobY, cx - 8, cy + 10 + bobY, colBorder);
+        draw_canvas_rect(layer, 56, 108, 144, 18, lv_color_hex(0xBE185D), 4);
+        draw_canvas_text(layer, 56, 110, 144, 16, "GIF ANIMADO", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
@@ -2613,7 +2634,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     std::string activeCompanionOverlay = engine.GetActiveOverlay();
     if (activeCompanionOverlay == "jokenpo_rock" || activeCompanionOverlay == "jokenpo_paper" ||
         activeCompanionOverlay == "jokenpo_scissors" || activeCompanionOverlay == "crystal_ball" ||
-        activeCompanionOverlay == "jail") {
+        activeCompanionOverlay == "jail" || activeCompanionOverlay == "photo_view" ||
+        activeCompanionOverlay == "gif_view") {
         DrawCompanionScene(layer, activeCompanionOverlay);
 #if LVGL_VERSION_MAJOR >= 9
         lv_canvas_finish_layer(face_canvas_, &layer_obj);
