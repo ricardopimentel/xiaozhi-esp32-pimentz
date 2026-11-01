@@ -550,8 +550,13 @@ LcdDisplay::~LcdDisplay() {
         esp_timer_delete(preview_timer_);
     }
 
-    if (preview_image_ != nullptr) {
+    if (preview_backdrop_ != nullptr) {
+        lv_obj_del(preview_backdrop_);
+        preview_backdrop_ = nullptr;
+        preview_image_ = nullptr;
+    } else if (preview_image_ != nullptr) {
         lv_obj_del(preview_image_);
+        preview_image_ = nullptr;
     }
     if (chat_message_label_ != nullptr) {
         lv_obj_del(chat_message_label_);
@@ -1099,8 +1104,19 @@ void LcdDisplay::SetupUI() {
     lv_obj_center(emoji_image_);
     lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
 
-    /* Middle layer: preview_image_ - centered display */
-    preview_image_ = lv_image_create(screen);
+    /* Middle layer: preview_backdrop_ with solid black background covering full screen */
+    preview_backdrop_ = lv_obj_create(screen);
+    lv_obj_set_size(preview_backdrop_, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(preview_backdrop_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_color(preview_backdrop_, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(preview_backdrop_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(preview_backdrop_, 0, 0);
+    lv_obj_set_style_radius(preview_backdrop_, 0, 0);
+    lv_obj_set_style_pad_all(preview_backdrop_, 0, 0);
+    lv_obj_set_scrollbar_mode(preview_backdrop_, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_add_flag(preview_backdrop_, LV_OBJ_FLAG_HIDDEN);
+
+    preview_image_ = lv_image_create(preview_backdrop_);
     lv_obj_set_size(preview_image_, width_, height_);
     lv_obj_align(preview_image_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
@@ -1336,6 +1352,7 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image, uint32_t dura
         }
         if (face_canvas_ != nullptr) lv_obj_remove_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        if (preview_backdrop_ != nullptr) lv_obj_add_flag(preview_backdrop_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
         preview_image_cached_.reset();
         if (eye_timer_) {
@@ -1383,6 +1400,10 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image, uint32_t dura
     // Hide face_canvas_ and emoji_box_ so photo is completely unobstructed
     lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
     if (face_canvas_ != nullptr) lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
+    if (preview_backdrop_ != nullptr) {
+        lv_obj_remove_flag(preview_backdrop_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(preview_backdrop_);
+    }
     lv_obj_remove_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(preview_image_);
 
@@ -2173,7 +2194,7 @@ void LcdDisplay::DrawEggScreen(lv_layer_t* layer) {
     }
 
     int cx = 128 + wobble;
-    int cy = 42;
+    int cy = 38;
     float ew = 23.0f * pulse;
     float eh = 28.0f * pulse;
 
@@ -2294,24 +2315,11 @@ void LcdDisplay::DrawEggScreen(lv_layer_t* layer) {
         }
     }
 
-    // 6. Texto de Status Centralizado (Idêntico ao Web Preview)
-    const char* statusText;
-    if (estado == ESTADO_OVO) {
-        statusText = ((ms / 2000) % 2 == 0) ? "OVO MISTERIOSO" : "APROXIME O CARTAO RFID";
-    } else if (stage == 3) {
-        statusText = "QUASE NASCENDO!";
-    } else if (stage == 0) {
-        statusText = "OVO MISTERIOSO";
-    } else {
-        statusText = "CHOCANDO...";
-    }
-    draw_canvas_text(layer, 0, 77, 256, 14, statusText, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
-
-    // 7. Barra de Progresso Futurista (160x7 px)
+    // 6. Barra de Progresso Futurista (160x7 px) em y = 74
     int barW = 160;
     int barH = 7;
     int barX = 128 - (barW / 2); // 48
-    int barY = 94;
+    int barY = 74;
 
     // Fundo escuro com cantos arredondados
     draw_canvas_rect(layer, barX, barY, barW, barH, lv_color_hex(0x151926), 3);
@@ -2327,12 +2335,25 @@ void LcdDisplay::DrawEggScreen(lv_layer_t* layer) {
     // Borda suave estilo neon
     draw_canvas_rect_empty(layer, barX, barY, barW, barH, lv_color_hex(0x283048), 1, 3);
 
-    // 8. Contagem Regressiva (TEMPO: MM:SS)
+    // 7. Contagem Regressiva (TEMPO: MM:SS) - Logo abaixo da barra de progresso em y = 86
     int remSeg = (estado == ESTADO_CHOCANDO) ? ((int)totalInc - (int)segChoc) : (int)totalInc;
     if (remSeg < 0) remSeg = 0;
     char timeBuf[32];
     snprintf(timeBuf, sizeof(timeBuf), "TEMPO: %02d:%02d", remSeg / 60, remSeg % 60);
-    draw_canvas_text(layer, 0, 107, 256, 16, timeBuf, lv_color_hex(0x94A3B8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    draw_canvas_text(layer, 0, 86, 256, 14, timeBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+
+    // 8. Texto de Estado Centralizado - Rodapé em y = 105
+    const char* statusText;
+    if (estado == ESTADO_OVO) {
+        statusText = ((ms / 2000) % 2 == 0) ? "OVO MISTERIOSO" : "APROXIME O CARTAO RFID";
+    } else if (stage == 3) {
+        statusText = "QUASE NASCENDO!";
+    } else if (stage == 0) {
+        statusText = "OVO MISTERIOSO";
+    } else {
+        statusText = "CHOCANDO...";
+    }
+    draw_canvas_text(layer, 0, 105, 256, 16, statusText, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 }
 
 void LcdDisplay::DrawSingleDie(lv_layer_t* layer, int cx, int cy, int halfSize, int val, lv_color_t accentColor) {
@@ -2685,14 +2706,30 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         snprintf(tempBuf, sizeof(tempBuf), "%d C", w.temp);
         draw_canvas_text(layer, 114, 30, 126, 24, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
-        // Descrição do Tempo (ex: "Nublado", "Chuva Leve", etc.)
+        // Descrição do Tempo com rolagem deslizante (marquee) contínua para textos longos
         std::string condDesc = w.condition_text.empty() ? "CLIMA ATUAL" : w.condition_text;
         auto slashPos = condDesc.find(" /");
         if (slashPos != std::string::npos) {
             condDesc = condDesc.substr(0, slashPos);
         }
-        if (condDesc.length() > 18) condDesc = condDesc.substr(0, 18);
-        draw_canvas_text(layer, 110, 58, 134, 18, condDesc.c_str(), lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        if (condDesc.length() > 13) {
+            int pool_len = (int)condDesc.length() + 4; // texto + " * "
+            int offset = (int)((ms / 250) % pool_len);
+            char weather_marquee_buf[16];
+            const char* sep = " * ";
+            for (int i = 0; i < 13; i++) {
+                int p = (offset + i) % pool_len;
+                if (p < (int)condDesc.length()) {
+                    weather_marquee_buf[i] = condDesc[p];
+                } else {
+                    weather_marquee_buf[i] = sep[p - condDesc.length()];
+                }
+            }
+            weather_marquee_buf[13] = '\0';
+            draw_canvas_text(layer, 110, 58, 134, 18, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        } else {
+            draw_canvas_text(layer, 110, 58, 134, 18, condDesc.c_str(), lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        }
 
         // 4. Faixa de Indicadores FORA DO CARD (Parte de Baixo do Display: y=101 a 123)
         char statsBuf[48];
