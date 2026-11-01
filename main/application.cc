@@ -897,7 +897,7 @@ void Application::InitializeProtocol() {
 
                             if (total_read < content_length) {
                                 ESP_LOGE(TAG, "Leitura incompleta: %d de %d", (int)total_read, (int)content_length);
-                                free(data);
+                                heap_caps_free(data);
                                 return;
                             }
 
@@ -909,14 +909,16 @@ void Application::InitializeProtocol() {
                                 size_t out_len = 0, width = 0, height = 0, stride = 0;
                                 esp_err_t err = jpeg_to_image((const uint8_t*)data, total_read, &out_rgb, &out_len, &width, &height, &stride);
                                 if (err == ESP_OK && out_rgb != nullptr) {
-                                    free(data);
+                                    heap_caps_free(data);
                                     image = std::make_unique<LvglAllocatedImage>(out_rgb, out_len, width, height, stride, LV_COLOR_FORMAT_RGB565);
                                 } else {
                                     image = std::make_unique<LvglAllocatedImage>(data, total_read);
                                 }
                             }
 
-                            Schedule([this, img = std::move(image), dur]() mutable {
+                            LvglImage* raw_img = image.release();
+                            Schedule([this, raw_img, dur]() {
+                                std::unique_ptr<LvglImage> img(raw_img);
                                 auto display = Board::GetInstance().GetDisplay();
                                 if (display) {
                                     auto lvgl_display = dynamic_cast<LvglDisplay*>(display);
