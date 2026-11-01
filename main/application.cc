@@ -938,6 +938,38 @@ void Application::InitializeProtocol() {
                             }
                         });
                     }
+                } else if (act == "show_weather") {
+                    TamagotchiWeatherInfo w;
+                    auto c_item = cJSON_GetObjectItem(root, "condition");
+                    if (c_item && cJSON_IsString(c_item)) w.condition = c_item->valuestring;
+                    auto ct_item = cJSON_GetObjectItem(root, "condition_text");
+                    if (ct_item && cJSON_IsString(ct_item)) w.condition_text = ct_item->valuestring;
+                    auto city_item = cJSON_GetObjectItem(root, "city");
+                    if (city_item && cJSON_IsString(city_item)) w.city = city_item->valuestring;
+                    auto t_item = cJSON_GetObjectItem(root, "temp");
+                    if (t_item && cJSON_IsNumber(t_item)) w.temp = t_item->valueint;
+                    auto tmin_item = cJSON_GetObjectItem(root, "temp_min");
+                    if (tmin_item && cJSON_IsNumber(tmin_item)) w.temp_min = tmin_item->valueint;
+                    auto tmax_item = cJSON_GetObjectItem(root, "temp_max");
+                    if (tmax_item && cJSON_IsNumber(tmax_item)) w.temp_max = tmax_item->valueint;
+                    auto h_item = cJSON_GetObjectItem(root, "humidity");
+                    if (h_item && cJSON_IsNumber(h_item)) w.humidity = h_item->valueint;
+                    auto rp_item = cJSON_GetObjectItem(root, "rain_prob");
+                    if (rp_item && cJSON_IsNumber(rp_item)) w.rain_prob = rp_item->valueint;
+                    auto d_item = cJSON_GetObjectItem(root, "is_day");
+                    if (d_item && cJSON_IsNumber(d_item)) w.is_day = (d_item->valueint != 0);
+
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 14000;
+
+                    Schedule([this, w, dur]() {
+                        auto& eng = TamagotchiEngine::GetInstance();
+                        eng.SetWeatherInfo(w);
+                        eng.TriggerOverlay("weather_view", dur);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
                 }
         } else {
             ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);

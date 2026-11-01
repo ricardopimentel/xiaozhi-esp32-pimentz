@@ -26,6 +26,18 @@ struct TamagotchiMediaItem {
     uint64_t last_update_ms = 0;
 };
 
+struct TamagotchiWeatherInfo {
+    std::string condition = "clear";
+    std::string condition_text = "Ensolarado";
+    std::string city = "Paraiso";
+    int temp = 28;
+    int temp_min = 22;
+    int temp_max = 34;
+    int humidity = 60;
+    int rain_prob = 0;
+    bool is_day = true;
+};
+
 class TamagotchiEngine {
 public:
     using TamagotchiMediaItem = ::TamagotchiMediaItem;
@@ -75,6 +87,8 @@ public:
     uint8_t GetAccessory() const;
 
     void SetPomodoroMode(bool active);
+    void SetWeatherInfo(const TamagotchiWeatherInfo& info) { weather_info_ = info; }
+    const TamagotchiWeatherInfo& GetWeatherInfo() const { return weather_info_; }
     bool IsPomodoroMode() const { return pomodoro_mode_; }
 
     // Getters
@@ -256,6 +270,7 @@ private:
 
     uint8_t acessorio_id_ = 0;
     bool pomodoro_mode_ = false;
+    TamagotchiWeatherInfo weather_info_;
 };
 
 #endif // TAMAGOTCHI_ENGINE_H
