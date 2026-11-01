@@ -108,6 +108,7 @@ public:
     virtual void SetChatMessage(const char* role, const char* content) override;
     virtual void ClearChatMessages() override;
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image) override;
+    virtual void SetPreviewImage(std::unique_ptr<LvglImage> image, uint32_t duration_ms) override;
     virtual void SetupUI() override;
     virtual void UpdateStatusBar(bool update_all = false) override;
     // Add theme switching function

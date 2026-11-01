@@ -1099,7 +1099,7 @@ void LcdDisplay::SetupUI() {
 
     /* Middle layer: preview_image_ - centered display */
     preview_image_ = lv_image_create(screen);
-    lv_obj_set_size(preview_image_, width_ / 2, height_ / 2);
+    lv_obj_set_size(preview_image_, width_, height_);
     lv_obj_align(preview_image_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
 
@@ -1316,6 +1316,10 @@ void LcdDisplay::SetupUI() {
 }
 
 void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
+    SetPreviewImage(std::move(image), PREVIEW_IMAGE_DURATION_MS);
+}
+
+void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image, uint32_t duration_ms) {
     DisplayLockGuard lock(this);
     if (preview_image_ == nullptr) {
         ESP_LOGE(TAG, "Preview image is not initialized");
@@ -1324,31 +1328,58 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
 
     if (image == nullptr) {
         esp_timer_stop(preview_timer_);
+        if (gif_controller_) {
+            gif_controller_->Stop();
+            gif_controller_.reset();
+        }
+        if (face_canvas_ != nullptr) lv_obj_remove_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
         preview_image_cached_.reset();
-        if (gif_controller_) {
-            gif_controller_->Start();
-        }
         return;
     }
 
-    preview_image_cached_ = std::move(image);
-    auto img_dsc = preview_image_cached_->image_dsc();
-    lv_image_set_src(preview_image_, img_dsc);
-    if (img_dsc->header.w > 0 && img_dsc->header.h > 0) {
-        // zoom factor 0.5
-        lv_image_set_scale(preview_image_, 128 * width_ / img_dsc->header.w);
-    }
-
-    // Hide emoji_box_
     if (gif_controller_) {
         gif_controller_->Stop();
+        gif_controller_.reset();
     }
+
+    preview_image_cached_ = std::move(image);
+
+    if (preview_image_cached_->IsGif()) {
+        gif_controller_ = std::make_unique<LvglGif>(preview_image_cached_->image_dsc());
+        if (gif_controller_->IsLoaded()) {
+            gif_controller_->SetFrameCallback([this]() {
+                lv_image_set_src(preview_image_, gif_controller_->image_dsc());
+            });
+            lv_image_set_src(preview_image_, gif_controller_->image_dsc());
+            gif_controller_->Start();
+        } else {
+            gif_controller_.reset();
+            lv_image_set_src(preview_image_, preview_image_cached_->image_dsc());
+        }
+    } else {
+        auto img_dsc = preview_image_cached_->image_dsc();
+        lv_image_set_src(preview_image_, img_dsc);
+        if (img_dsc && img_dsc->header.w > 0 && img_dsc->header.h > 0) {
+            int scale_w = (width_ * 256) / img_dsc->header.w;
+            int scale_h = (height_ * 256) / img_dsc->header.h;
+            int scale = std::min(scale_w, scale_h);
+            if (scale > 512) scale = 512;
+            if (scale < 32) scale = 32;
+            lv_image_set_scale(preview_image_, scale);
+        }
+    }
+
+    // Hide face_canvas_ and emoji_box_ so photo is completely unobstructed
     lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    if (face_canvas_ != nullptr) lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(preview_image_);
+
     esp_timer_stop(preview_timer_);
-    ESP_ERROR_CHECK(esp_timer_start_once(preview_timer_, PREVIEW_IMAGE_DURATION_MS * 1000));
+    if (duration_ms == 0) duration_ms = PREVIEW_IMAGE_DURATION_MS;
+    esp_timer_start_once(preview_timer_, duration_ms * 1000);
 }
 
 void LcdDisplay::SetChatMessage(const char* role, const char* content) {
@@ -2441,27 +2472,7 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         // Faixa de texto vermelha "NA CADEIA!"
         draw_canvas_rect(layer, 68, 108, 120, 18, lv_color_hex(0xDC2626), 4);
         draw_canvas_text(layer, 68, 110, 120, 16, "NA CADEIA!", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
-    } else if (overlay == "photo_view") {
-        // Moldura Neon Ciano Fotografica com Icone de Camera (256x128)
-        lv_color_t colBorder = lv_color_hex(0x00E5FF);
-        lv_color_t colCard = lv_color_hex(0x0A192F);
-        draw_canvas_rect(layer, cx - 64, cy - 36 + bobY, 128, 72, colCard, 10);
-        draw_canvas_rect_empty(layer, cx - 64, cy - 36 + bobY, 128, 72, colBorder, 2, 10);
-        draw_canvas_rect(layer, cx - 18, cy - 14 + bobY, 36, 22, colBorder, 5);
-        draw_canvas_disc(layer, cx, cy - 3 + bobY, 6, colCard);
-        draw_canvas_disc(layer, cx, cy - 3 + bobY, 3, colBorder);
-        draw_canvas_rect(layer, cx - 10, cy - 18 + bobY, 8, 4, colBorder, 2);
-        draw_canvas_rect(layer, 56, 108, 144, 18, lv_color_hex(0x0284C7), 4);
-        draw_canvas_text(layer, 56, 110, 144, 16, "FOTO NO LCD", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
-    } else if (overlay == "gif_view") {
-        // Moldura Magenta com Icone de Play e Rolo de Animacao (256x128)
-        lv_color_t colBorder = lv_color_hex(0xEC4899);
-        lv_color_t colCard = lv_color_hex(0x180B26);
-        draw_canvas_rect(layer, cx - 64, cy - 36 + bobY, 128, 72, colCard, 10);
-        draw_canvas_rect_empty(layer, cx - 64, cy - 36 + bobY, 128, 72, colBorder, 2, 10);
-        draw_canvas_triangle(layer, cx - 8, cy - 14 + bobY, cx + 12, cy - 2 + bobY, cx - 8, cy + 10 + bobY, colBorder);
-        draw_canvas_rect(layer, 56, 108, 144, 18, lv_color_hex(0xBE185D), 4);
-        draw_canvas_text(layer, 56, 110, 144, 16, "GIF ANIMADO", lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+
     }
 }
 
@@ -2634,8 +2645,7 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     std::string activeCompanionOverlay = engine.GetActiveOverlay();
     if (activeCompanionOverlay == "jokenpo_rock" || activeCompanionOverlay == "jokenpo_paper" ||
         activeCompanionOverlay == "jokenpo_scissors" || activeCompanionOverlay == "crystal_ball" ||
-        activeCompanionOverlay == "jail" || activeCompanionOverlay == "photo_view" ||
-        activeCompanionOverlay == "gif_view") {
+        activeCompanionOverlay == "jail") {
         DrawCompanionScene(layer, activeCompanionOverlay);
 #if LVGL_VERSION_MAJOR >= 9
         lv_canvas_finish_layer(face_canvas_, &layer_obj);
@@ -4680,5 +4690,8 @@ skip_default_cheeks: ;
 }
 
 void LcdDisplay::UpdateEyeAnimations() {
+    if (preview_image_cached_ != nullptr) {
+        return;
+    }
     DrawOledFace(0);
 }

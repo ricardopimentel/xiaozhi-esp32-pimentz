@@ -47,6 +47,13 @@ public:
     LvglAllocatedImage(void* data, size_t size, int width, int height, int stride, int color_format);
     virtual ~LvglAllocatedImage();
     virtual const lv_img_dsc_t* image_dsc() const override { return &image_dsc_; }
+    virtual bool IsGif() const override {
+        if (image_dsc_.data && image_dsc_.data_size >= 3) {
+            auto ptr = (const uint8_t*)image_dsc_.data;
+            return ptr[0] == 'G' && ptr[1] == 'I' && ptr[2] == 'F';
+        }
+        return false;
+    }
 
 private:
     lv_img_dsc_t image_dsc_;

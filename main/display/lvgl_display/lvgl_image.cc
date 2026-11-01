@@ -39,6 +39,11 @@ LvglAllocatedImage::LvglAllocatedImage(void* data, size_t size) {
     image_dsc_.data_size = size;
     image_dsc_.data = static_cast<uint8_t*>(data);
 
+    if (size >= 3 && data && memcmp(data, "GIF", 3) == 0) {
+        image_dsc_.header.magic = LV_IMAGE_HEADER_MAGIC;
+        return;
+    }
+
     if (lv_image_decoder_get_info(&image_dsc_, &image_dsc_.header) != LV_RESULT_OK) {
         ESP_LOGE(TAG, "Failed to get image info, data: %p size: %u", data, size);
         throw std::runtime_error("Failed to get image info");

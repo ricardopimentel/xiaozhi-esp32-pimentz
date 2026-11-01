@@ -11,6 +11,11 @@
 #include "settings.h"
 #include "esp_now_receiver.h"
 #include "tamagotchi_engine.h"
+#include "display/lvgl_display/jpg/jpeg_to_image.h"
+#include "display/lvgl_display/lvgl_image.h"
+#include "display/lvgl_display/lvgl_display.h"
+#include <thread>
+#include <esp_heap_caps.h>
 
 #include <cstring>
 #include <cstdlib>
@@ -848,15 +853,89 @@ void Application::InitializeProtocol() {
                         }
                     });
                 } else if (act == "show_image" || act == "show_gif") {
+                    auto url_item = cJSON_GetObjectItem(root, "url");
+                    std::string media_url = (url_item && cJSON_IsString(url_item)) ? url_item->valuestring : "";
                     auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
-                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 12000;
-                    std::string ov = (act == "show_gif") ? "gif_view" : "photo_view";
-                    Schedule([this, ov, dur]() {
-                        TamagotchiEngine::GetInstance().TriggerOverlay(ov, dur);
-                        if (GetDeviceState() == kDeviceStateIdle) {
-                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
-                        }
-                    });
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 14000;
+
+                    if (!media_url.empty()) {
+                        ESP_LOGI(TAG, "Iniciando download da midia para LCD: %s", media_url.c_str());
+                        std::thread([this, media_url, dur]() {
+                            auto http = Board::GetInstance().GetNetwork()->CreateHttp(3);
+                            if (!http || !http->Open("GET", media_url)) {
+                                ESP_LOGE(TAG, "Falha ao abrir conexao HTTP para: %s", media_url.c_str());
+                                return;
+                            }
+                            if (http->GetStatusCode() != 200) {
+                                ESP_LOGE(TAG, "Falha ao baixar midia, codigo HTTP: %d", http->GetStatusCode());
+                                http->Close();
+                                return;
+                            }
+
+                            size_t content_length = http->GetBodyLength();
+                            if (content_length == 0 || content_length > 400 * 1024) {
+                                ESP_LOGE(TAG, "Tamanho de midia invalido: %d", (int)content_length);
+                                http->Close();
+                                return;
+                            }
+
+                            char* data = (char*)heap_caps_malloc(content_length, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+                            if (!data) data = (char*)malloc(content_length);
+                            if (!data) {
+                                ESP_LOGE(TAG, "Falha de memoria para midia (%d bytes)", (int)content_length);
+                                http->Close();
+                                return;
+                            }
+
+                            size_t total_read = 0;
+                            while (total_read < content_length) {
+                                int ret = http->Read(data + total_read, content_length - total_read);
+                                if (ret <= 0) break;
+                                total_read += ret;
+                            }
+                            http->Close();
+
+                            if (total_read < content_length) {
+                                ESP_LOGE(TAG, "Leitura incompleta: %d de %d", (int)total_read, (int)content_length);
+                                free(data);
+                                return;
+                            }
+
+                            std::unique_ptr<LvglImage> image;
+                            if (total_read >= 3 && memcmp(data, "GIF", 3) == 0) {
+                                image = std::make_unique<LvglAllocatedImage>(data, total_read);
+                            } else {
+                                uint8_t* out_rgb = nullptr;
+                                size_t out_len = 0, width = 0, height = 0, stride = 0;
+                                esp_err_t err = jpeg_to_image((const uint8_t*)data, total_read, &out_rgb, &out_len, &width, &height, &stride);
+                                if (err == ESP_OK && out_rgb != nullptr) {
+                                    free(data);
+                                    image = std::make_unique<LvglAllocatedImage>(out_rgb, out_len, width, height, stride, LV_COLOR_FORMAT_RGB565);
+                                } else {
+                                    image = std::make_unique<LvglAllocatedImage>(data, total_read);
+                                }
+                            }
+
+                            Schedule([this, img = std::move(image), dur]() mutable {
+                                auto display = Board::GetInstance().GetDisplay();
+                                if (display) {
+                                    auto lvgl_display = dynamic_cast<LvglDisplay*>(display);
+                                    if (lvgl_display) {
+                                        lvgl_display->SetPreviewImage(std::move(img), dur);
+                                    }
+                                }
+                                if (GetDeviceState() == kDeviceStateIdle) {
+                                    audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                                }
+                            });
+                        }).detach();
+                    } else {
+                        Schedule([this]() {
+                            if (GetDeviceState() == kDeviceStateIdle) {
+                                audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                            }
+                        });
+                    }
                 }
         } else {
             ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);
