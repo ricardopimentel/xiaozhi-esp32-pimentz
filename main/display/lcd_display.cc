@@ -1408,7 +1408,12 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         if (content == nullptr || content[0] == '\0') {
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         } else if (!hide_subtitle_) {
-            lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            auto& engine = TamagotchiEngine::GetInstance();
+            if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {
+                lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            }
         }
     }
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
@@ -1702,6 +1707,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         if (egg_obj_ != nullptr) lv_obj_add_flag(egg_obj_, LV_OBJ_FLAG_HIDDEN);
         if (egg_bar_ != nullptr) lv_obj_add_flag(egg_bar_, LV_OBJ_FLAG_HIDDEN);
+        if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         if (face_canvas_ != nullptr) lv_obj_remove_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     } else {
         // Esconde o ovo e a barra
@@ -2139,115 +2145,194 @@ void LcdDisplay::DrawEggScreen(lv_layer_t* layer) {
     uint32_t ms = (uint32_t)(esp_timer_get_time() / 1000);
     EstadoNascimento estado = engine.GetEstadoNascimento();
     
-    // Animação de pulso e respiração
-    float pulse = sinf(ms * 0.0035f);
-    int cx = 128;
-    int cy = 46;
-    
-    // Trepidação dinâmica durante a incubação
-    int shakeX = 0;
-    int shakeY = 0;
-    if (estado == ESTADO_CHOCANDO) {
-        if (pulse > 0.4f) {
-            shakeX = (int)(sinf(ms * 0.045f) * 2.8f);
-            shakeY = (int)(cosf(ms * 0.055f) * 1.5f);
-        }
-    }
-    int eggX = cx + shakeX;
-    int eggY = cy + shakeY;
-
-    // 1. Aura cósmica exterior (néon roxo/índigo/ciano)
-    draw_canvas_disc(layer, eggX, eggY + 4, 38, lv_color_hex(0x1B1838));
-    draw_canvas_disc(layer, eggX, eggY - 4, 32, lv_color_hex(0x281754));
-
-    // 2. Casca do Ovo (formato oval estilizado com partes complementares)
-    draw_canvas_disc(layer, eggX, eggY + 8, 27, lv_color_hex(0x3B1F6E));
-    draw_canvas_disc(layer, eggX, eggY - 6, 23, lv_color_hex(0x4A148C));
-    draw_canvas_rect(layer, eggX - 25, eggY - 6, 50, 16, lv_color_hex(0x4A148C), 0);
-
-    // 3. Núcleo de Energia Cósmica (pulso luminoso ciano/ouro)
-    int coreR = 9 + (int)(pulse * 2.5f);
-    draw_canvas_disc(layer, eggX, eggY + 2, coreR + 4, lv_color_hex(0x18FFFF));
-    draw_canvas_disc(layer, eggX, eggY + 2, coreR, lv_color_hex(0x00E5FF));
-    draw_canvas_disc(layer, eggX, eggY + 2, coreR / 2, lv_color_hex(0xFFFFFF));
-
-    // 4. Manchas estelares decorativas na casca
-    draw_canvas_disc(layer, eggX - 14, eggY + 12, 3, lv_color_hex(0xFFD700));
-    draw_canvas_disc(layer, eggX + 13, eggY - 10, 2, lv_color_hex(0xFFD700));
-    draw_canvas_disc(layer, eggX + 10, eggY + 16, 2, lv_color_hex(0x00E5FF));
-    draw_canvas_disc(layer, eggX - 9, eggY - 14, 2, lv_color_hex(0xFF80AB));
-
-    // 5. Reflexo especular estilo vidro curvo
-    draw_canvas_arc(layer, eggX - 8, eggY - 8, 16, 120, 210, lv_color_hex(0xFFFFFF), 3);
-    draw_canvas_disc(layer, eggX - 14, eggY - 14, 2, lv_color_hex(0xFFFFFF));
-
-    // 6. Rachaduras Dinâmicas
     uint16_t segChoc = engine.GetSegundosChocados();
     uint16_t totalInc = engine.GetTempoIncubacaoSegundos();
     if (totalInc == 0) totalInc = 15;
     float prog = (estado == ESTADO_CHOCANDO) ? ((float)segChoc / (float)totalInc) : 0.0f;
     if (prog > 1.0f) prog = 1.0f;
 
-    if (estado == ESTADO_CHOCANDO && prog >= 0.20f) {
-        // Estágio 1: Rachadura primária reluzente (dourada e branca)
-        draw_canvas_line(layer, eggX - 2, eggY - 12, eggX + 7, eggY + 3, lv_color_hex(0xFFD700), 3);
-        draw_canvas_line(layer, eggX + 7, eggY + 3, eggX - 5, eggY + 16, lv_color_hex(0xFFD700), 3);
-        draw_canvas_line(layer, eggX - 2, eggY - 12, eggX + 7, eggY + 3, lv_color_hex(0xFFFFFF), 1);
-        draw_canvas_line(layer, eggX + 7, eggY + 3, eggX - 5, eggY + 16, lv_color_hex(0xFFFFFF), 1);
-    }
-    if (estado == ESTADO_CHOCANDO && prog >= 0.50f) {
-        // Estágio 2: Rachaduras ramificadas em ciano elétrico
-        draw_canvas_line(layer, eggX + 7, eggY + 3, eggX + 19, eggY + 8, lv_color_hex(0x00FFFF), 3);
-        draw_canvas_line(layer, eggX - 5, eggY + 16, eggX - 17, eggY + 22, lv_color_hex(0x00FFFF), 3);
-        draw_canvas_line(layer, eggX + 7, eggY + 3, eggX + 19, eggY + 8, lv_color_hex(0xFFFFFF), 1);
-        draw_canvas_line(layer, eggX - 5, eggY + 16, eggX - 17, eggY + 22, lv_color_hex(0xFFFFFF), 1);
-    }
-    if (estado == ESTADO_CHOCANDO && prog >= 0.80f) {
-        // Estágio 3: Fissuras profundas e faíscas cósmicas
-        draw_canvas_line(layer, eggX - 2, eggY - 12, eggX - 14, eggY - 18, lv_color_hex(0xFF4081), 2);
-        draw_canvas_line(layer, eggX + 7, eggY + 3, eggX + 10, eggY - 8, lv_color_hex(0xFF4081), 2);
-        DrawStar((float)(eggX + 22), (float)(eggY - 14), 4.0f, lv_color_hex(0xFFD700), layer);
-        DrawStar((float)(eggX - 22), (float)(eggY + 8), 3.5f, lv_color_hex(0x00E5FF), layer);
+    // Estágios sincronizados com o preview do console web (faces_preview.js):
+    // Estágio 0: < 25% | Estágio 1: 25%..55% | Estágio 2: 55%..85% | Estágio 3: >= 85%
+    int stage = 0;
+    if (estado == ESTADO_CHOCANDO) {
+        if (prog < 0.25f) stage = 0;
+        else if (prog < 0.55f) stage = 1;
+        else if (prog < 0.85f) stage = 2;
+        else stage = 3;
     }
 
-    // 7. HUD Inferior: Barra de Progresso Neon + Timer Digital
-    int barW = 160;
-    int barH = 10;
-    int barX = 128 - (barW / 2);
-    int barY = 96;
+    // Pulso e respiração suave do ovo
+    float pulse = 1.0f + sinf(ms * 0.0035f) * 0.05f;
 
-    // Fundo da barra
-    draw_canvas_rect(layer, barX, barY, barW, barH, lv_color_hex(0x1B1834), 5);
-
-    // Preenchimento gradiente ciano / ouro
-    int fillW = (int)((barW - 4) * prog);
-    if (fillW > 0) {
-        lv_color_t barFillColor = (prog >= 0.80f) ? lv_color_hex(0xFFEB3B) : lv_color_hex(0x00E5FF);
-        draw_canvas_rect(layer, barX + 2, barY + 2, fillW, barH - 4, barFillColor, 3);
-    }
-    // Borda da barra
-    draw_canvas_rect_empty(layer, barX, barY, barW, barH, lv_color_hex(0x534B82), 2, 5);
-
-    // 8. Dígitos do Timer
-    int remSeg = (estado == ESTADO_CHOCANDO) ? ((int)totalInc - (int)segChoc) : (int)totalInc;
-    if (remSeg < 0) remSeg = 0;
-    uint32_t tm = (uint32_t)(remSeg / 60);
-    uint32_t ts = (uint32_t)(remSeg % 60);
-    char timeStr[16];
-    snprintf(timeStr, sizeof(timeStr), "%02u:%02u", (unsigned int)tm, (unsigned int)ts);
-
-    int textX = 128 - 23;
-    int textY = 111;
-    for (int i = 0; i < 5; i++) {
-        DrawTimerSegmentChar(layer, textX + i * 10, textY, timeStr[i], lv_color_hex(0xFFFFFF), lv_color_hex(0x000000));
+    // Trepidação dinâmica com antecipação (wobble)
+    int wobble = 0;
+    if (stage == 3) {
+        if ((ms / 50) % 2 == 0) wobble = (int)(sinf(ms * 0.05f) * 3.5f);
+    } else if (stage == 2) {
+        if ((ms / 80) % 3 == 0) wobble = (int)(sinf(ms * 0.04f) * 2.0f);
     }
 
-    // 9. Se for ESTADO_OVO (esperando aproximação do cartão):
+    int cx = 128 + wobble;
+    int cy = 42;
+    float ew = 23.0f * pulse;
+    float eh = 28.0f * pulse;
+
+    // 1. Aura cósmica celestial (glow gradiente suave atrás do ovo)
+    draw_canvas_disc(layer, cx, cy, 44, lv_color_hex(0x061822));
+    draw_canvas_disc(layer, cx, cy, 38, lv_color_hex(0x0A2432));
+    draw_canvas_disc(layer, cx, cy, 32, lv_color_hex(0x0E3040));
+    draw_canvas_disc(layer, cx, cy, 26, lv_color_hex(0x133D50));
+
+    // Se estiver no estado de espera por aproximação (ESTADO_OVO), anel pulsante azul
     if (estado == ESTADO_OVO) {
         float waveScale = fabsf(sinf(ms * 0.003f));
-        int ringR = 36 + (int)(waveScale * 6.0f);
-        draw_canvas_arc(layer, eggX, eggY, ringR, 0, 360, lv_color_hex(0x80D8FF), 1);
+        int ringR = 34 + (int)(waveScale * 6.0f);
+        draw_canvas_arc(layer, cx, cy, ringR, 0, 360, lv_color_hex(0x80D8FF), 1);
     }
+
+    // 2. Traçado do contorno do ovo via Curva de Bézier Cúbica idêntica ao web preview:
+    // P0 = (cx, cy - eh)
+    // P1 = (cx + ew * 1.05, cy - eh * 0.7)
+    // P2 = (cx + ew * 1.35, cy + eh * 0.7)
+    // P3 = (cx, cy + eh * 0.95)
+    int half_w[128] = {0};
+    int yStart = (int)roundf(cy - eh);
+    int yEnd = (int)roundf(cy + eh * 0.95f);
+    if (yStart < 0) yStart = 0;
+    if (yEnd >= 128) yEnd = 127;
+
+    for (int i = 0; i <= 60; i++) {
+        float s = (float)i / 60.0f;
+        float inv_s = 1.0f - s;
+        float c0 = inv_s * inv_s * inv_s;
+        float c1 = 3.0f * inv_s * inv_s * s;
+        float c2 = 3.0f * inv_s * s * s;
+        float c3 = s * s * s;
+
+        float cur_y = c0 * (cy - eh) + c1 * (cy - eh * 0.7f) + c2 * (cy + eh * 0.7f) + c3 * (cy + eh * 0.95f);
+        float cur_w = c1 * (ew * 1.05f) + c2 * (ew * 1.35f);
+
+        int iy = (int)roundf(cur_y);
+        if (iy >= 0 && iy < 128) {
+            int iw = (int)roundf(cur_w);
+            if (iw > half_w[iy]) half_w[iy] = iw;
+        }
+    }
+    // Interpola falhas de arredondamento
+    for (int y = yStart + 1; y < yEnd; y++) {
+        if (half_w[y] == 0 && half_w[y-1] > 0 && half_w[y+1] > 0) {
+            half_w[y] = (half_w[y-1] + half_w[y+1]) / 2;
+        }
+    }
+
+    // 3. Preenchimento com Gradiente Turquesa/Ciano Cósmico (E0F7FA -> 80DEEA -> 0097A7 -> 006064)
+    for (int y = yStart; y <= yEnd; y++) {
+        int w = half_w[y];
+        if (w <= 0) continue;
+        float u = (yEnd > yStart) ? ((float)(y - yStart) / (float)(yEnd - yStart)) : 0.0f;
+        uint8_t r, g, b;
+        if (u <= 0.35f) {
+            float f = u / 0.35f;
+            r = (uint8_t)(224 + f * (128 - 224));
+            g = (uint8_t)(247 + f * (222 - 247));
+            b = (uint8_t)(250 + f * (234 - 250));
+        } else if (u <= 0.75f) {
+            float f = (u - 0.35f) / 0.40f;
+            r = (uint8_t)(128 + f * (0 - 128));
+            g = (uint8_t)(222 + f * (151 - 222));
+            b = (uint8_t)(234 + f * (167 - 234));
+        } else {
+            float f = (u - 0.75f) / 0.25f;
+            r = 0;
+            g = (uint8_t)(151 + f * (96 - 151));
+            b = (uint8_t)(167 + f * (100 - 167));
+        }
+        lv_color_t line_col = lv_color_hex(((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b);
+        draw_canvas_line(layer, cx - w, y, cx + w, y, line_col, 1);
+        // Borda exterior luminosa em Ciano Elétrico (#00E5FF)
+        draw_canvas_line(layer, cx - w, y, cx - w + 1, y, lv_color_hex(0x00E5FF), 1);
+        draw_canvas_line(layer, cx + w - 1, y, cx + w, y, lv_color_hex(0x00E5FF), 1);
+    }
+
+    // 4. Reflexo Especular Curvo (Brilho no ombro superior-esquerdo)
+    int arcCx = cx - (int)(ew * 0.45f);
+    int arcCy = cy - (int)(eh * 0.35f);
+    int arcR = (int)(ew * 0.45f);
+    if (arcR > 3) {
+        draw_canvas_arc(layer, arcCx, arcCy, arcR, 162, 288, lv_color_hex(0xE0F7FA), 2);
+    }
+
+    // 5. Rachaduras Dinâmicas em Zig-Zag Elétrico
+    if (stage >= 1) {
+        // Estágio 1: Rachadura primária amarela reluzente com miolo branco
+        draw_canvas_line(layer, cx - 3, (int)(cy - eh + 8), cx + 4, (int)(cy - eh + 16), lv_color_hex(0xFFFF00), 2);
+        draw_canvas_line(layer, cx + 4, (int)(cy - eh + 16), cx - 2, (int)(cy - eh + 24), lv_color_hex(0xFFFF00), 2);
+        draw_canvas_line(layer, cx - 2, (int)(cy - eh + 24), cx + 5, (int)(cy - eh + 32), lv_color_hex(0xFFFF00), 2);
+        draw_canvas_line(layer, cx - 3, (int)(cy - eh + 8), cx + 4, (int)(cy - eh + 16), lv_color_hex(0xFFFFFF), 1);
+        draw_canvas_line(layer, cx + 4, (int)(cy - eh + 16), cx - 2, (int)(cy - eh + 24), lv_color_hex(0xFFFFFF), 1);
+        draw_canvas_line(layer, cx - 2, (int)(cy - eh + 24), cx + 5, (int)(cy - eh + 32), lv_color_hex(0xFFFFFF), 1);
+    }
+    if (stage >= 2) {
+        // Estágio 2: Ramificações em ciano elétrico
+        draw_canvas_line(layer, cx - 2, (int)(cy - eh + 24), cx - 12, (int)(cy - eh + 28), lv_color_hex(0x00FFFF), 2);
+        draw_canvas_line(layer, cx - 12, (int)(cy - eh + 28), cx - 9, (int)(cy - eh + 38), lv_color_hex(0x00FFFF), 2);
+        draw_canvas_line(layer, cx + 5, (int)(cy - eh + 32), cx - 4, (int)(cy - eh + 42), lv_color_hex(0x00FFFF), 2);
+        draw_canvas_line(layer, cx - 4, (int)(cy - eh + 42), cx + 2, (int)(cy - eh + 50), lv_color_hex(0x00FFFF), 2);
+    }
+    if (stage >= 3) {
+        // Estágio 3: Fissuras profundas em branco puro
+        draw_canvas_line(layer, cx + 4, (int)(cy - eh + 16), cx + 14, (int)(cy - eh + 20), lv_color_hex(0xFFFFFF), 2);
+        draw_canvas_line(layer, cx + 14, (int)(cy - eh + 20), cx + 10, (int)(cy - eh + 28), lv_color_hex(0xFFFFFF), 2);
+        draw_canvas_line(layer, cx - 4, (int)(cy - eh + 42), cx - 16, (int)(cy - eh + 45), lv_color_hex(0xFFFFFF), 2);
+
+        // Estrelas cintilantes cósmicas
+        for (int i = 0; i < 4; i++) {
+            float spkP = fmodf((ms * 0.0022f + i * 0.25f), 1.0f);
+            int sx = cx + ((i % 2 == 0) ? -1 : 1) * (int)(8 + spkP * 28);
+            int sy = cy + ((i > 1) ? -1 : 1) * (int)(10 + spkP * 24);
+            DrawStar((float)sx, (float)sy, 4.5f * (1.0f - spkP), (i % 2 == 0) ? lv_color_hex(0xFFD600) : lv_color_hex(0x00E5FF), layer);
+        }
+    }
+
+    // 6. Texto de Status Centralizado (Idêntico ao Web Preview)
+    const char* statusText;
+    if (estado == ESTADO_OVO) {
+        statusText = ((ms / 2000) % 2 == 0) ? "OVO MISTERIOSO" : "APROXIME O CARTAO RFID";
+    } else if (stage == 3) {
+        statusText = "QUASE NASCENDO!";
+    } else if (stage == 0) {
+        statusText = "OVO MISTERIOSO";
+    } else {
+        statusText = "CHOCANDO...";
+    }
+    draw_canvas_text(layer, 0, 77, 256, 14, statusText, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+
+    // 7. Barra de Progresso Futurista (160x7 px)
+    int barW = 160;
+    int barH = 7;
+    int barX = 128 - (barW / 2); // 48
+    int barY = 94;
+
+    // Fundo escuro com cantos arredondados
+    draw_canvas_rect(layer, barX, barY, barW, barH, lv_color_hex(0x151926), 3);
+
+    // Preenchimento com gradiente de cor (Ciano -> Dourado)
+    int fillW = (int)(barW * prog);
+    if (fillW < 4 && prog > 0.01f) fillW = 4;
+    if (fillW > barW) fillW = barW;
+    if (fillW > 0) {
+        lv_color_t fillCol = (prog >= 0.85f) ? lv_color_hex(0xFFD600) : (prog >= 0.50f ? lv_color_hex(0x00E5FF) : lv_color_hex(0x00B0FF));
+        draw_canvas_rect(layer, barX + 1, barY + 1, fillW - 2 > 0 ? fillW - 2 : fillW, barH - 2, fillCol, 2);
+    }
+    // Borda suave estilo neon
+    draw_canvas_rect_empty(layer, barX, barY, barW, barH, lv_color_hex(0x283048), 1, 3);
+
+    // 8. Contagem Regressiva (TEMPO: MM:SS)
+    int remSeg = (estado == ESTADO_CHOCANDO) ? ((int)totalInc - (int)segChoc) : (int)totalInc;
+    if (remSeg < 0) remSeg = 0;
+    char timeBuf[32];
+    snprintf(timeBuf, sizeof(timeBuf), "TEMPO: %02d:%02d", remSeg / 60, remSeg % 60);
+    draw_canvas_text(layer, 0, 107, 256, 16, timeBuf, lv_color_hex(0x94A3B8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 }
 
 void LcdDisplay::DrawSingleDie(lv_layer_t* layer, int cx, int cy, int halfSize, int val, lv_color_t accentColor) {

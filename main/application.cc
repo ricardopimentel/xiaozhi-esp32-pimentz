@@ -274,18 +274,13 @@ void Application::Run() {
             if (engine.GetEstadoNascimento() != ESTADO_NASCIDO) {
                 if (GetDeviceState() == kDeviceStateWifiConfiguring || GetDeviceState() == kDeviceStateStarting) {
                     display->SetStatus("AGUARDANDO WIFI");
-                    display->SetChatMessage("system", "Configure o WiFi pelo celular (ou aguarde conectar) antes de chocar o ovo.");
                     display->SetEmotion("neutral");
                 } else {
                     if (engine.GetEstadoNascimento() == ESTADO_OVO) {
-                        display->SetStatus("OVO DE TAMAGOTCHI");
-                        display->SetChatMessage("system", "Aproxime o cartão RFID do corpo do robô para começar a chocar!");
+                        display->SetStatus("OVO MISTERIOSO");
                         display->SetEmotion("neutral");
                     } else if (engine.GetEstadoNascimento() == ESTADO_CHOCANDO) {
-                        char buf[64];
-                        snprintf(buf, sizeof(buf), "Chocando o ovo... (%d/15s)", engine.GetSegundosChocados());
                         display->SetStatus("CHOCANDO...");
-                        display->SetChatMessage("system", buf);
                         display->SetEmotion("neutral");
                     }
                 }
