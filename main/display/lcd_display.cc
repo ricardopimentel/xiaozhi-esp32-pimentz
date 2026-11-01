@@ -329,8 +329,10 @@ LcdDisplay::LcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_
     // Create a timer to hide the preview image
     esp_timer_create_args_t preview_timer_args = {
         .callback = [](void* arg) {
-            LcdDisplay* display = static_cast<LcdDisplay*>(arg);
-            display->SetPreviewImage(nullptr);
+            lv_async_call([](void* user_data) {
+                LcdDisplay* display = static_cast<LcdDisplay*>(user_data);
+                display->SetPreviewImage(nullptr);
+            }, arg);
         },
         .arg = this,
         .dispatch_method = ESP_TIMER_TASK,
@@ -1336,6 +1338,9 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image, uint32_t dura
         lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
         preview_image_cached_.reset();
+        if (eye_timer_) {
+            lv_timer_resume(eye_timer_);
+        }
         return;
     }
 
@@ -1371,6 +1376,10 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image, uint32_t dura
         }
     }
 
+    // Pausa o timer dos olhos para ZERO uso de CPU em renderizacao de fundo
+    if (eye_timer_) {
+        lv_timer_pause(eye_timer_);
+    }
     // Hide face_canvas_ and emoji_box_ so photo is completely unobstructed
     lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
     if (face_canvas_ != nullptr) lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
@@ -1424,6 +1433,9 @@ void LcdDisplay::ClearChatMessages() {
 #endif
 
 void LcdDisplay::SetEmotion(const char* emotion) {
+    if (preview_image_cached_ != nullptr) {
+        return; // Preview de foto/gif ativo: nao renderiza carinha por baixo e nao divide processamento
+    }
     static std::string last_emotion = "";
     if (emotion && last_emotion == emotion) {
         return; // Ignora se a emoção não mudou (evita vazamento de memória e travamento da CPU recarregando o GIF a 5 FPS via ESP-NOW)

@@ -15,6 +15,7 @@
 #include "display/lvgl_display/lvgl_image.h"
 #include "display/lvgl_display/lvgl_display.h"
 #include <thread>
+#include <atomic>
 #include <esp_heap_caps.h>
 
 #include <cstring>
@@ -860,15 +861,34 @@ void Application::InitializeProtocol() {
 
                     if (!media_url.empty()) {
                         ESP_LOGI(TAG, "Iniciando download da midia para LCD: %s", media_url.c_str());
-                        std::thread([this, media_url, dur]() {
+                        struct MediaDlCtx {
+                            Application* app;
+                            std::string url;
+                            uint32_t duration;
+                        };
+                        MediaDlCtx* ctx = new MediaDlCtx{this, media_url, dur};
+
+                        xTaskCreate([](void* arg) {
+                            std::unique_ptr<MediaDlCtx> p((MediaDlCtx*)arg);
+                            static std::atomic<bool> s_dl_busy{false};
+                            if (s_dl_busy.exchange(true)) {
+                                ESP_LOGW(TAG, "Download de midia ja em andamento; descartando solicitacao concorrente");
+                                vTaskDelete(NULL);
+                                return;
+                            }
+
                             auto http = Board::GetInstance().GetNetwork()->CreateHttp(3);
-                            if (!http || !http->Open("GET", media_url)) {
-                                ESP_LOGE(TAG, "Falha ao abrir conexao HTTP para: %s", media_url.c_str());
+                            if (!http || !http->Open("GET", p->url)) {
+                                ESP_LOGE(TAG, "Falha ao abrir conexao HTTP para: %s", p->url.c_str());
+                                s_dl_busy = false;
+                                vTaskDelete(NULL);
                                 return;
                             }
                             if (http->GetStatusCode() != 200) {
                                 ESP_LOGE(TAG, "Falha ao baixar midia, codigo HTTP: %d", http->GetStatusCode());
                                 http->Close();
+                                s_dl_busy = false;
+                                vTaskDelete(NULL);
                                 return;
                             }
 
@@ -876,6 +896,8 @@ void Application::InitializeProtocol() {
                             if (content_length == 0 || content_length > 400 * 1024) {
                                 ESP_LOGE(TAG, "Tamanho de midia invalido: %d", (int)content_length);
                                 http->Close();
+                                s_dl_busy = false;
+                                vTaskDelete(NULL);
                                 return;
                             }
 
@@ -884,6 +906,8 @@ void Application::InitializeProtocol() {
                             if (!data) {
                                 ESP_LOGE(TAG, "Falha de memoria para midia (%d bytes)", (int)content_length);
                                 http->Close();
+                                s_dl_busy = false;
+                                vTaskDelete(NULL);
                                 return;
                             }
 
@@ -898,6 +922,8 @@ void Application::InitializeProtocol() {
                             if (total_read < content_length) {
                                 ESP_LOGE(TAG, "Leitura incompleta: %d de %d", (int)total_read, (int)content_length);
                                 heap_caps_free(data);
+                                s_dl_busy = false;
+                                vTaskDelete(NULL);
                                 return;
                             }
 
@@ -917,20 +943,26 @@ void Application::InitializeProtocol() {
                             }
 
                             LvglImage* raw_img = image.release();
-                            Schedule([this, raw_img, dur]() {
+                            uint32_t dur_ms = p->duration;
+                            Application* p_app = p->app;
+
+                            p_app->Schedule([p_app, raw_img, dur_ms]() {
                                 std::unique_ptr<LvglImage> img(raw_img);
                                 auto display = Board::GetInstance().GetDisplay();
                                 if (display) {
                                     auto lvgl_display = dynamic_cast<LvglDisplay*>(display);
                                     if (lvgl_display) {
-                                        lvgl_display->SetPreviewImage(std::move(img), dur);
+                                        lvgl_display->SetPreviewImage(std::move(img), dur_ms);
                                     }
                                 }
-                                if (GetDeviceState() == kDeviceStateIdle) {
-                                    audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                                if (p_app->GetDeviceState() == kDeviceStateIdle) {
+                                    p_app->PlaySound(Lang::Sounds::OGG_POPUP);
                                 }
                             });
-                        }).detach();
+
+                            s_dl_busy = false;
+                            vTaskDelete(NULL);
+                        }, "media_dl", 9216, ctx, tskIDLE_PRIORITY + 1, NULL);
                     } else {
                         Schedule([this]() {
                             if (GetDeviceState() == kDeviceStateIdle) {
