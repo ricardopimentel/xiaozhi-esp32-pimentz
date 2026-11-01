@@ -691,7 +691,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(status_bar_, LV_ALIGN_TOP_MID, 0, 0);  // Overlap with top_bar_
 
     notification_label_ = lv_label_create(status_bar_);
-    lv_obj_set_width(notification_label_, LV_HOR_RES * 0.8);
+    lv_obj_set_width(notification_label_, LV_HOR_RES * 0.55);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
     lv_label_set_text(notification_label_, "");
@@ -699,7 +699,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
 
     status_label_ = lv_label_create(status_bar_);
-    lv_obj_set_width(status_label_, LV_HOR_RES * 0.8);
+    lv_obj_set_width(status_label_, LV_HOR_RES * 0.55);
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
@@ -1162,7 +1162,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(status_bar_, LV_ALIGN_TOP_MID, 0, 0);  // Overlap with top_bar_
 
     notification_label_ = lv_label_create(status_bar_);
-    lv_obj_set_width(notification_label_, LV_HOR_RES * 0.75);
+    lv_obj_set_width(notification_label_, LV_HOR_RES * 0.55);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(notification_label_, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_text(notification_label_, "");
@@ -1170,7 +1170,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
 
     status_label_ = lv_label_create(status_bar_);
-    lv_obj_set_width(status_label_, LV_HOR_RES * 0.75);
+    lv_obj_set_width(status_label_, LV_HOR_RES * 0.55);
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(status_label_, lv_color_hex(0xFFFFFF), 0);
