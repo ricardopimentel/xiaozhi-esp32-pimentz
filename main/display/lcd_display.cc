@@ -2618,11 +2618,11 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
             cardBorder = lv_color_hex(0xFACC15); // Ouro sol
         }
 
-        // 1. Moldura do Card de Céu (Mais compacto: 240x90 pixels, y=4 a 94)
-        draw_canvas_rect(layer, 8, 4, 240, 90, skyBg, 14);
-        draw_canvas_rect_empty(layer, 8, 4, 240, 90, cardBorder, 2, 14);
+        // 1. Moldura do Card de Ceu (240x90 pixels, y=2 a 92)
+        draw_canvas_rect(layer, 8, 2, 240, 90, skyBg, 14);
+        draw_canvas_rect_empty(layer, 8, 2, 240, 90, cardBorder, 2, 14);
 
-// 2. Pilula Superior do Nome da Cidade (Ocupando quase toda a largura do topo: 216x22 px, y=8 a 30)
+        // 2. Pilula Superior do Nome da Cidade (Ampla e alta: 224x26 px, y=6 a 32, texto em y=11)
         std::string cityLabel = w.city.empty() ? "PARAISO DO TOCANTINS" : w.city;
         char safeCity[48];
         SanitizeToAscii(cityLabel.c_str(), safeCity, sizeof(safeCity));
@@ -2630,13 +2630,13 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
             snprintf(safeCity, sizeof(safeCity), "PARAISO DO TOCANTINS");
         }
 
-        draw_canvas_rect(layer, 20, 8, 216, 22, lv_color_hex(0x0B132B), 11);
-        draw_canvas_rect_empty(layer, 20, 8, 216, 22, cardBorder, 1, 11);
-        draw_canvas_text(layer, 24, 13, 208, 16, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_rect(layer, 16, 6, 224, 26, lv_color_hex(0x0B132B), 13);
+        draw_canvas_rect_empty(layer, 16, 6, 224, 26, cardBorder, 1, 13);
+        draw_canvas_text(layer, 20, 11, 216, 16, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
-        // 3. Centro do Card (y=32 a 66): Icone Animado a Esquerda (cx=68) + Grande Temperatura a Direita (x=114..220)
-        int skyX = 68;
-        int skyY = 50;
+        // 3. Centro do Card (y=33 a 67): Icone Animado a Esquerda (cx=66) + Grande Temperatura a Direita
+        int skyX = 66;
+        int skyY = 49;
 
         if (isNight) {
             // Lua Crescente Prateada com cratera de luz
@@ -2711,9 +2711,9 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         // Grande Temperatura Principal (ex: "29 C")
         char tempBuf[16];
         snprintf(tempBuf, sizeof(tempBuf), "%d C", w.temp);
-        draw_canvas_text(layer, 114, 38, 114, 24, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_text(layer, 116, 39, 114, 22, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
-        // 4. Base do Card: Linha Completa de Largura Total para a Condicao do Clima (x=16..240, w=224, y=69..87)
+        // 4. Base do Card: Linha Completa de Largura Total para a Condicao do Clima (x=14..242, w=228, y=69..87)
         std::string rawDesc = w.condition_text.empty() ? "CLIMA ATUAL" : w.condition_text;
         auto slashPos = rawDesc.find(" /");
         if (slashPos != std::string::npos) {
@@ -2740,12 +2740,12 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
                 }
             }
             weather_marquee_buf[24] = '\0';
-            draw_canvas_text(layer, 16, 70, 224, 18, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            draw_canvas_text(layer, 14, 69, 228, 18, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         } else {
-            draw_canvas_text(layer, 16, 70, 224, 18, condDesc, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            draw_canvas_text(layer, 14, 69, 228, 18, condDesc, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         }
 
-        // 5. Faixa de Indicadores FORA DO CARD (Pilula Elegante e Espacosa: 232x26 px, y=98 a 124)
+        // 5. Faixa de Indicadores FORA DO CARD (Pilula Ampla e Espacosa: 240x30 px, y=96 a 126, texto em y=102)
         char rawStats[48];
         if (w.rain_prob > 0) {
             snprintf(rawStats, sizeof(rawStats), "Chuva:%d%% | ^%d v%d", w.rain_prob, w.temp_max, w.temp_min);
@@ -2755,9 +2755,9 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         char statsBuf[48];
         SanitizeToAscii(rawStats, statsBuf, sizeof(statsBuf));
 
-        draw_canvas_rect(layer, 12, 98, 232, 26, lv_color_hex(0x030712), 13);
-        draw_canvas_rect_empty(layer, 12, 98, 232, 26, lv_color_hex(0x0284C7), 1, 13);
-        draw_canvas_text(layer, 16, 105, 224, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_rect(layer, 8, 96, 240, 30, lv_color_hex(0x030712), 15);
+        draw_canvas_rect_empty(layer, 8, 96, 240, 30, lv_color_hex(0x0284C7), 1, 15);
+        draw_canvas_text(layer, 12, 102, 232, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
