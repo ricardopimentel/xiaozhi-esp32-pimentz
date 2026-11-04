@@ -2707,7 +2707,7 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         // Moldura do Nome da Cidade (Mais ampla, nitida e com borda de destaque: 128x22 px, y=8 a 30)
         draw_canvas_rect(layer, 112, 8, 128, 22, lv_color_hex(0x0B132B), 6);
         draw_canvas_rect_empty(layer, 112, 8, 128, 22, cardBorder, 1, 6);
-        draw_canvas_text(layer, 114, 11, 124, 16, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_text(layer, 114, 13, 124, 16, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
         // Grande Temperatura Principal (ex: "25 C")
         char tempBuf[16];
@@ -2758,7 +2758,7 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
 
         draw_canvas_rect(layer, 12, 98, 232, 26, lv_color_hex(0x030712), 13);
         draw_canvas_rect_empty(layer, 12, 98, 232, 26, lv_color_hex(0x0284C7), 1, 13);
-        draw_canvas_text(layer, 16, 103, 224, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_text(layer, 16, 105, 224, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
