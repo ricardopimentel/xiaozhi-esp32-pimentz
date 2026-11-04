@@ -2698,49 +2698,67 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
 
         // 3. HUD de Métricas Climáticas (Lado Direito: x=108 a 240)
         std::string cityLabel = w.city.empty() ? "PARAISO" : w.city;
-        draw_canvas_rect(layer, 114, 10, 126, 17, lv_color_hex(0x0F172A), 4);
-        draw_canvas_text(layer, 116, 11, 122, 16, cityLabel.c_str(), cardBorder, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        char safeCity[32];
+        SanitizeToAscii(cityLabel.c_str(), safeCity, sizeof(safeCity));
+        if (safeCity[0] == '\0') {
+            snprintf(safeCity, sizeof(safeCity), "PARAISO");
+        }
+
+        // Moldura do Nome da Cidade (Mais ampla, nitida e com borda de destaque: 128x22 px, y=8 a 30)
+        draw_canvas_rect(layer, 112, 8, 128, 22, lv_color_hex(0x0B132B), 6);
+        draw_canvas_rect_empty(layer, 112, 8, 128, 22, cardBorder, 1, 6);
+        draw_canvas_text(layer, 114, 11, 124, 16, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
         // Grande Temperatura Principal (ex: "25 C")
         char tempBuf[16];
         snprintf(tempBuf, sizeof(tempBuf), "%d C", w.temp);
-        draw_canvas_text(layer, 114, 30, 126, 24, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_text(layer, 112, 33, 128, 22, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
-        // Descrição do Tempo com rolagem deslizante (marquee) contínua para textos longos
-        std::string condDesc = w.condition_text.empty() ? "CLIMA ATUAL" : w.condition_text;
-        auto slashPos = condDesc.find(" /");
+        // Descricao do Tempo com rolagem deslizante (marquee) continua para textos longos
+        std::string rawDesc = w.condition_text.empty() ? "CLIMA ATUAL" : w.condition_text;
+        auto slashPos = rawDesc.find(" /");
         if (slashPos != std::string::npos) {
-            condDesc = condDesc.substr(0, slashPos);
+            rawDesc = rawDesc.substr(0, slashPos);
         }
-        if (condDesc.length() > 13) {
-            int pool_len = (int)condDesc.length() + 4; // texto + " * "
+        char condDesc[64];
+        SanitizeToAscii(rawDesc.c_str(), condDesc, sizeof(condDesc));
+        if (condDesc[0] == '\0') {
+            snprintf(condDesc, sizeof(condDesc), "CLIMA ATUAL");
+        }
+
+        size_t descLen = strlen(condDesc);
+        if (descLen > 13) {
+            int pool_len = (int)descLen + 4; // texto + " * "
             int offset = (int)((ms / 250) % pool_len);
             char weather_marquee_buf[16];
             const char* sep = " * ";
             for (int i = 0; i < 13; i++) {
                 int p = (offset + i) % pool_len;
-                if (p < (int)condDesc.length()) {
+                if (p < (int)descLen) {
                     weather_marquee_buf[i] = condDesc[p];
                 } else {
-                    weather_marquee_buf[i] = sep[p - condDesc.length()];
+                    weather_marquee_buf[i] = sep[p - descLen];
                 }
             }
             weather_marquee_buf[13] = '\0';
-            draw_canvas_text(layer, 110, 58, 134, 18, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            draw_canvas_text(layer, 110, 58, 132, 18, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         } else {
-            draw_canvas_text(layer, 110, 58, 134, 18, condDesc.c_str(), lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            draw_canvas_text(layer, 110, 58, 132, 18, condDesc, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         }
 
-        // 4. Faixa de Indicadores FORA DO CARD (Parte de Baixo do Display: y=101 a 123)
-        char statsBuf[48];
+        // 4. Faixa de Indicadores FORA DO CARD (Pilula Elegante e Espacosa: 232x26 px, y=98 a 124)
+        char rawStats[48];
         if (w.rain_prob > 0) {
-            snprintf(statsBuf, sizeof(statsBuf), "Chuva:%d%% | ^%d v%d", w.rain_prob, w.temp_max, w.temp_min);
+            snprintf(rawStats, sizeof(rawStats), "Chuva:%d%% | ^%d v%d", w.rain_prob, w.temp_max, w.temp_min);
         } else {
-            snprintf(statsBuf, sizeof(statsBuf), "Umid:%d%% | ^%d v%d", w.humidity, w.temp_max, w.temp_min);
+            snprintf(rawStats, sizeof(rawStats), "Umid:%d%% | ^%d v%d", w.humidity, w.temp_max, w.temp_min);
         }
-        draw_canvas_rect(layer, 16, 101, 224, 22, lv_color_hex(0x020617), 11);
-        draw_canvas_rect_empty(layer, 16, 101, 224, 22, lv_color_hex(0x1E293B), 1, 11);
-        draw_canvas_text(layer, 20, 104, 216, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        char statsBuf[48];
+        SanitizeToAscii(rawStats, statsBuf, sizeof(statsBuf));
+
+        draw_canvas_rect(layer, 12, 98, 232, 26, lv_color_hex(0x030712), 13);
+        draw_canvas_rect_empty(layer, 12, 98, 232, 26, lv_color_hex(0x0284C7), 1, 13);
+        draw_canvas_text(layer, 16, 103, 224, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
