@@ -1286,11 +1286,11 @@ void LcdDisplay::SetupUI() {
     // Criação do Canvas do Rosto OLED (256x128 pixels, escala 2x)
     face_canvas_ = lv_canvas_create(screen);
 #if LVGL_VERSION_MAJOR >= 9
-    // Em LVGL 9, lv_draw_buf_create cuida de todo o alinhamento e stride perfeitamente
-    lv_draw_buf_t* draw_buf = lv_draw_buf_create(256, 128, LV_COLOR_FORMAT_NATIVE, LV_STRIDE_AUTO);
+    // Em LVGL 9, lv_draw_buf_create cuida de todo o alinhamento e stride perfeitamente (256x180 preserva topo em y=29 com y_ofs=-1)
+    lv_draw_buf_t* draw_buf = lv_draw_buf_create(256, 180, LV_COLOR_FORMAT_NATIVE, LV_STRIDE_AUTO);
     if (draw_buf) {
         lv_canvas_set_draw_buf(face_canvas_, draw_buf);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -27);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -1);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN); // Oculto por padrao ate nascer
     } else {
         ESP_LOGE(TAG, "Falha CRITICA ao alocar draw_buf para o Canvas! Desativando rosto.");
@@ -1298,19 +1298,24 @@ void LcdDisplay::SetupUI() {
     }
 #else
     // LVGL 8 fallback
-    size_t canvas_size = 256 * 128 * 4;
-    face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);    
+    size_t canvas_size = 256 * 180 * 4;
+    face_canvas_buf_ = (uint8_t*)heap_caps_malloc(canvas_size, MALLOC_CAP_SPIRAM);
     if (face_canvas_buf_) {
-        // Alinhamento manual de segurança para 64-bytes
         void* aligned_buf = (void*)(((uintptr_t)face_canvas_buf_ + 63) & ~63);
-        lv_canvas_set_buffer(face_canvas_, aligned_buf, 256, 128, LV_COLOR_FORMAT_NATIVE);
-        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -27);
+        lv_canvas_set_buffer(face_canvas_, aligned_buf, 256, 180, LV_COLOR_FORMAT_NATIVE);
+        lv_obj_align(face_canvas_, LV_ALIGN_CENTER, 0, -1);
         lv_obj_add_flag(face_canvas_, LV_OBJ_FLAG_HIDDEN);
     } else {
         ESP_LOGE(TAG, "Falha ao alocar Canvas! Desativando rosto.");
         face_canvas_ = nullptr;
     }
 #endif
+    if (bottom_bar_ != nullptr) {
+        lv_obj_move_foreground(bottom_bar_);
+    }
+    if (low_battery_popup_ != nullptr) {
+        lv_obj_move_foreground(low_battery_popup_);
+    }
     InicializarParticulas();
 
     // Cria a barra do timer
@@ -2021,7 +2026,7 @@ void LcdDisplay::DrawStarDirect(int px, int py, int r, lv_color_t color, lv_laye
     if (!face_canvas_ || !layer) return;
     if (r < 2) r = 2;
     // Proteção contra estouro de limites do canvas 256x128
-    if (px < r || px >= (256 - r) || py < r || py >= (128 - r)) return;
+    if (px < r || px >= (256 - r) || py < r || py >= (180 - r)) return;
     
     draw_canvas_line(layer, px, py - r, px, py + r, color, 3);
     draw_canvas_line(layer, px - r, py, px + r, py, color, 3);
@@ -2618,34 +2623,49 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
             cardBorder = lv_color_hex(0xFACC15); // Ouro sol
         }
 
-        // 1. Moldura do Card de Ceu (240x90 pixels, y=2 a 92)
-        draw_canvas_rect(layer, 8, 2, 240, 90, skyBg, 14);
-        draw_canvas_rect_empty(layer, 8, 2, 240, 90, cardBorder, 2, 14);
+        // 1. Moldura do Card Principal (x=13..242 => 5px margem esq/dir na tela 240px; y=4..122 => 119px altura)
+        draw_canvas_rect(layer, 13, 4, 229, 118, skyBg, 16);
+        draw_canvas_rect_empty(layer, 13, 4, 229, 118, cardBorder, 2, 16);
 
-        // 2. Pilula Superior do Nome da Cidade (Ampla e alta: 224x26 px, y=6 a 32, texto em y=11)
-        std::string cityLabel = w.city.empty() ? "PARAISO DO TOCANTINS" : w.city;
+        // 2. Pilula Superior do Nome da Cidade (x=19..236, y=11..45 => h=34; texto em y=15 centraliza cap/base perfeitamente)
+        std::string cityLabel = w.city.empty() ? "Paraiso do Tocantins" : w.city;
         char safeCity[48];
         SanitizeToAscii(cityLabel.c_str(), safeCity, sizeof(safeCity));
         if (safeCity[0] == '\0') {
-            snprintf(safeCity, sizeof(safeCity), "PARAISO DO TOCANTINS");
+            snprintf(safeCity, sizeof(safeCity), "Paraiso do Tocantins");
         }
 
-        draw_canvas_rect(layer, 16, 6, 224, 26, lv_color_hex(0x0B132B), 13);
-        draw_canvas_rect_empty(layer, 16, 6, 224, 26, cardBorder, 1, 13);
-        draw_canvas_text(layer, 20, 11, 216, 16, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_rect(layer, 19, 11, 217, 34, lv_color_hex(0x050914), 17);
+        draw_canvas_rect_empty(layer, 19, 11, 217, 34, cardBorder, 1, 17);
 
-        // 3. Centro do Card (y=33 a 67): Icone Animado a Esquerda (cx=66) + Grande Temperatura a Direita
-        int skyX = 66;
-        int skyY = 49;
+        size_t cityLen = strlen(safeCity);
+        if (cityLen > 22) {
+            int c_pool = (int)cityLen + 4;
+            int c_off = (int)((ms / 260) % c_pool);
+            char city_marquee[24];
+            const char* c_sep = " * ";
+            for (int i = 0; i < 20; i++) {
+                int p = (c_off + i) % c_pool;
+                city_marquee[i] = (p < (int)cityLen) ? safeCity[p] : c_sep[p - cityLen];
+            }
+            city_marquee[20] = '\0';
+            draw_canvas_text(layer, 22, 15, 211, 26, city_marquee, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        } else {
+            draw_canvas_text(layer, 22, 15, 211, 26, safeCity, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        }
+
+        // 3. Centro do Card (y=50..90): Icone Animado a Esquerda (cx=72, cy=71) + Temperatura a Direita
+        int skyX = 72;
+        int skyY = 71;
 
         if (isNight) {
-            // Lua Crescente Prateada com cratera de luz
-            int moonR = 15;
+            // Lua Crescente Prateada com folga ampla abaixo da pilula da cidade
+            int moonR = 14;
             draw_canvas_disc(layer, skyX, skyY + bobY, moonR, lv_color_hex(0xF1F5F9));
             draw_canvas_disc(layer, skyX + 6, skyY - 3 + bobY, moonR - 2, skyBg);
-            
+
             // Estrelas piscantes animadas ao redor
-            int starOffsets[4][2] = { {-22, -16}, {20, -14}, {-18, 16}, {20, 14} };
+            int starOffsets[4][2] = { {-21, -13}, {19, -12}, {-18, 13}, {19, 12} };
             for (int i = 0; i < 4; i++) {
                 float blink = sinf(ms * 0.005f + i * 1.5f);
                 if (blink > -0.2f) {
@@ -2655,44 +2675,44 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
             }
         } else if (isRain || isStorm) {
             // Nuvem de Chuva carregada
-            int ncy = skyY - 8 + bobY;
-            draw_canvas_disc(layer, skyX - 14, ncy + 3, 10, lv_color_hex(0x475569));
-            draw_canvas_disc(layer, skyX + 13, ncy + 3, 9, lv_color_hex(0x475569));
-            draw_canvas_disc(layer, skyX, ncy, 14, lv_color_hex(0x64748B));
-            draw_canvas_rect(layer, skyX - 16, ncy + 3, 30, 9, lv_color_hex(0x475569), 3);
+            int ncy = skyY - 4 + bobY;
+            draw_canvas_disc(layer, skyX - 13, ncy + 3, 9, lv_color_hex(0x475569));
+            draw_canvas_disc(layer, skyX + 12, ncy + 3, 9, lv_color_hex(0x475569));
+            draw_canvas_disc(layer, skyX, ncy, 13, lv_color_hex(0x64748B));
+            draw_canvas_rect(layer, skyX - 15, ncy + 3, 28, 8, lv_color_hex(0x475569), 3);
 
-            // Gotas de Chuva caindo em loop continuo
+            // Gotas de Chuva caindo em loop continuo sem invadir o texto abaixo
             for (int i = 0; i < 5; i++) {
-                int dropY = (int)((ms * 0.12f + i * 12)) % 26 + (ncy + 10);
-                int dropX = (skyX - 16) + (i * 7) - ((dropY - ncy) / 6);
-                if (dropY < 68) {
+                int dropY = (int)((ms * 0.12f + i * 10)) % 18 + (ncy + 10);
+                int dropX = (skyX - 15) + (i * 7) - ((dropY - ncy) / 6);
+                if (dropY < 89) {
                     draw_canvas_line(layer, dropX, dropY, dropX - 2, dropY + 4, lv_color_hex(0x38BDF8), 2);
                 }
             }
 
             // Raio de tempestade piscante
             if (isStorm && ((ms / 250) % 6 == 0)) {
-                draw_canvas_line(layer, skyX + 4, ncy + 6, skyX - 2, ncy + 14, lv_color_hex(0xFEF08A), 2);
-                draw_canvas_line(layer, skyX - 2, ncy + 14, skyX + 5, ncy + 14, lv_color_hex(0xFEF08A), 2);
-                draw_canvas_line(layer, skyX + 5, ncy + 14, skyX + 1, ncy + 22, lv_color_hex(0xFEF08A), 2);
+                draw_canvas_line(layer, skyX + 4, ncy + 6, skyX - 2, ncy + 13, lv_color_hex(0xFEF08A), 2);
+                draw_canvas_line(layer, skyX - 2, ncy + 13, skyX + 5, ncy + 13, lv_color_hex(0xFEF08A), 2);
+                draw_canvas_line(layer, skyX + 5, ncy + 13, skyX + 1, ncy + 20, lv_color_hex(0xFEF08A), 2);
             }
         } else if (isCloud) {
             // Nuvens duplas fofas flutuantes
             float drift = sinf(ms * 0.003f) * 4.0f;
             int ncy = skyY + bobY;
-            draw_canvas_disc(layer, skyX + 9 + (int)drift, ncy - 5, 10, lv_color_hex(0x94A3B8));
-            draw_canvas_disc(layer, skyX - 12 - (int)drift, ncy + 3, 10, lv_color_hex(0xE2E8F0));
+            draw_canvas_disc(layer, skyX + 9 + (int)drift, ncy - 4, 10, lv_color_hex(0x94A3B8));
+            draw_canvas_disc(layer, skyX - 12 - (int)drift, ncy + 3, 9, lv_color_hex(0xE2E8F0));
             draw_canvas_disc(layer, skyX + 10 - (int)drift, ncy + 3, 9, lv_color_hex(0xE2E8F0));
-            draw_canvas_disc(layer, skyX - (int)drift, ncy - 2, 14, lv_color_hex(0xFFFFFF));
-            draw_canvas_rect(layer, skyX - 14 - (int)drift, ncy + 3, 26, 9, lv_color_hex(0xE2E8F0), 3);
+            draw_canvas_disc(layer, skyX - (int)drift, ncy - 2, 13, lv_color_hex(0xFFFFFF));
+            draw_canvas_rect(layer, skyX - 14 - (int)drift, ncy + 3, 26, 8, lv_color_hex(0xE2E8F0), 3);
         } else {
             // Sol Dourado Radiante com Raios Giratorios
             float rot = ms * 0.0015f;
-            int sunR = 11 + (int)(sinf(ms * 0.006f) * 2.0f);
+            int sunR = 10 + (int)(sinf(ms * 0.006f) * 2.0f);
             for (int i = 0; i < 8; i++) {
                 float ang = rot + i * (3.14159f / 4.0f);
                 int r1 = sunR + 3;
-                int r2 = sunR + 7;
+                int r2 = sunR + 6;
                 int x1 = skyX + (int)(cosf(ang) * r1);
                 int y1 = skyY + bobY + (int)(sinf(ang) * r1);
                 int x2 = skyX + (int)(cosf(ang) * r2);
@@ -2702,19 +2722,19 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
             draw_canvas_disc(layer, skyX, skyY + bobY, sunR, lv_color_hex(0xFACC15));
             draw_canvas_disc(layer, skyX, skyY + bobY, sunR - 3, lv_color_hex(0xFEF08A));
 
-            int ncy = skyY + 11 + bobY;
-            draw_canvas_disc(layer, skyX + 7, ncy, 6, lv_color_hex(0xE0F2FE));
-            draw_canvas_disc(layer, skyX + 15, ncy + 2, 5, lv_color_hex(0xE0F2FE));
-            draw_canvas_disc(layer, skyX + 11, ncy - 2, 8, lv_color_hex(0xFFFFFF));
+            int ncy = skyY + 10 + bobY;
+            draw_canvas_disc(layer, skyX + 7, ncy, 5, lv_color_hex(0xE0F2FE));
+            draw_canvas_disc(layer, skyX + 14, ncy + 2, 5, lv_color_hex(0xE0F2FE));
+            draw_canvas_disc(layer, skyX + 10, ncy - 2, 7, lv_color_hex(0xFFFFFF));
         }
 
-        // Grande Temperatura Principal (ex: "29 C")
+        // Grande Temperatura Principal alinhada verticalmente ao centro do icone (cy=71 => text_y=59)
         char tempBuf[16];
         snprintf(tempBuf, sizeof(tempBuf), "%d C", w.temp);
-        draw_canvas_text(layer, 116, 39, 114, 22, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_text(layer, 118, 59, 112, 26, tempBuf, lv_color_hex(0xFFFFFF), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
 
-        // 4. Base do Card: Linha Completa de Largura Total para a Condicao do Clima (x=14..242, w=228, y=69..87)
-        std::string rawDesc = w.condition_text.empty() ? "CLIMA ATUAL" : w.condition_text;
+        // 4. Base do Card: Linha Completa de Largura Total com folga superior e inferior (text_y=93, baseline=112, borda=122)
+        std::string rawDesc = w.condition_text.empty() ? "Clima atual" : w.condition_text;
         auto slashPos = rawDesc.find(" /");
         if (slashPos != std::string::npos) {
             rawDesc = rawDesc.substr(0, slashPos);
@@ -2722,16 +2742,16 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         char condDesc[64];
         SanitizeToAscii(rawDesc.c_str(), condDesc, sizeof(condDesc));
         if (condDesc[0] == '\0') {
-            snprintf(condDesc, sizeof(condDesc), "CLIMA ATUAL");
+            snprintf(condDesc, sizeof(condDesc), "Clima atual");
         }
 
         size_t descLen = strlen(condDesc);
-        if (descLen > 22) {
+        if (descLen > 21) {
             int pool_len = (int)descLen + 4; // texto + " * "
             int offset = (int)((ms / 250) % pool_len);
-            char weather_marquee_buf[28];
+            char weather_marquee_buf[24];
             const char* sep = " * ";
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < 20; i++) {
                 int p = (offset + i) % pool_len;
                 if (p < (int)descLen) {
                     weather_marquee_buf[i] = condDesc[p];
@@ -2739,13 +2759,13 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
                     weather_marquee_buf[i] = sep[p - descLen];
                 }
             }
-            weather_marquee_buf[24] = '\0';
-            draw_canvas_text(layer, 14, 69, 228, 18, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            weather_marquee_buf[20] = '\0';
+            draw_canvas_text(layer, 19, 93, 217, 26, weather_marquee_buf, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         } else {
-            draw_canvas_text(layer, 14, 69, 228, 18, condDesc, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+            draw_canvas_text(layer, 19, 93, 217, 26, condDesc, lv_color_hex(0xBAE6FD), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
         }
 
-        // 5. Faixa de Indicadores FORA DO CARD (Pilula Ampla e Espacosa: 240x30 px, y=96 a 126, texto em y=102)
+        // 5. Pilula Externa de Indicadores (10px abaixo do card: y=132..166, h=34; x=13..242 sem cortar na direita; text_y=136 centralizado)
         char rawStats[48];
         if (w.rain_prob > 0) {
             snprintf(rawStats, sizeof(rawStats), "Chuva:%d%% | ^%d v%d", w.rain_prob, w.temp_max, w.temp_min);
@@ -2755,9 +2775,9 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         char statsBuf[48];
         SanitizeToAscii(rawStats, statsBuf, sizeof(statsBuf));
 
-        draw_canvas_rect(layer, 8, 96, 240, 30, lv_color_hex(0x030712), 15);
-        draw_canvas_rect_empty(layer, 8, 96, 240, 30, lv_color_hex(0x0284C7), 1, 15);
-        draw_canvas_text(layer, 12, 102, 232, 16, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        draw_canvas_rect(layer, 13, 132, 229, 34, lv_color_hex(0x030712), 17);
+        draw_canvas_rect_empty(layer, 13, 132, 229, 34, lv_color_hex(0x0284C7), 2, 17);
+        draw_canvas_text(layer, 17, 136, 221, 26, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
