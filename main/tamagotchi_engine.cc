@@ -1023,9 +1023,11 @@ uint8_t TamagotchiEngine::GetFoodReactionType() const {
     return 0;
 }
 
-void TamagotchiEngine::TriggerDiceRoll(int val1, int val2, uint32_t duration_ms) {
-    dice_val1_ = std::max(1, std::min(6, val1));
-    dice_val2_ = (val2 > 0) ? std::max(1, std::min(6, val2)) : 0;
+void TamagotchiEngine::TriggerDiceRoll(int val1, int val2, uint32_t duration_ms, int sides) {
+    dice_sides_ = (sides == 20) ? 20 : 6;
+    int max_face = (dice_sides_ == 20) ? 20 : 6;
+    dice_val1_ = std::max(1, std::min(max_face, val1));
+    dice_val2_ = (dice_sides_ == 20 || val2 <= 0) ? 0 : std::max(1, std::min(6, val2));
     dice_duration_ms_ = (duration_ms < 1000) ? 1000 : duration_ms;
     dice_start_ms_ = esp_timer_get_time() / 1000;
     dice_active_ = true;
@@ -1080,6 +1082,18 @@ std::string TamagotchiEngine::GetActiveOverlay() const {
     uint64_t now = esp_timer_get_time() / 1000;
     if (now >= overlay_until_ms_) return "";
     return overlay_type_;
+}
+
+void TamagotchiEngine::SetRpgUiMode(const std::string& mode) {
+    if (mode == "dm_face") {
+        overlay_type_ = "dm_face";
+        overlay_until_ms_ = (esp_timer_get_time() / 1000) + 180000;
+    } else {
+        if (overlay_type_ == "dm_face") {
+            overlay_type_ = "";
+            overlay_until_ms_ = 0;
+        }
+    }
 }
 
 void TamagotchiEngine::TriggerCustomExpression(uint8_t idle_type, const std::string& emotion_override, uint32_t duration_ms) {

@@ -67,11 +67,14 @@ public:
     uint8_t GetFoodReactionType() const;
 
     // Companion App: Jogos, Dados, Roleta, Acessorios e Pomodoro
-    void TriggerDiceRoll(int val1, int val2 = 0, uint32_t duration_ms = 3200);
+    void TriggerDiceRoll(int val1, int val2 = 0, uint32_t duration_ms = 3200, int sides = 6);
     bool IsDiceActive() const;
     int GetDiceVal1() const { return dice_val1_; }
     int GetDiceVal2() const { return dice_val2_; }
+    int GetDiceSides() const { return dice_sides_; }
     float GetDiceProgress() const;
+
+    void SetRpgUiMode(const std::string& mode);
 
     void TriggerWheelSpin(int target_val, uint32_t duration_ms = 3800);
     bool IsWheelActive() const;
@@ -256,6 +259,7 @@ private:
     uint32_t dice_duration_ms_ = 3200;
     int dice_val1_ = 1;
     int dice_val2_ = 0;
+    int dice_sides_ = 6;
 
     bool wheel_active_ = false;
     uint64_t wheel_start_ms_ = 0;

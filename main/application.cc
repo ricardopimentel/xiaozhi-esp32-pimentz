@@ -590,7 +590,10 @@ void Application::InitializeProtocol() {
     protocol_->OnIncomingJson([this, display](const cJSON* root) {
         // Parse JSON data
         auto type = cJSON_GetObjectItem(root, "type");
-        if (strcmp(type->valuestring, "tts") == 0) {
+        const char* type_str = (type && cJSON_IsString(type))
+            ? type->valuestring
+            : (cJSON_GetObjectItem(root, "action") ? "companion" : "");
+        if (strcmp(type_str, "tts") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
             if (strcmp(state->valuestring, "start") == 0) {
                 Schedule([this]() {
@@ -631,7 +634,7 @@ void Application::InitializeProtocol() {
                     });
                 }
             }
-        } else if (strcmp(type->valuestring, "stt") == 0) {
+        } else if (strcmp(type_str, "stt") == 0) {
             auto text = cJSON_GetObjectItem(root, "text");
             if (cJSON_IsString(text)) {
                 ESP_LOGI(TAG, ">> %s", text->valuestring);
@@ -639,19 +642,19 @@ void Application::InitializeProtocol() {
                     display->SetChatMessage("user", message.c_str());
                 });
             }
-        } else if (strcmp(type->valuestring, "llm") == 0) {
+        } else if (strcmp(type_str, "llm") == 0) {
             auto emotion = cJSON_GetObjectItem(root, "emotion");
             if (cJSON_IsString(emotion)) {
                 Schedule([display, emotion_str = std::string(emotion->valuestring)]() {
                     display->SetEmotion(emotion_str.c_str());
                 });
             }
-        } else if (strcmp(type->valuestring, "mcp") == 0) {
+        } else if (strcmp(type_str, "mcp") == 0) {
             auto payload = cJSON_GetObjectItem(root, "payload");
             if (cJSON_IsObject(payload)) {
                 McpServer::GetInstance().ParseMessage(payload);
             }
-        } else if (strcmp(type->valuestring, "system") == 0) {
+        } else if (strcmp(type_str, "system") == 0) {
             auto command = cJSON_GetObjectItem(root, "command");
             if (cJSON_IsString(command)) {
                 ESP_LOGI(TAG, "System command: %s", command->valuestring);
@@ -664,7 +667,7 @@ void Application::InitializeProtocol() {
                     ESP_LOGW(TAG, "Unknown system command: %s", command->valuestring);
                 }
             }
-        } else if (strcmp(type->valuestring, "alert") == 0) {
+        } else if (strcmp(type_str, "alert") == 0) {
             auto status = cJSON_GetObjectItem(root, "status");
             auto message = cJSON_GetObjectItem(root, "message");
             auto emotion = cJSON_GetObjectItem(root, "emotion");
@@ -673,7 +676,7 @@ void Application::InitializeProtocol() {
             } else {
                 ESP_LOGW(TAG, "Alert command requires status, message and emotion");
             }
-        } else if (strcmp(type->valuestring, "media") == 0) {
+        } else if (strcmp(type_str, "media") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
             bool is_playing = (state && cJSON_IsString(state) && strcmp(state->valuestring, "playing") == 0);
             auto players = cJSON_GetObjectItem(root, "players");
@@ -717,7 +720,7 @@ void Application::InitializeProtocol() {
                 );
             }
 #if CONFIG_RECEIVE_CUSTOM_MESSAGE
-        } else if (strcmp(type->valuestring, "custom") == 0) {
+        } else if (strcmp(type_str, "custom") == 0) {
             auto payload = cJSON_GetObjectItem(root, "payload");
             ESP_LOGI(TAG, "Received custom message: %s", cJSON_PrintUnformatted(root));
             if (cJSON_IsObject(payload)) {
@@ -728,7 +731,7 @@ void Application::InitializeProtocol() {
                 ESP_LOGW(TAG, "Invalid custom message format: missing payload");
             }
 #endif
-        } else if (strcmp(type->valuestring, "companion") == 0) {
+        } else if (strcmp(type_str, "companion") == 0) {
                 auto action_item = cJSON_GetObjectItem(root, "action");
                 std::string act = (action_item && cJSON_IsString(action_item)) ? action_item->valuestring : "";
 
@@ -780,16 +783,40 @@ void Application::InitializeProtocol() {
                     auto v2_item = cJSON_GetObjectItem(root, "val2");
                     auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
                     auto fg_item = cJSON_GetObjectItem(root, "fun_gain");
-                    int v1 = (v1_item && cJSON_IsNumber(v1_item)) ? v1_item->valueint : ((rand() % 6) + 1);
+                    auto sides_item = cJSON_GetObjectItem(root, "sides");
+                    int sides = (sides_item && cJSON_IsNumber(sides_item)) ? sides_item->valueint : 6;
+                    int max_s = (sides == 20) ? 20 : 6;
+                    int v1 = (v1_item && cJSON_IsNumber(v1_item)) ? v1_item->valueint : ((rand() % max_s) + 1);
                     int v2 = (v2_item && cJSON_IsNumber(v2_item)) ? v2_item->valueint : 0;
                     uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 3200;
                     int fg = (fg_item && cJSON_IsNumber(fg_item)) ? fg_item->valueint : 4;
-                    Schedule([this, v1, v2, dur, fg]() {
-                        TamagotchiEngine::GetInstance().TriggerDiceRoll(v1, v2, dur);
+                    Schedule([this, v1, v2, dur, fg, sides]() {
+                        TamagotchiEngine::GetInstance().TriggerDiceRoll(v1, v2, dur, sides);
                         TamagotchiEngine::GetInstance().AddPlayProgress(fg, 1, false);
                         if (GetDeviceState() == kDeviceStateIdle) {
                             audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
                         }
+                    });
+                } else if (act == "play_dice_anim") {
+                    auto res_item = cJSON_GetObjectItem(root, "result");
+                    auto sides_item = cJSON_GetObjectItem(root, "sides");
+                    auto dur_item = cJSON_GetObjectItem(root, "duration_ms");
+                    int sides = (sides_item && cJSON_IsNumber(sides_item)) ? sides_item->valueint : 20;
+                    int max_s = (sides == 20) ? 20 : 6;
+                    int res_val = (res_item && cJSON_IsNumber(res_item)) ? res_item->valueint : ((rand() % max_s) + 1);
+                    uint32_t dur = (dur_item && cJSON_IsNumber(dur_item)) ? (uint32_t)dur_item->valueint : 3600;
+                    Schedule([this, res_val, dur, sides]() {
+                        TamagotchiEngine::GetInstance().TriggerDiceRoll(res_val, 0, dur, sides);
+                        TamagotchiEngine::GetInstance().AddPlayProgress(3, 1, false);
+                        if (GetDeviceState() == kDeviceStateIdle) {
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                        }
+                    });
+                } else if (act == "set_ui") {
+                    auto mode_item = cJSON_GetObjectItem(root, "mode");
+                    std::string mode = (mode_item && cJSON_IsString(mode_item)) ? mode_item->valuestring : "idle_bot";
+                    Schedule([mode]() {
+                        TamagotchiEngine::GetInstance().SetRpgUiMode(mode);
                     });
                 } else if (act == "spin_wheel") {
                     auto val_item = cJSON_GetObjectItem(root, "val");

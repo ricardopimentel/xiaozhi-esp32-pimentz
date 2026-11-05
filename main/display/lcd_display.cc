@@ -2399,6 +2399,150 @@ void LcdDisplay::DrawDiceScene(lv_layer_t* layer) {
     float prog = engine.GetDiceProgress();
     int v1 = engine.GetDiceVal1();
     int v2 = engine.GetDiceVal2();
+    int sides = engine.GetDiceSides();
+
+    if (sides == 20) {
+        bool rolling = (prog < 0.56f);
+        int disp20 = rolling ? (((int)(ms / 55) % 20) + 1) : v1;
+
+        int bounceY = 0;
+        int shakeX = 0;
+        if (rolling) {
+            bounceY = (int)(-fabsf(sinf(ms * 0.017f)) * 12.0f);
+            shakeX = (int)(sinf(ms * 0.042f) * 5.0f);
+        } else {
+            float settle = (prog - 0.56f) / 0.44f;
+            if (settle < 0.35f) {
+                bounceY = (int)(-sinf((settle / 0.35f) * 3.14159f) * 6.0f);
+            }
+            if (v1 == 1 && settle < 0.65f) {
+                shakeX = (int)(sinf(ms * 0.07f) * 3.0f);
+            }
+        }
+
+        int dcx = 128 + shakeX;
+        int dcy = 64 + bounceY;
+        int R = 44;
+        int r = 25;
+
+        lv_color_t glowBg = lv_color_hex(0x090D16);
+        lv_color_t bodyCol = lv_color_hex(0x1E1B4B);
+        lv_color_t upperCol = lv_color_hex(0x312E81);
+        lv_color_t innerCol = lv_color_hex(0x4338CA);
+        lv_color_t edgeCol = lv_color_hex(0x22D3EE);
+        lv_color_t numCol = lv_color_hex(0xFFFFFF);
+        lv_color_t pillBorder = lv_color_hex(0x0284C7);
+        lv_color_t pillText = lv_color_hex(0x38BDF8);
+
+        if (!rolling) {
+            if (v1 == 20) {
+                glowBg = lv_color_hex(0x291802);
+                bodyCol = lv_color_hex(0x78350F);
+                upperCol = lv_color_hex(0x92400E);
+                innerCol = lv_color_hex(0xB45309);
+                edgeCol = lv_color_hex(0xFACC15);
+                numCol = lv_color_hex(0xFEF08A);
+                pillBorder = lv_color_hex(0xEAB308);
+                pillText = lv_color_hex(0xFEF08A);
+            } else if (v1 == 1) {
+                glowBg = lv_color_hex(0x240505);
+                bodyCol = lv_color_hex(0x450A0A);
+                upperCol = lv_color_hex(0x7F1D1D);
+                innerCol = lv_color_hex(0x991B1B);
+                edgeCol = lv_color_hex(0xEF4444);
+                numCol = lv_color_hex(0xFCA5A5);
+                pillBorder = lv_color_hex(0xDC2626);
+                pillText = lv_color_hex(0xFCA5A5);
+            } else {
+                glowBg = lv_color_hex(0x071324);
+                bodyCol = lv_color_hex(0x0F172A);
+                upperCol = lv_color_hex(0x1E293B);
+                innerCol = lv_color_hex(0x155E75);
+                edgeCol = lv_color_hex(0x38BDF8);
+                numCol = lv_color_hex(0xFDE047);
+                pillBorder = lv_color_hex(0x22D3EE);
+                pillText = lv_color_hex(0xE0F2FE);
+            }
+        }
+
+        // Halo arcano de fundo
+        draw_canvas_disc(layer, dcx, dcy, R + 6, glowBg);
+
+        float rot = rolling ? (prog * 14.0f) : -1.5707963f; // Vertice apontando para 12h ao parar
+        int hx[6], hy[6];
+        for (int i = 0; i < 6; i++) {
+            float a = rot + i * 1.04719755f; // 60 graus
+            hx[i] = dcx + (int)(cosf(a) * R);
+            hy[i] = dcy + (int)(sinf(a) * R);
+        }
+
+        int tx[3], ty[3];
+        for (int i = 0; i < 3; i++) {
+            float a = rot + i * 2.0943951f; // 120 graus
+            tx[i] = dcx + (int)(cosf(a) * r);
+            ty[i] = dcy + (int)(sinf(a) * r);
+        }
+
+        // Corpo hexagonal do icosaedro (D20)
+        draw_canvas_triangle(layer, hx[0], hy[0], hx[1], hy[1], hx[2], hy[2], upperCol);
+        draw_canvas_triangle(layer, hx[0], hy[0], hx[2], hy[2], hx[3], hy[3], bodyCol);
+        draw_canvas_triangle(layer, hx[0], hy[0], hx[3], hy[3], hx[4], hy[4], bodyCol);
+        draw_canvas_triangle(layer, hx[0], hy[0], hx[4], hy[4], hx[5], hy[5], upperCol);
+
+        // Face triangular central
+        draw_canvas_triangle(layer, tx[0], ty[0], tx[1], ty[1], tx[2], ty[2], innerCol);
+
+        // Arestas externas e internas do D20
+        for (int i = 0; i < 6; i++) {
+            int n = (i + 1) % 6;
+            draw_canvas_line(layer, hx[i], hy[i], hx[n], hy[n], edgeCol, 2);
+        }
+        for (int i = 0; i < 3; i++) {
+            int n = (i + 1) % 3;
+            draw_canvas_line(layer, tx[i], ty[i], tx[n], ty[n], edgeCol, 2);
+            int h_prev = (i * 2 + 5) % 6;
+            int h_curr = (i * 2) % 6;
+            int h_next = (i * 2 + 1) % 6;
+            draw_canvas_line(layer, tx[i], ty[i], hx[h_prev], hy[h_prev], edgeCol, 2);
+            draw_canvas_line(layer, tx[i], ty[i], hx[h_curr], hy[h_curr], edgeCol, 2);
+            draw_canvas_line(layer, tx[i], ty[i], hx[h_next], hy[h_next], edgeCol, 2);
+        }
+
+        // Nucleo escuro central para leitura nitida do numero 1..20
+        draw_canvas_disc(layer, dcx, dcy, 15, lv_color_hex(0x030712));
+        draw_canvas_arc(layer, dcx, dcy, 16, 0, 360, edgeCol, 2);
+
+        static char s_d20_num[12];
+        snprintf(s_d20_num, sizeof(s_d20_num), "%d", disp20);
+        draw_canvas_text(layer, dcx - 22, dcy - 11, 44, 22, s_d20_num, numCol, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+
+        if (!rolling && v1 == 20) {
+            DrawStarDirect(dcx - 62, 34, 6, lv_color_hex(0xFACC15), layer);
+            DrawStarDirect(dcx + 62, 34, 6, lv_color_hex(0xFACC15), layer);
+            DrawStarDirect(dcx - 56, 94, 5, lv_color_hex(0x22D3EE), layer);
+            DrawStarDirect(dcx + 56, 94, 5, lv_color_hex(0x22D3EE), layer);
+        } else if (!rolling) {
+            DrawStarDirect(dcx - 60, 42, 4, edgeCol, layer);
+            DrawStarDirect(dcx + 60, 42, 4, edgeCol, layer);
+        }
+
+        // Pilula inferior com o resultado (x=18..238, y=128..162, h=34)
+        static char s_d20_label[40];
+        if (rolling) {
+            snprintf(s_d20_label, sizeof(s_d20_label), "ROLANDO D20...");
+        } else if (v1 == 20) {
+            snprintf(s_d20_label, sizeof(s_d20_label), "CRITICO! D20: 20");
+        } else if (v1 == 1) {
+            snprintf(s_d20_label, sizeof(s_d20_label), "FALHA! D20: 1");
+        } else {
+            snprintf(s_d20_label, sizeof(s_d20_label), "DADO D20: %d", v1);
+        }
+        draw_canvas_rect(layer, 18, 128, 220, 34, lv_color_hex(0x030712), 17);
+        draw_canvas_rect_empty(layer, 18, 128, 220, 34, pillBorder, 2, 17);
+        draw_canvas_text(layer, 22, 132, 212, 26, s_d20_label, pillText, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+        return;
+    }
+
     bool dual = (v2 > 0);
 
     bool rolling = (prog < 0.46f);
@@ -2778,6 +2922,81 @@ void LcdDisplay::DrawCompanionScene(lv_layer_t* layer, const std::string& overla
         draw_canvas_rect(layer, 13, 132, 229, 34, lv_color_hex(0x030712), 17);
         draw_canvas_rect_empty(layer, 13, 132, 229, 34, lv_color_hex(0x0284C7), 2, 17);
         draw_canvas_text(layer, 17, 136, 221, 26, statsBuf, lv_color_hex(0x38BDF8), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+    } else if (overlay == "dm_face") {
+        // =====================================================================
+        // MESTRE DO RPG (DUNGEON MASTER - GROQ)
+        // Retrato arcano de capuz místico, olhos dourados e barba prateada
+        // =====================================================================
+        bool dmSpeaking = (Application::GetInstance().GetDeviceState() == kDeviceStateSpeaking);
+        lv_color_t goldBorder = dmSpeaking ? lv_color_hex(0xFACC15) : lv_color_hex(0xD97706);
+
+        // 1. Pilula Superior de Identificacao (y=4..34, h=30, text_y=7)
+        draw_canvas_rect(layer, 26, 4, 204, 30, lv_color_hex(0x090514), 15);
+        draw_canvas_rect_empty(layer, 26, 4, 204, 30, goldBorder, 2, 15);
+        draw_canvas_text(layer, 30, 7, 196, 24, "MESTRE DO RPG", lv_color_hex(0xFDE68A), &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
+
+        // Estrelas místicas orbitando o capuz
+        int starBob = (int)(sinf(ms * 0.005f) * 4.0f);
+        DrawStarDirect(42, 62 + starBob, 5, lv_color_hex(0xFACC15), layer);
+        DrawStarDirect(214, 62 - starBob, 5, lv_color_hex(0xC084FC), layer);
+
+        // Ondas sonoras arcanas nas laterais enquanto o Mestre narra
+        if (dmSpeaking) {
+            int pulseR = 8 + (int)((ms / 90) % 10);
+            draw_canvas_arc(layer, cx - 58, 86 + bobY, pulseR, 135, 225, lv_color_hex(0xFACC15), 2);
+            draw_canvas_arc(layer, cx + 58, 86 + bobY, pulseR, 315, 45, lv_color_hex(0xFACC15), 2);
+        }
+
+        // 2. Manto e Capuz Arcano Pontiagudo (y=38..128)
+        draw_canvas_triangle(layer, cx - 64, 128, cx + 64, 128, cx, 52 + bobY, lv_color_hex(0x4C0519));
+        draw_canvas_triangle(layer, cx - 50, 122 + bobY, cx + 50, 122 + bobY, cx, 38 + bobY, lv_color_hex(0x581C87));
+        draw_canvas_line(layer, cx, 38 + bobY, cx - 48, 120 + bobY, goldBorder, 3);
+        draw_canvas_line(layer, cx, 38 + bobY, cx + 48, 120 + bobY, goldBorder, 3);
+
+        // Sombra profunda do rosto sob o capuz
+        draw_canvas_disc(layer, cx, 84 + bobY, 30, lv_color_hex(0x05020A));
+        draw_canvas_triangle(layer, cx - 32, 110 + bobY, cx + 32, 110 + bobY, cx, 50 + bobY, lv_color_hex(0x05020A));
+
+        // Sobrancelhas franzidas de sabedoria
+        draw_canvas_line(layer, cx - 23, 70 + bobY, cx - 7, 74 + bobY, lv_color_hex(0xFDE047), 3);
+        draw_canvas_line(layer, cx + 23, 70 + bobY, cx + 7, 74 + bobY, lv_color_hex(0xFDE047), 3);
+
+        // Olhos dourados brilhantes com piscar natural
+        bool blink = ((ms % 3900) < 130);
+        if (blink) {
+            draw_canvas_rect(layer, cx - 22, 79 + bobY, 15, 2, lv_color_hex(0xF59E0B), 1);
+            draw_canvas_rect(layer, cx + 7, 79 + bobY, 15, 2, lv_color_hex(0xF59E0B), 1);
+        } else {
+            draw_canvas_rect(layer, cx - 23, 76 + bobY, 16, 9, lv_color_hex(0xD97706), 4);
+            draw_canvas_rect(layer, cx - 19, 78 + bobY, 8, 5, lv_color_hex(0xFEF08A), 2);
+            draw_canvas_rect(layer, cx + 7, 76 + bobY, 16, 9, lv_color_hex(0xD97706), 4);
+            draw_canvas_rect(layer, cx + 11, 78 + bobY, 8, 5, lv_color_hex(0xFEF08A), 2);
+        }
+
+        // Barba longa e bigode prateados de Mestre dos Magos
+        draw_canvas_triangle(layer, cx - 24, 98 + bobY, cx + 24, 98 + bobY, cx, 128 + bobY, lv_color_hex(0x94A3B8));
+        draw_canvas_triangle(layer, cx - 14, 100 + bobY, cx + 14, 100 + bobY, cx, 124 + bobY, lv_color_hex(0xE2E8F0));
+        draw_canvas_line(layer, cx - 2, 94 + bobY, cx - 19, 99 + bobY, lv_color_hex(0xF8FAFC), 4);
+        draw_canvas_line(layer, cx + 2, 94 + bobY, cx + 19, 99 + bobY, lv_color_hex(0xF8FAFC), 4);
+
+        // Boca reativa de energia arcana ao falar
+        if (dmSpeaking) {
+            int openH = 3 + (int)(fabsf(sinf(ms * 0.024f)) * 7.0f);
+            draw_canvas_rect(layer, cx - 8, 96 + bobY, 16, openH, lv_color_hex(0xFACC15), 3);
+            if (openH >= 6) {
+                draw_canvas_rect(layer, cx - 5, 98 + bobY, 10, openH - 4, lv_color_hex(0xFEF9C3), 2);
+            }
+        } else {
+            draw_canvas_line(layer, cx - 6, 98 + bobY, cx + 6, 98 + bobY, lv_color_hex(0xF59E0B), 2);
+        }
+
+        // 3. Pilula Inferior de Status (y=133..165, h=32, text_y=136)
+        lv_color_t stBorder = dmSpeaking ? lv_color_hex(0xFACC15) : lv_color_hex(0xA855F7);
+        lv_color_t stColor = dmSpeaking ? lv_color_hex(0xFEF08A) : lv_color_hex(0xE9D5FF);
+        const char* stText = dmSpeaking ? "NARRANDO AVENTURA" : "MESTRE AGUARDANDO";
+        draw_canvas_rect(layer, 18, 133, 220, 32, lv_color_hex(0x05020A), 16);
+        draw_canvas_rect_empty(layer, 18, 133, 220, 32, stBorder, 2, 16);
+        draw_canvas_text(layer, 22, 136, 212, 24, stText, stColor, &BUILTIN_TEXT_FONT, LV_TEXT_ALIGN_CENTER);
     }
 }
 
@@ -2950,7 +3169,8 @@ void LcdDisplay::DrawOledFace(int xOffset) {
     std::string activeCompanionOverlay = engine.GetActiveOverlay();
     if (activeCompanionOverlay == "jokenpo_rock" || activeCompanionOverlay == "jokenpo_paper" ||
         activeCompanionOverlay == "jokenpo_scissors" || activeCompanionOverlay == "crystal_ball" ||
-        activeCompanionOverlay == "jail" || activeCompanionOverlay == "weather_view") {
+        activeCompanionOverlay == "jail" || activeCompanionOverlay == "weather_view" ||
+        activeCompanionOverlay == "dm_face") {
         DrawCompanionScene(layer, activeCompanionOverlay);
 #if LVGL_VERSION_MAJOR >= 9
         lv_canvas_finish_layer(face_canvas_, &layer_obj);
